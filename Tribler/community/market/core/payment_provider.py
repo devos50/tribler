@@ -95,4 +95,4 @@ class MultiChainPaymentProvider(object):
         if total == (-1, -1):
             return Quantity(0)
         else:
-            return Quantity((max(0, total[0] - total[1]) / 2) / self.MULTI_CHAIN_MULTIPLIER)
+            return Quantity(int((max(0, total[0] - total[1]) / 2) / self.MULTI_CHAIN_MULTIPLIER))
