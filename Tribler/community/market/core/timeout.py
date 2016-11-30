@@ -14,8 +14,8 @@ class Timeout(object):
         """
         super(Timeout, self).__init__()
 
-        if not isinstance(timeout, float):
-            raise ValueError("Timeout must be a float")
+        if not isinstance(timeout, (float, int)):
+            raise ValueError("Timeout must be a float or an integer")
 
         if timeout < 0:
             raise ValueError("Timeout must be positive or zero")
@@ -39,7 +39,7 @@ class Timeout(object):
             return False
 
     def __float__(self):
-        return self._timeout
+        return float(self._timeout)
 
     def __str__(self):
         return "%s" % datetime.datetime.fromtimestamp(self._timeout)
