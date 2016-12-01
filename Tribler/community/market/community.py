@@ -245,7 +245,6 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
-        self._logger.debug("Ask created")
 
         # Convert values to value objects
         price = Price.from_float(price)
@@ -265,6 +264,8 @@ class MarketCommunity(Community):
         proposed_trades = self.matching_engine.match_order(order)
         self.send_proposed_trade_messages(proposed_trades)
 
+        self._logger.info("Ask created with price %s and quantity %s" % (price, quantity))
+
         return order
 
     def send_ask(self, ask):
@@ -276,7 +277,7 @@ class MarketCommunity(Community):
         """
         assert isinstance(ask, Ask), type(ask)
 
-        self._logger.debug("Ask send with id: %s for order with id: %s", str(ask.message_id), str(ask.order_id))
+        self._logger.info("Ask send with id: %s for order with id: %s", str(ask.message_id), str(ask.order_id))
 
         payload = ask.to_network()
 
@@ -300,7 +301,7 @@ class MarketCommunity(Community):
         for message in messages:
             ask = Ask.from_network(message.payload)
 
-            self._logger.debug("Ask received with id: %s for order with id: %s", str(ask.message_id), str(ask.order_id))
+            self._logger.info("Ask received (price: %s, quantity: %s)", ask.price, ask.quantity)
 
             # Update the pubkey register with the current address
             self.update_ip(ask.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
@@ -336,7 +337,6 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
-        self._logger.debug("Bid created")
 
         # Convert values to value objects
         price = Price.from_float(price)
@@ -356,6 +356,8 @@ class MarketCommunity(Community):
         proposed_trades = self.matching_engine.match_order(order)
         self.send_proposed_trade_messages(proposed_trades)
 
+        self._logger.info("Bid created with price %s and quantity %s" % (price, quantity))
+
         return order
 
     def send_bid(self, bid):
@@ -367,7 +369,7 @@ class MarketCommunity(Community):
         """
         assert isinstance(bid, Bid), type(bid)
 
-        self._logger.debug("Bid send with id: %s for order with id: %s", str(bid.message_id), str(bid.order_id))
+        self._logger.info("Bid send with id: %s for order with id: %s", str(bid.message_id), str(bid.order_id))
 
         payload = bid.to_network()
 
@@ -391,7 +393,7 @@ class MarketCommunity(Community):
         for message in messages:
             bid = Bid.from_network(message.payload)
 
-            self._logger.debug("Bid received with id: %s for order with id: %s", str(bid.message_id), str(bid.order_id))
+            self._logger.info("Bid received (price: %s, quantity: %s)", bid.price, bid.quantity)
 
             # Update the pubkey register with the current address
             self.update_ip(bid.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
@@ -420,6 +422,8 @@ class MarketCommunity(Community):
 
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
+
+        self._logger.info("Sending proposed trade to trader %s", destination)
 
         meta = self.get_meta_message(u"proposed-trade")
         message = meta.impl(
