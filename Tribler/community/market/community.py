@@ -264,7 +264,7 @@ class MarketCommunity(Community):
         proposed_trades = self.matching_engine.match_order(order)
         self.send_proposed_trade_messages(proposed_trades)
 
-        self._logger.info("Ask created with price %s and quantity %s" % (price, quantity))
+        self._logger.debug("Ask created with price %s and quantity %s" % (price, quantity))
 
         return order
 
@@ -277,7 +277,7 @@ class MarketCommunity(Community):
         """
         assert isinstance(ask, Ask), type(ask)
 
-        self._logger.info("Ask send with id: %s for order with id: %s", str(ask.message_id), str(ask.order_id))
+        self._logger.debug("Ask send with id: %s for order with id: %s", str(ask.message_id), str(ask.order_id))
 
         payload = ask.to_network()
 
@@ -301,7 +301,8 @@ class MarketCommunity(Community):
         for message in messages:
             ask = Ask.from_network(message.payload)
 
-            self._logger.info("Ask received (price: %s, quantity: %s)", ask.price, ask.quantity)
+            self._logger.debug("Ask received from trader %s (price: %s, quantity: %s)", str(ask.order_id.trader_id),
+                               ask.price, ask.quantity)
 
             # Update the pubkey register with the current address
             self.update_ip(ask.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
@@ -356,7 +357,7 @@ class MarketCommunity(Community):
         proposed_trades = self.matching_engine.match_order(order)
         self.send_proposed_trade_messages(proposed_trades)
 
-        self._logger.info("Bid created with price %s and quantity %s" % (price, quantity))
+        self._logger.debug("Bid created with price %s and quantity %s" % (price, quantity))
 
         return order
 
@@ -369,7 +370,7 @@ class MarketCommunity(Community):
         """
         assert isinstance(bid, Bid), type(bid)
 
-        self._logger.info("Bid send with id: %s for order with id: %s", str(bid.message_id), str(bid.order_id))
+        self._logger.debug("Bid send with id: %s for order with id: %s", str(bid.message_id), str(bid.order_id))
 
         payload = bid.to_network()
 
@@ -393,7 +394,8 @@ class MarketCommunity(Community):
         for message in messages:
             bid = Bid.from_network(message.payload)
 
-            self._logger.info("Bid received (price: %s, quantity: %s)", bid.price, bid.quantity)
+            self._logger.debug("Bid received from trader %s (price: %s, quantity: %s)", str(bid.order_id.trader_id),
+                               bid.price, bid.quantity)
 
             # Update the pubkey register with the current address
             self.update_ip(bid.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
@@ -423,7 +425,8 @@ class MarketCommunity(Community):
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
 
-        self._logger.info("Sending proposed trade to trader %s", destination)
+        self._logger.debug("Sending proposed trade with msg id %s to trader %s (ip: %s, port: %s)",
+                           str(proposed_trade.message_id), destination, *self.lookup_ip(destination))
 
         meta = self.get_meta_message(u"proposed-trade")
         message = meta.impl(
@@ -442,6 +445,8 @@ class MarketCommunity(Community):
     def on_proposed_trade(self, messages):
         for message in messages:
             proposed_trade = ProposedTrade.from_network(message.payload)
+
+            self._logger.debug("Proposed trade received with id: %s", str(proposed_trade.message_id))
 
             if str(proposed_trade.recipient_order_id.trader_id) == str(self.pubkey):  # The message is for this node
                 order = self.order_manager.order_repository.find_by_id(proposed_trade.recipient_order_id)
@@ -465,6 +470,10 @@ class MarketCommunity(Community):
                     self._logger.debug("Declined trade made with id: %s for proposed trade with id: %s",
                                        str(declined_trade.message_id), str(proposed_trade.message_id))
                     self.send_declined_trade(declined_trade)
+            else:
+                self._logger.warning("Received proposed trade message that was not for this node "
+                                     "(my id: %s, message recipient id: %s", str(self.pubkey),
+                                     str(proposed_trade.recipient_order_id.trader_id))
 
     # Accepted trade
     def send_accepted_trade(self, accepted_trade):

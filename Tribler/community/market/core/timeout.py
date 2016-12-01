@@ -1,4 +1,5 @@
 import datetime
+import time
 
 from timestamp import Timestamp
 
@@ -33,7 +34,7 @@ class Timeout(object):
         """
         assert isinstance(timestamp, Timestamp), type(timestamp)
 
-        if self._timeout < timestamp:
+        if (time.time() + self._timeout) < timestamp:
             return True
         else:
             return False
