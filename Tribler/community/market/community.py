@@ -436,7 +436,7 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
+        self.dispersy._forward([message])
 
     def send_proposed_trade_messages(self, messages):
         for message in messages:
