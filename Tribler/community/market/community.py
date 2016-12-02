@@ -176,8 +176,10 @@ class MarketCommunity(Community):
         for message in messages:
             allowed, _ = self._timeline.check(message)
             if allowed:
+                self._logger.debug("Allowing message %s" % message)
                 yield message
             else:
+                self._logger.debug("Delaying message %s" % message)
                 yield DelayMessageByProof(message)
 
     def check_history(self, message):
