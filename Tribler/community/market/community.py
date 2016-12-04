@@ -424,6 +424,9 @@ class MarketCommunity(Community):
         assert isinstance(proposed_trade, ProposedTrade), type(proposed_trade)
         destination, payload = proposed_trade.to_network()
 
+        # Add the local address to the payload
+        payload += (self.dispersy.lan_address[0], self.dispersy.lan_address[1])
+
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
 
@@ -489,7 +492,7 @@ class MarketCommunity(Community):
         destination, payload = accepted_trade.to_network()
 
         # Add ttl
-        payload += (Ttl.default(),)
+        payload += (self.dispersy.lan_address[0], self.dispersy.lan_address[1], Ttl.default())
 
         meta = self.get_meta_message(u"accepted-trade")
         message = meta.impl(

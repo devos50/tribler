@@ -84,7 +84,7 @@ class OfferPayload(MessagePayload):
 class TradePayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, recipient_trader_id, recipient_order_number,
-                     price, quantity, timestamp):
+                     price, quantity, timestamp, ip, port):
             assert isinstance(order_number, OrderNumber), type(order_number)
             assert isinstance(recipient_trader_id, TraderId), type(recipient_trader_id)
             assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
@@ -96,6 +96,8 @@ class TradePayload(MessagePayload):
             self._recipient_order_number = recipient_order_number
             self._price = price
             self._quantity = quantity
+            self._ip = ip
+            self._port = port
 
         @property
         def order_number(self):
@@ -117,15 +119,19 @@ class TradePayload(MessagePayload):
         def quantity(self):
             return self._quantity
 
+        @property
+        def address(self):
+            return SocketAddress(self._ip, self._port)
+
 
 class AcceptedTradePayload(TradePayload):
     class Implementation(TradePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, recipient_trader_id, recipient_order_number,
-                     price, quantity, timestamp, ttl):
+                     price, quantity, timestamp, ip, port, ttl):
             assert isinstance(ttl, Ttl), type(ttl)
             super(AcceptedTradePayload.Implementation, self).__init__(meta, trader_id, message_number, order_number,
                                                                       recipient_trader_id, recipient_order_number,
-                                                                      price, quantity, timestamp)
+                                                                      price, quantity, timestamp, ip, port)
             self._ttl = ttl
 
         @property
