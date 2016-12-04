@@ -55,8 +55,6 @@ class MultiChainPaymentProvider(object):
     """"Multi chain payment provider which enables checking the multi chain balance of this peer and transferring multi
     chain to other peers"""
 
-    MULTI_CHAIN_MULTIPLIER = 100
-
     def __init__(self, multi_chain_community, public_key):
         """
         :param multi_chain_community: The multi chain community which manages multi chain transfers
@@ -81,7 +79,7 @@ class MultiChainPaymentProvider(object):
         assert isinstance(quantity, Quantity), type(quantity)
 
         if self.balance() >= quantity:
-            byte_quantity = int(quantity) * self.MULTI_CHAIN_MULTIPLIER
+            byte_quantity = int(quantity)
             self.multi_chain_community.schedule_block(candidate, -byte_quantity, byte_quantity)
         else:
             raise InsufficientFunds()
@@ -95,4 +93,4 @@ class MultiChainPaymentProvider(object):
         if total == (-1, -1):
             return Quantity(0)
         else:
-            return Quantity(int((max(0, total[0] - total[1]) / 2) / self.MULTI_CHAIN_MULTIPLIER))
+            return Quantity(int(max(0, total[0] - total[1]) / 2))

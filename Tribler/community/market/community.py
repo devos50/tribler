@@ -725,7 +725,8 @@ class MarketCommunity(Community):
 
             self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # Not enough funds
-            self._logger.warning("Not enough multichain credits for this transaction!")
+            self._logger.warning("Not enough multichain credits for this transaction (have %s, need %s)!",
+                                 self.multi_chain_payment_provider.balance(), multi_chain_payment.transferor_quantity)
 
     def on_multi_chain_payment(self, messages):
         for message in messages:
@@ -762,7 +763,8 @@ class MarketCommunity(Community):
 
             self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # not enough funds
-            self._logger.warning("Not enough BitCoin for this transaction!")
+            self._logger.warning("Not enough BitCoin for this transaction (have %s, need %s)!",
+                                 self.bitcoin_payment_provider.balance(), bitcoin_payment.price)
 
     def on_bitcoin_payment(self, messages):
         for message in messages:
