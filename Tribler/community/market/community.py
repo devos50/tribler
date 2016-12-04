@@ -450,6 +450,10 @@ class MarketCommunity(Community):
 
             self._logger.debug("Proposed trade received with id: %s", str(proposed_trade.message_id))
 
+            # Update the known IP address of the sender of this proposed trade
+            self.update_ip(proposed_trade.message_id.trader_id,
+                           (message.payload.address.ip, message.payload.address.port))
+
             if str(proposed_trade.recipient_order_id.trader_id) == str(self.pubkey):  # The message is for this node
                 order = self.order_manager.order_repository.find_by_id(proposed_trade.recipient_order_id)
 
