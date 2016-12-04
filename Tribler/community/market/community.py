@@ -256,15 +256,15 @@ class MarketCommunity(Community):
         # Create the order
         order = self.order_manager.create_ask_order(price, quantity, timeout)
 
+        # Search for matches
+        proposed_trades = self.matching_engine.match_order(order)
+        self.send_proposed_trade_messages(proposed_trades)
+
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Ask), type(tick)
         self.order_book.insert_ask(tick)
         self.send_ask_messages([tick])
-
-        # Search for matches
-        proposed_trades = self.matching_engine.match_order(order)
-        self.send_proposed_trade_messages(proposed_trades)
 
         self._logger.debug("Ask created with price %s and quantity %s" % (price, quantity))
 
@@ -349,15 +349,15 @@ class MarketCommunity(Community):
         # Create the order
         order = self.order_manager.create_bid_order(price, quantity, timeout)
 
+        # Search for matches
+        proposed_trades = self.matching_engine.match_order(order)
+        self.send_proposed_trade_messages(proposed_trades)
+
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Bid), type(tick)
         self.order_book.insert_bid(tick)
         self.send_bid_messages([tick])
-
-        # Search for matches
-        proposed_trades = self.matching_engine.match_order(order)
-        self.send_proposed_trade_messages(proposed_trades)
 
         self._logger.debug("Bid created with price %s and quantity %s" % (price, quantity))
 
