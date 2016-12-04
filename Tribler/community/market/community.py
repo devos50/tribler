@@ -441,7 +441,7 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy._forward([message])
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def send_proposed_trade_messages(self, messages):
         for message in messages:
@@ -544,7 +544,7 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def send_declined_trade_messages(self, messages):
         for message in messages:
@@ -579,7 +579,7 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def send_counter_trade_messages(self, messages):
         for message in messages:
@@ -648,7 +648,7 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def on_start_transaction(self, messages):
         for message in messages:
@@ -692,7 +692,7 @@ class MarketCommunity(Community):
             )
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def on_continue_transaction(self, messages):
         for message in messages:
@@ -723,9 +723,9 @@ class MarketCommunity(Community):
                 payload=payload
             )
 
-            self.dispersy.store_update_forward([message], True, True, True)
+            self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # Not enough funds
-            pass
+            self._logger.warning("Not enough multichain credits for this transaction!")
 
     def on_multi_chain_payment(self, messages):
         for message in messages:
@@ -760,9 +760,9 @@ class MarketCommunity(Community):
                 payload=payload
             )
 
-            self.dispersy.store_update_forward([message], True, True, True)
+            self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # not enough funds
-            pass
+            self._logger.warning("Not enough BitCoin for this transaction!")
 
     def on_bitcoin_payment(self, messages):
         for message in messages:
@@ -801,7 +801,7 @@ class MarketCommunity(Community):
             )
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def on_end_transaction(self, messages):
         for message in messages:
