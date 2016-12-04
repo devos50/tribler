@@ -713,6 +713,8 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
+            self._logger.debug("Paying %s MultiChain credits to %s",
+                               multi_chain_payment.transferor_quantity, transaction.partner_trader_id)
             self.multi_chain_payment_provider.transfer_multi_chain(candidate, multi_chain_payment.transferor_quantity)
 
             meta = self.get_meta_message(u"multi-chain-payment")
@@ -751,6 +753,7 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
+            self._logger.debug("Paying %s BTC to %s", bitcoin_payment.price, transaction.partner_trader_id)
             self.bitcoin_payment_provider.transfer_bitcoin(bitcoin_payment.bitcoin_address, bitcoin_payment.price)
 
             meta = self.get_meta_message(u"bitcoin-payment")
@@ -807,4 +810,4 @@ class MarketCommunity(Community):
 
     def on_end_transaction(self, messages):
         for message in messages:
-            pass
+            self._logger.debug("Finishing transaction %s", message.payload.transaction_number)
