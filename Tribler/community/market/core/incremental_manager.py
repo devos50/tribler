@@ -6,6 +6,7 @@ class IncrementalQuantityManager(object):
     """Incremental Quantity Manager which determines an incremental quantity list for payments"""
 
     INITIAL_QUANTITY = 20
+    MAX_TRANSACTIONS = 10
     INCREMENTAL_QUANTITY = 200
 
     @staticmethod
@@ -17,6 +18,12 @@ class IncrementalQuantityManager(object):
         :return: Incremental quantity list
         :rtype: List[Quantity]
         """
+
+        # Check whether we should change the INCREMENTAL_QUANTITY to avoid not going over our MAX transactions
+        quantity_per_trade = IncrementalQuantityManager.INCREMENTAL_QUANTITY
+        if quantity_per_trade * IncrementalQuantityManager.MAX_TRANSACTIONS < int(total_quantity):
+            quantity_per_trade = int(total_quantity) / IncrementalQuantityManager.MAX_TRANSACTIONS
+
         incremental_quantities = []
         remaining_quantity = int(total_quantity)
         if remaining_quantity > 0:
@@ -25,7 +32,7 @@ class IncrementalQuantityManager(object):
             remaining_quantity -= initial_quantity
 
             while remaining_quantity > 0:
-                incremental_quantity = min(IncrementalQuantityManager.INCREMENTAL_QUANTITY, remaining_quantity)
+                incremental_quantity = min(quantity_per_trade, remaining_quantity)
                 incremental_quantities.append(Quantity(incremental_quantity))
                 remaining_quantity -= incremental_quantity
         return incremental_quantities
