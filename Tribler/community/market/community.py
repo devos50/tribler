@@ -406,10 +406,10 @@ class MarketCommunity(Community):
                 self.order_book.insert_bid(bid)
 
                 # Check for new matches against the orders of this node
-                for order in self.order_manager.order_repository.find_all():
-                    if order.is_ask() and order.is_valid():
-                        proposed_trades = self.matching_engine.match_order(order)
-                        self.send_proposed_trade_messages(proposed_trades)
+                #for order in self.order_manager.order_repository.find_all():
+                #    if order.is_ask() and order.is_valid():
+                #        proposed_trades = self.matching_engine.match_order(order)
+                #        self.send_proposed_trade_messages(proposed_trades)
 
                 # Check if message needs to be send on
                 ttl = message.payload.ttl
