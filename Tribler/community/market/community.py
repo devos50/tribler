@@ -563,6 +563,12 @@ class MarketCommunity(Community):
                     except TickWasNotReserved:  # Nothing left to do
                         pass
 
+                # Just remove the tick with the order id of the other party and try to find a new match
+                self._logger.debug("Received declined trade, trying to find a new match for this order")
+                self.order_book.remove_tick(declined_trade.order_id)
+                proposed_trades = self.matching_engine.match_order(order)
+                self.send_proposed_trade_messages(proposed_trades)
+
     # Counter trade
     def send_counter_trade(self, counter_trade):
         assert isinstance(counter_trade, CounterTrade), type(counter_trade)
