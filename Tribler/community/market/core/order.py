@@ -133,6 +133,7 @@ class Order(object):
         self._traded_quantity = Quantity(0)
         self._timeout = timeout
         self._timestamp = timestamp
+        self._completed_timestamp = None
         self._is_ask = is_ask
         self._reserved_ticks = {}
         self._accepted_trades = {}
@@ -206,12 +207,27 @@ class Order(object):
         """
         return self._timestamp
 
+    @property
+    def completed_timestamp(self):
+        """
+        :return: the timestamp of completion of this order, None if this order is not completed (yet).
+        :rtype: Timestamp
+        """
+        return self._completed_timestamp
+
     def is_ask(self):
         """
         :return: True if message is an ask, False otherwise
         :rtype: bool
         """
         return self._is_ask
+
+    def is_complete(self):
+        """
+        :return: True if the order is completed.
+        :rtype: bool
+        """
+        return self._traded_quantity >= self._quantity
 
     def reserve_quantity_for_tick(self, order_id, quantity):
         """
@@ -266,6 +282,9 @@ class Order(object):
         except TickWasNotReserved:
             pass
         assert self.available_quantity >= Quantity(0)
+
+        if self.is_complete():
+            self._completed_timestamp = Timestamp.now()
 
     def add_transaction(self, accepted_trade_message_id, transaction):
         self._transactions[accepted_trade_message_id] = transaction.transaction_id
