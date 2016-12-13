@@ -574,6 +574,9 @@ class MarketCommunity(Community):
         assert isinstance(counter_trade, CounterTrade), type(counter_trade)
         destination, payload = counter_trade.to_network()
 
+        # Add the local address to the payload
+        payload += (self.dispersy.lan_address[0], self.dispersy.lan_address[1])
+
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
 
