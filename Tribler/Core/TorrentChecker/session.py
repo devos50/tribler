@@ -359,6 +359,7 @@ class UDPScraper(DatagramProtocol):
         This method handles everything that needs to be done when something during
         the UDP scraping went wrong.
         """
+        print "Reached timeout for tracker %s?" % self.udpsession.tracker_url
         self.udpsession.failed()
 
     def stop(self):
@@ -371,6 +372,7 @@ class UDPScraper(DatagramProtocol):
             self.timeout_call.cancel()
 
         if self.transport and self.numPorts and self.transport.connected:
+            print "Stopping with listening on the port for tracker %s!" % self.udpsession.tracker_url
             return maybeDeferred(self.transport.stopListening)
         return defer.succeed(True)
 
@@ -672,6 +674,7 @@ class UdpTrackerSession(TrackerSession):
         self._is_finished = True
 
         # Call the callback of the deferred with the result
+        print "Has result for %s" % self.tracker_url
         self.result_deferred.callback({self.tracker_url: response_list})
 
 
