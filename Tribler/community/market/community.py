@@ -63,6 +63,8 @@ class MarketCommunity(Community):
         # The public key of this node
         self.pubkey = self.my_member.public_key.encode("HEX")
         self.pubkey_register = {}  # TODO: fix memory leak
+        self.relayed_asks = []
+        self.relayed_bids = []
 
         order_repository = MemoryOrderRepository(self.pubkey)
         message_repository = MemoryMessageRepository(self.pubkey)
@@ -309,7 +311,8 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(ask.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
-            if not self.order_book.tick_exists(ask.order_id):  # Message has not been received before
+            if not str(ask.order_id) in self.relayed_asks:  # Message has not been received before
+                self.relayed_asks.append(str(ask.order_id))
                 self.order_book.insert_ask(ask)
 
                 # Check for new matches against the orders of this node
@@ -402,7 +405,8 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(bid.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
-            if not self.order_book.tick_exists(bid.order_id):  # Message has not been received before
+            if not str(bid.order_id) in self.relayed_bids:  # Message has not been received before
+                self.relayed_bids.append(str(bid.order_id))
                 self.order_book.insert_bid(bid)
 
                 # Check for new matches against the orders of this node
