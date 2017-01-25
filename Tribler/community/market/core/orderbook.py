@@ -85,6 +85,8 @@ class OrderBook(object):
         :type accepted_trade: AcceptedTrade
         """
         assert isinstance(accepted_trade, AcceptedTrade), type(accepted_trade)
+        self._logger.debug("Trading tick in order book for own order %s vs order %s",
+                           str(accepted_trade.order_id), str(accepted_trade.recipient_order_id))
 
         if self.bid_exists(accepted_trade.order_id):
             tick = self.get_bid(accepted_trade.order_id)

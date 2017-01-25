@@ -430,8 +430,8 @@ class MarketCommunity(Community):
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
 
-        self._logger.debug("Sending proposed trade with msg id %s to trader %s (ip: %s, port: %s)",
-                           str(proposed_trade.message_id), destination, *self.lookup_ip(destination))
+        self._logger.debug("Sending proposed trade with own order id %s and other order id %s to trader %s (ip: %s, port: %s)",
+                           str(proposed_trade.order_id), str(proposed_trade.recipient_order_id), destination, *self.lookup_ip(destination))
 
         meta = self.get_meta_message(u"proposed-trade")
         message = meta.impl(

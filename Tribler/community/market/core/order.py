@@ -1,3 +1,5 @@
+import logging
+
 from message import TraderId
 from price import Price
 from quantity import Quantity
@@ -118,6 +120,7 @@ class Order(object):
         :type is_ask: bool
         """
         super(Order, self).__init__()
+        self._logger = logging.getLogger(self.__class__.__name__)
 
         assert isinstance(order_id, OrderId), type(order_id)
         assert isinstance(price, Price), type(price)
@@ -243,6 +246,8 @@ class Order(object):
 
         if self.available_quantity >= quantity:
             if order_id not in self._reserved_ticks:
+                self._logger.debug("Reserving quantity %s for order %s (own order id: %s), total quantity: %s, traded: %s",
+                                   quantity, str(order_id), str(self.order_id), self.total_quantity, self.traded_quantity)
                 self._reserved_quantity += quantity
                 self._reserved_ticks[order_id] = quantity
                 assert self.available_quantity >= Quantity(0)
@@ -257,6 +262,8 @@ class Order(object):
         :raises TickWasNotReserved: Thrown when the tick was not reserved first
         """
         if order_id in self._reserved_ticks:
+            self._logger.debug("Releasing quantity for order id %s (own order id: %s), total quantity: %s, traded: %s",
+                               str(order_id), str(self.order_id), self.total_quantity, self.traded_quantity)
             if self._reserved_quantity >= self._reserved_ticks[order_id]:
                 self._reserved_quantity -= self._reserved_ticks[order_id]
                 assert self.available_quantity >= Quantity(0)
@@ -275,6 +282,7 @@ class Order(object):
         self._timeout = Timestamp.now()
 
     def add_trade(self, accepted_trade):
+        self._logger.debug("Adding trade for order %s with quantity %s", str(self.order_id), accepted_trade.quantity)
         self._accepted_trades[accepted_trade.message_id] = accepted_trade
         self._traded_quantity += accepted_trade.quantity
         try:
