@@ -6,7 +6,7 @@ class Ttl(object):
     reaching enough nodes to find good trades
     """
 
-    DEFAULT = 2
+    DEFAULT = 8
 
     def __init__(self, ttl):
         """
@@ -19,8 +19,8 @@ class Ttl(object):
         if not isinstance(ttl, int):
             raise ValueError("Time to live must be an int")
 
-        if ttl > 2 or ttl < 0:
-            raise ValueError("Time to live must be between 0 and 2")
+        if ttl < 0:
+            raise ValueError("Time to live must be greater than zero")
 
         self._ttl = ttl
 
