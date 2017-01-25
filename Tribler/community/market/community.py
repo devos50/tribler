@@ -477,9 +477,10 @@ class MarketCommunity(Community):
                     declined_trade = Trade.decline(self.order_book.message_repository.next_identity(), Timestamp.now(),
                                                    proposed_trade)
                     self._logger.debug("Declined trade made with id: %s for proposed trade with id: %s "
-                                       "(valid? %s, available quantity of order: %s)",
+                                       "(valid? %s, available quantity of order: %s, reserved: %s, traded: %s)",
                                        str(declined_trade.message_id), str(proposed_trade.message_id),
-                                       order.is_valid(), order.available_quantity)
+                                       order.is_valid(), order.available_quantity, order.reserved_quantity,
+                                       order.traded_quantity)
                     self.send_declined_trade(declined_trade)
             else:
                 self._logger.warning("Received proposed trade message that was not for this node "
