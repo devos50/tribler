@@ -37,7 +37,8 @@ class TransactionManager(object):
         transaction = Transaction.from_accepted_trade(accepted_trade, self.transaction_repository.next_identity())
         self.transaction_repository.add(transaction)
 
-        self._logger.info("Transaction created with id: " + str(transaction.transaction_id))
+        self._logger.info("Transaction created with id: %s, quantity: %s",
+                          str(transaction.transaction_id), str(transaction.total_quantity))
         return transaction
 
     def create_from_start_transaction(self, start_transaction, price, quantity, timeout):
@@ -57,7 +58,8 @@ class TransactionManager(object):
                                   quantity, timeout, Timestamp.now())
         self.transaction_repository.add(transaction)
 
-        self._logger.info("Transaction created with id: " + str(transaction.transaction_id))
+        self._logger.info("Transaction created with id: %s, quantity: %s",
+                          str(transaction.transaction_id), str(transaction.total_quantity))
 
         return transaction
 

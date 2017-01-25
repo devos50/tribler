@@ -621,8 +621,8 @@ class MarketCommunity(Community):
         accepted_trade = Trade.accept(self.order_book.message_repository.next_identity(), Timestamp.now(),
                                       proposed_trade)
 
-        self._logger.debug("Accepted trade made with id: %s for proposed/counter trade with id: %s",
-                           str(accepted_trade.message_id), str(proposed_trade.message_id))
+        self._logger.debug("Accepted trade made with id: %s for proposed/counter trade with id: %s (quantity: %s)",
+                           str(accepted_trade.message_id), str(proposed_trade.message_id), accepted_trade.quantity)
 
         self.check_history(accepted_trade)  # Set the message received as true
 
@@ -802,6 +802,7 @@ class MarketCommunity(Community):
     # End transaction
     def send_end_transaction(self, transaction):
         # Lookup the remote address of the peer with the pubkey
+        self._logger.debug("Sending end transaction (quantity: %s)", transaction.total_quantity)
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         message_id = self.order_book.message_repository.next_identity()

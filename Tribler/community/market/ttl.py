@@ -6,7 +6,7 @@ class Ttl(object):
     reaching enough nodes to find good trades
     """
 
-    DEFAULT = 8
+    DEFAULT = 2
 
     def __init__(self, ttl):
         """
