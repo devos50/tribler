@@ -41,25 +41,21 @@ class TransactionManager(object):
                           str(transaction.transaction_id), str(transaction.total_quantity))
         return transaction
 
-    def create_from_start_transaction(self, start_transaction, price, quantity, timeout):
+    def create_from_start_transaction(self, start_transaction, timeout):
         """
         :type start_transaction: StartTransaction
-        :type price: Price
-        :type quantity: Quantity
         :type timeout: Timeout
         :rtype: Transaction
         """
         assert isinstance(start_transaction, StartTransaction), type(start_transaction)
-        assert isinstance(price, Price), type(price)
-        assert isinstance(quantity, Quantity), type(quantity)
         assert isinstance(timeout, Timeout), type(timeout)
 
-        transaction = Transaction(start_transaction.transaction_id, start_transaction.transaction_id.trader_id, price,
-                                  quantity, timeout, Timestamp.now())
+        transaction = Transaction(start_transaction.transaction_id, start_transaction.transaction_id.trader_id,
+                                  start_transaction.price, start_transaction.quantity, timeout, Timestamp.now())
         self.transaction_repository.add(transaction)
 
-        self._logger.info("Transaction created with id: %s, quantity: %s",
-                          str(transaction.transaction_id), str(transaction.total_quantity))
+        self._logger.info("Transaction created with id: %s, quantity: %s, price: %s",
+                          str(transaction.transaction_id), str(transaction.total_quantity), str(transaction.price))
 
         return transaction
 

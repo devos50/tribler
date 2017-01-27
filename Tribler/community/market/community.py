@@ -506,27 +506,15 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy.store_update_forward([message], True, True, True)
-
-    def send_accepted_trade_messages(self, messages):
-        for message in messages:
-            self.send_accepted_trade(message)
+        self.dispersy.store_update_forward([message], True, False, True)
 
     def on_accepted_trade(self, messages):
         for message in messages:
             accepted_trade = AcceptedTrade.from_network(message.payload)
 
             if self.check_history(accepted_trade):  # The message is new to this node
-                order = self.order_manager.order_repository.find_by_id(accepted_trade.recipient_order_id)
-
-                if order:  # This is a trade with this node
-                    try:
-                        order.add_trade(accepted_trade)  # Remove quantity from order and store trade
-                        self.order_book.trade_tick(accepted_trade)  # Remove ticks from order book
-                    except TickWasNotReserved:  # Something went wrong
-                        pass
-                else:  # This is a trade between two other nodes
-                    self.order_book.trade_tick(accepted_trade)  # Remove ticks from order book
+                self.order_book.trade_tick(accepted_trade.order_id, accepted_trade.recipient_order_id,
+                                           accepted_trade.quantity)
 
                 ttl = message.payload.ttl  # Check if message needs to be send on
                 ttl.make_hop()  # Complete the hop from the previous node
@@ -627,8 +615,8 @@ class MarketCommunity(Community):
         self.check_history(accepted_trade)  # Set the message received as true
 
         self.order_book.insert_trade(accepted_trade)
-        order.add_trade(accepted_trade)  # Remove quantity from order and store trade
-        self.order_book.trade_tick(accepted_trade)  # Remove ticks from order book
+        order.add_trade(accepted_trade.recipient_order_id, accepted_trade.quantity)
+        self.order_book.trade_tick(accepted_trade.order_id, accepted_trade.recipient_order_id, accepted_trade.quantity)
 
         self.send_accepted_trade(accepted_trade)
         self.start_transaction(accepted_trade)
@@ -639,11 +627,11 @@ class MarketCommunity(Community):
 
         if order:
             transaction = self.transaction_manager.create_from_accepted_trade(accepted_trade)
-            order.add_transaction(accepted_trade.message_id, transaction)
 
             start_transaction = StartTransaction(self.order_book.message_repository.next_identity(),
-                                                 transaction.transaction_id, accepted_trade.recipient_order_id,
-                                                 accepted_trade.message_id, Timestamp.now())
+                                                 transaction.transaction_id, order.order_id,
+                                                 accepted_trade.recipient_order_id, accepted_trade.price,
+                                                 accepted_trade.quantity, Timestamp.now())
             self.send_start_transaction(transaction, start_transaction)
 
     # Start transaction
@@ -668,13 +656,15 @@ class MarketCommunity(Community):
         for message in messages:
             start_transaction = StartTransaction.from_network(message.payload)
 
-            order = self.order_manager.order_repository.find_by_id(start_transaction.order_id)
+            order = self.order_manager.order_repository.find_by_id(start_transaction.recipient_order_id)
 
             if order:
-                transaction = self.transaction_manager.create_from_start_transaction(start_transaction, order.price,
-                                                                                     order.total_quantity,
-                                                                                     order.timeout)
-                order.add_transaction(start_transaction.accepted_trade_message_id, transaction)
+                transaction = self.transaction_manager.create_from_start_transaction(start_transaction, order.timeout)
+
+                try:
+                    order.add_trade(start_transaction.order_id, start_transaction.quantity)
+                except TickWasNotReserved:  # Something went wrong
+                    pass
 
                 if order.is_ask():  # Send multi chain payment
                     message_id = self.order_book.message_repository.next_identity()

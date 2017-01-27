@@ -217,25 +217,35 @@ class Transaction(object):
 class StartTransaction(Message):
     """Class for representing a message to indicate the start of a payment set"""
 
-    def __init__(self, message_id, transaction_id, order_id, accepted_trade_message_id, timestamp):
+    def __init__(self, message_id, transaction_id, order_id, recipient_order_id, price, quantity, timestamp):
         """
         :param message_id: A message id to identify the message
         :param transaction_id: A transaction id to identify the transaction
-        :param order_id: An order id to identify the order
+        :param order_id: My order id
+        :param recipient_order_id: The order id of the recipient of this message
+        :param price: A price for the trade
+        :param quantity: A quantity to be traded
         :param timestamp: A timestamp when the transaction was created
         :type message_id: MessageId
         :type transaction_id: TransactionId
         :type order_id: OrderId
+        :type price: Price
+        :type quantity: Quantity
         :type timestamp: Timestamp
         """
         super(StartTransaction, self).__init__(message_id, timestamp)
 
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
         assert isinstance(order_id, OrderId), type(order_id)
+        assert isinstance(recipient_order_id, OrderId), type(order_id)
+        assert isinstance(price, Price), type(price)
+        assert isinstance(quantity, Quantity), type(quantity)
 
         self._transaction_id = transaction_id
         self._order_id = order_id
-        self._accepted_trade_message_id = accepted_trade_message_id
+        self._recipient_order_id = recipient_order_id
+        self._price = price
+        self._quantity = quantity
 
     @property
     def transaction_id(self):
@@ -252,11 +262,27 @@ class StartTransaction(Message):
         return self._order_id
 
     @property
-    def accepted_trade_message_id(self):
+    def recipient_order_id(self):
         """
-        :rtype: MessageId
+        :rtype: OrderId
         """
-        return self._accepted_trade_message_id
+        return self._recipient_order_id
+
+    @property
+    def price(self):
+        """
+        :return: The price
+        :rtype: Price
+        """
+        return self._price
+
+    @property
+    def quantity(self):
+        """
+        :return: The quantity
+        :rtype: Quantity
+        """
+        return self._quantity
 
     @classmethod
     def from_network(cls, data):
@@ -273,14 +299,19 @@ class StartTransaction(Message):
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
         assert hasattr(data, 'order_trader_id'), isinstance(data.order_trader_id, TraderId)
         assert hasattr(data, 'order_number'), isinstance(data.order_number, OrderNumber)
-        assert hasattr(data, 'trade_message_number'), isinstance(data.trade_message_number, MessageNumber)
+        assert hasattr(data, 'recipient_trader_id'), isinstance(data.recipient_trader_id, TraderId)
+        assert hasattr(data, 'recipient_order_number'), isinstance(data.recipient_order_number, OrderNumber)
+        assert hasattr(data, 'price'), isinstance(data.price, Price)
+        assert hasattr(data, 'quantity'), isinstance(data.quantity, Quantity)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
 
         return cls(
             MessageId(data.trader_id, data.message_number),
             TransactionId(data.transaction_trader_id, data.transaction_number),
             OrderId(data.order_trader_id, data.order_number),
-            MessageId(data.trader_id, data.trade_message_number),
+            OrderId(data.recipient_trader_id, data.recipient_order_number),
+            data.price,
+            data.quantity,
             data.timestamp
         )
 
@@ -295,6 +326,9 @@ class StartTransaction(Message):
             self._transaction_id.transaction_number,
             self._order_id.trader_id,
             self._order_id.order_number,
-            self._accepted_trade_message_id.message_number,
+            self._recipient_order_id.trader_id,
+            self._recipient_order_id.order_number,
+            self._price,
+            self._quantity,
             self._timestamp,
         )

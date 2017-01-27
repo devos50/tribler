@@ -80,32 +80,36 @@ class OrderBook(object):
         if self._bids.tick_exists(order_id):
             self._bids.remove_tick(order_id)
 
-    def trade_tick(self, accepted_trade):
+    def trade_tick(self, order_id, recipient_order_id, quantity):
         """
-        :type accepted_trade: AcceptedTrade
+        :type order_id: OrderId
+        :type recipient_order_id: OrderId
+        :type quantity: Quantity
         """
-        assert isinstance(accepted_trade, AcceptedTrade), type(accepted_trade)
+        assert isinstance(order_id, OrderId), type(order_id)
+        assert isinstance(recipient_order_id, OrderId), type(recipient_order_id)
+        assert isinstance(quantity, Quantity), type(quantity)
         self._logger.debug("Trading tick in order book for own order %s vs order %s",
-                           str(accepted_trade.order_id), str(accepted_trade.recipient_order_id))
+                           str(order_id), str(recipient_order_id))
 
-        if self.bid_exists(accepted_trade.order_id):
-            tick = self.get_bid(accepted_trade.order_id)
-            tick.quantity -= accepted_trade.quantity
+        if self.bid_exists(order_id):
+            tick = self.get_bid(order_id)
+            tick.quantity -= quantity
             if tick.quantity == Quantity(0):
                 self.remove_tick(tick.order_id)
-        if self.ask_exists(accepted_trade.order_id):
-            tick = self.get_ask(accepted_trade.order_id)
-            tick.quantity -= accepted_trade.quantity
+        if self.ask_exists(order_id):
+            tick = self.get_ask(order_id)
+            tick.quantity -= quantity
             if tick.quantity == Quantity(0):
                 self.remove_tick(tick.order_id)
-        if self.bid_exists(accepted_trade.recipient_order_id):
-            tick = self.get_bid(accepted_trade.recipient_order_id)
-            tick.quantity -= accepted_trade.quantity
+        if self.bid_exists(recipient_order_id):
+            tick = self.get_bid(recipient_order_id)
+            tick.quantity -= quantity
             if tick.quantity == Quantity(0):
                 self.remove_tick(tick.order_id)
-        if self.ask_exists(accepted_trade.recipient_order_id):
-            tick = self.get_ask(accepted_trade.recipient_order_id)
-            tick.quantity -= accepted_trade.quantity
+        if self.ask_exists(recipient_order_id):
+            tick = self.get_ask(recipient_order_id)
+            tick.quantity -= quantity
             if tick.quantity == Quantity(0):
                 self.remove_tick(tick.order_id)
 

@@ -185,16 +185,22 @@ class TransactionPayload(MessagePayload):
 class StartTransactionPayload(TransactionPayload):
     class Implementation(TransactionPayload.Implementation):
         def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number, order_trader_id,
-                     order_number, trade_message_number, timestamp):
+                     order_number, recipient_trader_id, recipient_order_number, price, quantity, timestamp):
             assert isinstance(order_trader_id, TraderId), type(order_trader_id)
             assert isinstance(order_number, OrderNumber), type(order_number)
-            assert isinstance(trade_message_number, MessageNumber), type(trade_message_number)
+            assert isinstance(recipient_trader_id, TraderId), type(recipient_trader_id)
+            assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
+            assert isinstance(price, Price), type(price)
+            assert isinstance(quantity, Quantity), type(quantity)
             super(StartTransactionPayload.Implementation, self).__init__(meta, trader_id, message_number,
                                                                          transaction_trader_id, transaction_number,
                                                                          timestamp)
             self._order_trader_id = order_trader_id
             self._order_number = order_number
-            self._trade_message_number = trade_message_number
+            self._recipient_trader_id = recipient_trader_id
+            self._recipient_order_number = recipient_order_number
+            self._price = price
+            self._quantity = quantity
 
         @property
         def order_trader_id(self):
@@ -205,8 +211,20 @@ class StartTransactionPayload(TransactionPayload):
             return self._order_number
 
         @property
-        def trade_message_number(self):
-            return self._trade_message_number
+        def recipient_trader_id(self):
+            return self._recipient_trader_id
+
+        @property
+        def recipient_order_number(self):
+            return self._recipient_order_number
+
+        @property
+        def price(self):
+            return self._price
+
+        @property
+        def quantity(self):
+            return self._quantity
 
 
 class MultiChainPaymentPayload(TransactionPayload):

@@ -139,8 +139,6 @@ class Order(object):
         self._completed_timestamp = None
         self._is_ask = is_ask
         self._reserved_ticks = {}
-        self._accepted_trades = {}
-        self._transactions = {}
 
     @property
     def reserved_ticks(self):
@@ -177,6 +175,7 @@ class Order(object):
         Return the quantity that is not reserved
         :rtype: Quantity
         """
+        self._logger.debug("quantity: %s, reserved: %s, traded: %s", self._quantity, self._reserved_quantity, self._traded_quantity)
         return self._quantity - self._reserved_quantity - self._traded_quantity
 
     @property
@@ -281,18 +280,15 @@ class Order(object):
     def cancel(self):
         self._timeout = Timestamp.now()
 
-    def add_trade(self, accepted_trade):
-        self._logger.debug("Adding trade for order %s with quantity %s", str(self.order_id), accepted_trade.quantity)
-        self._accepted_trades[accepted_trade.message_id] = accepted_trade
-        self._traded_quantity += accepted_trade.quantity
+    def add_trade(self, other_order_id, quantity):
+        self._logger.debug("Adding trade for order %s with quantity %s (other id: %s)",
+                          str(self.order_id), quantity, str(other_order_id))
+        self._traded_quantity += quantity
         try:
-            self.release_quantity_for_tick(accepted_trade.order_id)
+            self.release_quantity_for_tick(other_order_id)
         except TickWasNotReserved:
             pass
         assert self.available_quantity >= Quantity(0)
 
         if self.is_complete():
             self._completed_timestamp = Timestamp.now()
-
-    def add_transaction(self, accepted_trade_message_id, transaction):
-        self._transactions[accepted_trade_message_id] = transaction.transaction_id
