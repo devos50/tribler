@@ -195,6 +195,12 @@ class TriblerLaunchMany(TaskManager):
             self.dispersy.define_auto_load(AllChannelCommunity, self.session.dispersy_member, load=True,
                                            kargs=default_kwargs)
 
+        # Market Community
+        if self.session.get_market_community_enabled():
+            from Tribler.community.market.community import MarketCommunity
+            self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member, load=True,
+                                           kargs=default_kwargs)
+
         # Channel Community
         if self.session.get_channel_community_enabled():
             from Tribler.community.channel.community import ChannelCommunity

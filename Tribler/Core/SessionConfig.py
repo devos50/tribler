@@ -253,6 +253,34 @@ class SessionConfigInterface(object):
         return self.sessconfig.get(u'tunnel_community', u'enabled')
 
     #
+    # MarketCommunity settings
+    #
+
+    def set_market_community_enabled(self, value):
+        self.sessconfig.set(u'market_community', u'enabled', value)
+
+    def get_market_community_enabled(self):
+        """ Returns whether the Market community is enabled
+        @return Boolean. """
+        return self.sessconfig.get(u'market_community', u'enabled')
+
+    def set_market_community_api_enabled(self, value):
+        self.sessconfig.set(u'market_community', u'enabled', value)
+
+    def get_market_community_api_enabled(self):
+        """ Returns whether the Market community api is enabled
+        @return Boolean. """
+        return self.sessconfig.get(u'market_community', u'api_enabled')
+
+    def set_market_community_api_port(self, value):
+        self.sessconfig.set(u'market_community', u'api_port', value)
+
+    def get_market_community_api_port(self):
+        """ Returns the listen port of the Market community api
+            @return Boolean. """
+        return self.sessconfig.get(u'market_community', u'api_port')
+
+    #
     # Network settings
     #
 

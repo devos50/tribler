@@ -1,4 +1,5 @@
 from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks
 from twisted.web import server
 
 from Tribler.community.market.restapi.root_endpoint import RootEndpoint
@@ -35,7 +36,11 @@ from ttl import Ttl
 
 
 class MarketCommunity(Community):
-    """Community for selling and buying multichain coins"""
+    """Community for selling and buying multichain credits"""
+
+    def __init__(self, *args, **kwargs):
+        super(MarketCommunity, self).__init__(*args, **kwargs)
+        self.market_api = None
 
     @classmethod
     def get_master_members(cls, dispersy):
@@ -60,7 +65,7 @@ class MarketCommunity(Community):
         master = dispersy.get_member(public_key=master_key)
         return [master]
 
-    def initialize(self, tribler_session=None, start_api=True):
+    def initialize(self, tribler_session=None):
         super(MarketCommunity, self).initialize()
         self._logger.info("Market community initialized")
 
@@ -82,8 +87,8 @@ class MarketCommunity(Community):
         self.transaction_manager = TransactionManager(transaction_repository)
 
         # Start the RESTful API if it's enabled
-        if start_api:
-            self.market_api = reactor.listenTCP(tribler_session.get_http_api_port(),
+        if tribler_session.get_market_community_api_enabled():
+            self.market_api = reactor.listenTCP(tribler_session.get_market_community_api_port(),
                                                 server.Site(resource=RootEndpoint(tribler_session)))
 
         self.history = {}  # List for received messages TODO: fix memory leak
@@ -825,3 +830,9 @@ class MarketCommunity(Community):
     def on_end_transaction(self, messages):
         for message in messages:
             self._logger.debug("Finishing transaction %s", message.payload.transaction_number)
+
+    @inlineCallbacks
+    def unload_community(self):
+        if self.market_api:
+            yield self.market_api.stopListening()
+        yield super(MarketCommunity, self).unload_community()
