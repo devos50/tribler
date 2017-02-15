@@ -1,3 +1,7 @@
+from twisted.internet import reactor
+from twisted.web import server
+
+from Tribler.community.market.restapi.root_endpoint import RootEndpoint
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -56,7 +60,7 @@ class MarketCommunity(Community):
         master = dispersy.get_member(public_key=master_key)
         return [master]
 
-    def initialize(self, multi_chain_community=None):
+    def initialize(self, tribler_session=None, start_api=True):
         super(MarketCommunity, self).initialize()
         self._logger.info("Market community initialized")
 
@@ -72,10 +76,15 @@ class MarketCommunity(Community):
         self.order_book = OrderBook(message_repository)
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
 
-        self.multi_chain_payment_provider = MultiChainPaymentProvider(multi_chain_community, self.pubkey)
+        #self.multi_chain_payment_provider = MultiChainPaymentProvider(multi_chain_community, self.pubkey)
         self.bitcoin_payment_provider = BitcoinPaymentProvider()
         transaction_repository = MemoryTransactionRepository(self.pubkey)
         self.transaction_manager = TransactionManager(transaction_repository)
+
+        # Start the RESTful API if it's enabled
+        if start_api:
+            self.market_api = reactor.listenTCP(tribler_session.get_http_api_port(),
+                                                server.Site(resource=RootEndpoint(tribler_session)))
 
         self.history = {}  # List for received messages TODO: fix memory leak
 
