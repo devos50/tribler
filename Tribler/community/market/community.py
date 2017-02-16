@@ -89,7 +89,7 @@ class MarketCommunity(Community):
         # Start the RESTful API if it's enabled
         if tribler_session.get_market_community_api_enabled():
             self.market_api = reactor.listenTCP(tribler_session.get_market_community_api_port(),
-                                                server.Site(resource=RootEndpoint(tribler_session)))
+                                                server.Site(resource=RootEndpoint(tribler_session, self)))
 
         self.history = {}  # List for received messages TODO: fix memory leak
 
