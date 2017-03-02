@@ -129,6 +129,19 @@ class Tick(Message):
             self._timestamp,
         )
 
+    def to_dictionary(self):
+        """
+        Return a dictionary with a representation of this tick.
+        """
+        return {
+            "order_id": self._order_id,
+            "message_id": self.message_id,
+            "price": self.price,
+            "quantity": self.quantity,
+            "timeout": self.timeout,
+            "timestamp": self.timestamp
+        }
+
 
 class Ask(Tick):
     """Represents an ask from a order located on another node."""

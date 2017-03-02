@@ -5,7 +5,8 @@ from Tribler.Core.Modules.restapi.util import convert_db_channel_to_json, conver
 from Tribler.Core.simpledefs import (NTFY_CHANNELCAST, SIGNAL_CHANNEL, SIGNAL_ON_SEARCH_RESULTS, SIGNAL_TORRENT,
                                      NTFY_UPGRADER, NTFY_STARTED, NTFY_WATCH_FOLDER_CORRUPT_TORRENT, NTFY_INSERT,
                                      NTFY_NEW_VERSION, NTFY_FINISHED, NTFY_TRIBLER, NTFY_UPGRADER_TICK, NTFY_CHANNEL,
-                                     NTFY_DISCOVERED, NTFY_TORRENT, NTFY_ERROR, NTFY_DELETE)
+                                     NTFY_DISCOVERED, NTFY_TORRENT, NTFY_ERROR, NTFY_DELETE, NTFY_MARKET_ON_ASK,
+                                     NTFY_UPDATE, NTFY_MARKET_ON_BID)
 from Tribler.Core.version import version_id
 
 
@@ -40,6 +41,8 @@ class EventsEndpoint(resource.Resource):
     - torrent_error: An error has occurred during the download process of a specific torrent. The event includes the
       infohash and a readable string of the error message.
     - tribler_exception: An exception has occurred in Tribler. The event includes a readable string of the error.
+    - market_ask: Tribler learned about a new ask in the market. The event includes information about the ask.
+    - market_bid: Tribler learned about a new bid in the market. The event includes information about the bid.
     """
 
     def __init__(self, session):
@@ -65,6 +68,8 @@ class EventsEndpoint(resource.Resource):
         self.session.add_observer(self.on_torrent_removed_from_channel, NTFY_TORRENT, [NTFY_DELETE])
         self.session.add_observer(self.on_torrent_finished, NTFY_TORRENT, [NTFY_FINISHED])
         self.session.add_observer(self.on_torrent_error, NTFY_TORRENT, [NTFY_ERROR])
+        self.session.add_observer(self.on_market_ask, NTFY_MARKET_ON_ASK, [NTFY_UPDATE])
+        self.session.add_observer(self.on_market_bid, NTFY_MARKET_ON_BID, [NTFY_UPDATE])
 
     def write_data(self, message):
         """
@@ -153,6 +158,12 @@ class EventsEndpoint(resource.Resource):
 
     def on_tribler_exception(self, exception_text):
         self.write_data({"type": "tribler_exception", "event": {"text": exception_text}})
+
+    def on_market_ask(self, subject, changetype, objectID, *args):
+        self.write_data({"type": "market_ask", "event": args[0].to_dictionary()})
+
+    def on_market_bid(self, subject, changetype, objectID, *args):
+        self.write_data({"type": "market_bid", "event": args[0].to_dictionary()})
 
     def render_GET(self, request):
         """

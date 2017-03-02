@@ -1,6 +1,8 @@
 from twisted.internet import reactor
 from twisted.web import server
 
+from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK
+from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -74,6 +76,7 @@ class MarketCommunity(Community):
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
+        self.tribler_session = tribler_session
 
         #self.multi_chain_payment_provider = MultiChainPaymentProvider(multi_chain_community, self.pubkey)
         self.bitcoin_payment_provider = BitcoinPaymentProvider()
@@ -318,6 +321,9 @@ class MarketCommunity(Community):
                 self.relayed_asks.append(str(ask.order_id))
                 self.order_book.insert_ask(ask)
 
+                if self.tribler_session:
+                    self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK, NTFY_UPDATE, None, ask)
+
                 # Check for new matches against the orders of this node
                 for order in self.order_manager.order_repository.find_all():
                     if (not order.is_ask()) and order.is_valid():
@@ -411,6 +417,9 @@ class MarketCommunity(Community):
             if not str(bid.order_id) in self.relayed_bids:  # Message has not been received before
                 self.relayed_bids.append(str(bid.order_id))
                 self.order_book.insert_bid(bid)
+
+                if self.tribler_session:
+                    self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK, NTFY_UPDATE, None, bid)
 
                 # Check for new matches against the orders of this node
                 #for order in self.order_manager.order_repository.find_all():
