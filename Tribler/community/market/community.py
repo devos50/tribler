@@ -1,8 +1,6 @@
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks
 from twisted.web import server
 
-from Tribler.community.market.restapi.root_endpoint import RootEndpoint
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -37,10 +35,6 @@ from ttl import Ttl
 
 class MarketCommunity(Community):
     """Community for selling and buying multichain credits"""
-
-    def __init__(self, *args, **kwargs):
-        super(MarketCommunity, self).__init__(*args, **kwargs)
-        self.market_api = None
 
     @classmethod
     def get_master_members(cls, dispersy):
@@ -85,11 +79,6 @@ class MarketCommunity(Community):
         self.bitcoin_payment_provider = BitcoinPaymentProvider()
         transaction_repository = MemoryTransactionRepository(self.pubkey)
         self.transaction_manager = TransactionManager(transaction_repository)
-
-        # Start the RESTful API if it's enabled
-        if tribler_session.get_market_community_api_enabled():
-            self.market_api = reactor.listenTCP(tribler_session.get_market_community_api_port(),
-                                                server.Site(resource=RootEndpoint(tribler_session, self)))
 
         self.history = {}  # List for received messages TODO: fix memory leak
 
@@ -830,9 +819,3 @@ class MarketCommunity(Community):
     def on_end_transaction(self, messages):
         for message in messages:
             self._logger.debug("Finishing transaction %s", message.payload.transaction_number)
-
-    @inlineCallbacks
-    def unload_community(self):
-        if self.market_api:
-            yield self.market_api.stopListening()
-        yield super(MarketCommunity, self).unload_community()
