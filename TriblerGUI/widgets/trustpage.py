@@ -1,4 +1,7 @@
 import matplotlib
+
+from TriblerGUI.defs import PAGE_MARKET
+
 matplotlib.use('Qt5Agg')
 
 import datetime
@@ -86,6 +89,12 @@ class TrustPage(QWidget):
         vlayout = self.window().plot_widget.layout()
         self.trust_plot = TrustPlotMplCanvas(self.window().plot_widget, dpi=100)
         vlayout.addWidget(self.trust_plot)
+
+        self.window().trade_button.clicked.connect(self.on_trade_button_clicked)
+
+    def on_trade_button_clicked(self):
+        self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
+        self.window().stackedWidget.setCurrentIndex(PAGE_MARKET)
 
     def load_trust_statistics(self):
         self.request_mgr = TriblerRequestManager()
