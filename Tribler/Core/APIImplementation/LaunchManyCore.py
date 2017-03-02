@@ -21,6 +21,7 @@ from Tribler.Core.CacheDB.sqlitecachedb import forceDBThread
 from Tribler.Core.DownloadConfig import DownloadStartupConfig, DefaultDownloadStartupConfig
 from Tribler.Core.Modules.search_manager import SearchManager
 from Tribler.Core.Modules.versioncheck_manager import VersionCheckManager
+from Tribler.Core.Modules.wallet_manager import WalletManager
 from Tribler.Core.Modules.watch_folder import WatchFolder
 from Tribler.Core.TorrentChecker.torrent_checker import TorrentChecker
 from Tribler.Core.TorrentDef import TorrentDef, TorrentDefNoMetainfo
@@ -91,6 +92,7 @@ class TriblerLaunchMany(TaskManager):
         self.startup_deferred = Deferred()
 
         self.boosting_manager = None
+        self.wallet_manager = None
 
     def register(self, session, sesslock):
         assert isInIOThread()
@@ -316,6 +318,8 @@ class TriblerLaunchMany(TaskManager):
         if self.session.get_creditmining_enable():
             from Tribler.Core.CreditMining.BoostingManager import BoostingManager
             self.boosting_manager = BoostingManager(self.session)
+
+        self.wallet_manager = WalletManager(self.session)
 
         self.version_check_manager = VersionCheckManager(self.session)
         self.session.set_download_states_callback(self.sesscb_states_callback)

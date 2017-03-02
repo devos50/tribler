@@ -45,6 +45,7 @@ STATEDIR_DLPSTATE_DIR = u'dlcheckpoints'
 STATEDIR_PEERICON_DIR = u'icons'
 STATEDIR_TORRENT_STORE_DIR = u'collected_torrents'
 STATEDIR_METADATA_STORE_DIR = u'collected_metadata'
+STATEDIR_WALLET_DIR = u'wallet'
 
 STATEDIR_SESSCONFIG = 'libtribler.conf'
 STATEDIR_DLCONFIG = 'tribler.conf'

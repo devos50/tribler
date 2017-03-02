@@ -38,7 +38,7 @@ from Tribler.Core.exceptions import NotYetImplementedException, OperationNotEnab
 from Tribler.Core.simpledefs import (NTFY_CHANNELCAST, NTFY_DELETE, NTFY_INSERT, NTFY_MYPREFERENCES,
                                      NTFY_PEERS, NTFY_TORRENTS, NTFY_UPDATE, NTFY_VOTECAST, STATEDIR_DLPSTATE_DIR,
                                      STATEDIR_METADATA_STORE_DIR, STATEDIR_PEERICON_DIR, STATEDIR_TORRENT_STORE_DIR,
-                                     DLSTATUS_STOPPED, STATEDIR_GUICONFIG)
+                                     DLSTATUS_STOPPED, STATEDIR_GUICONFIG, STATEDIR_WALLET_DIR)
 from Tribler.Core.statistics import TriblerStatistics
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
@@ -128,6 +128,9 @@ class Session(SessionConfigInterface):
 
         set_and_create_dir(scfg.get_peer_icon_path(), scfg.set_peer_icon_path,
                            os.path.join(scfg.get_state_dir(), STATEDIR_PEERICON_DIR))
+
+        # btc wallet
+        create_dir(os.path.join(scfg.get_state_dir(), STATEDIR_WALLET_DIR))
 
         create_dir(os.path.join(scfg.get_state_dir(), u"sqlite"))
 
