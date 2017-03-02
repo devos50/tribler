@@ -9332,12 +9332,12 @@ background-color: transparent;
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_62">
+              <widget class="QLabel" name="net_score_label">
                <property name="styleSheet">
                 <string notr="true">font-weight: bold; font-size: 14px;</string>
                </property>
                <property name="text">
-                <string>-343</string>
+                <string>0</string>
                </property>
               </widget>
              </item>
@@ -9390,12 +9390,12 @@ background-color: transparent;
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_47">
+              <widget class="QLabel" name="btc_amount_label">
                <property name="styleSheet">
                 <string notr="true">font-weight: bold; font-size: 14px;</string>
                </property>
                <property name="text">
-                <string>0.34</string>
+                <string>0</string>
                </property>
               </widget>
              </item>

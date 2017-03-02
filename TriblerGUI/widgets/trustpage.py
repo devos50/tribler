@@ -82,6 +82,7 @@ class TrustPage(QWidget):
         self.trust_plot = None
         self.public_key = None
         self.request_mgr = None
+        self.statistics = None
         self.blocks = None
         self.byte_scale = 1024 * 1024
 
@@ -93,6 +94,7 @@ class TrustPage(QWidget):
         self.window().trade_button.clicked.connect(self.on_trade_button_clicked)
 
     def on_trade_button_clicked(self):
+        self.window().market_page.initialize_market_page(self.statistics)
         self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
         self.window().stackedWidget.setCurrentIndex(PAGE_MARKET)
 
