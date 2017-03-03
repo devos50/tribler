@@ -1,7 +1,7 @@
 from twisted.internet import reactor
 from twisted.web import server
 
-from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK
+from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
@@ -419,7 +419,7 @@ class MarketCommunity(Community):
                 self.order_book.insert_bid(bid)
 
                 if self.tribler_session:
-                    self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK, NTFY_UPDATE, None, bid)
+                    self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID, NTFY_UPDATE, None, bid)
 
                 # Check for new matches against the orders of this node
                 #for order in self.order_manager.order_repository.find_all():

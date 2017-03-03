@@ -134,12 +134,13 @@ class Tick(Message):
         Return a dictionary with a representation of this tick.
         """
         return {
-            "order_id": self._order_id,
-            "message_id": self.message_id,
-            "price": self.price,
-            "quantity": self.quantity,
-            "timeout": self.timeout,
-            "timestamp": self.timestamp
+            "trader_id": str(self.order_id.trader_id),
+            "order_id": str(self.order_id.order_number),
+            "message_id": str(self.message_id),
+            "price": str(self.price),
+            "quantity": int(self.quantity),
+            "timeout": str(self.timeout),
+            "timestamp": str(self.timestamp)
         }
 
 

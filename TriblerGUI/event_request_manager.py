@@ -24,6 +24,8 @@ class EventRequestManager(QNetworkAccessManager):
     discovered_channel = pyqtSignal(object)
     discovered_torrent = pyqtSignal(object)
     torrent_finished = pyqtSignal(object)
+    received_market_ask = pyqtSignal(object)
+    received_market_bid = pyqtSignal(object)
 
     def __init__(self):
         QNetworkAccessManager.__init__(self)
@@ -88,6 +90,10 @@ class EventRequestManager(QNetworkAccessManager):
                         self.tribler_started.emit()
                 elif json_dict["type"] == "torrent_finished":
                     self.torrent_finished.emit(json_dict["event"])
+                elif json_dict["type"] == "market_ask":
+                    self.received_market_ask.emit(json_dict["event"])
+                elif json_dict["type"] == "market_bid":
+                    self.received_market_bid.emit(json_dict["event"])
                 elif json_dict["type"] == "tribler_exception":
                     raise RuntimeError(json_dict["event"]["text"])
             self.current_event_string = ""
