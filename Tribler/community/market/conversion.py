@@ -56,7 +56,7 @@ class MarketConversion(BinaryConversion):
         for i, arg_type in enumerate(types):
             try:
                 if arg_type == Price or arg_type == Quantity:
-                    args.append(arg_type.from_mil(payload[i]))
+                    args.append(arg_type(payload[i]))
                 elif arg_type == str or arg_type == int:
                     args.append(payload[i])
                 else:

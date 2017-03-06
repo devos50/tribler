@@ -7782,8 +7782,8 @@ QTabBar::tab:selected {
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>653</width>
-                       <height>280</height>
+                       <width>131</width>
+                       <height>236</height>
                       </rect>
                      </property>
                      <layout class="QFormLayout" name="formLayout_4">
@@ -9628,7 +9628,7 @@ background-color: transparent;
                       </column>
                       <column>
                        <property name="text">
-                        <string>Price (mBTC)</string>
+                        <string>Price (BTC)</string>
                        </property>
                       </column>
                      </widget>
@@ -9731,6 +9731,9 @@ background-color: transparent;
                       <property name="indentation">
                        <number>0</number>
                       </property>
+                      <property name="sortingEnabled">
+                       <bool>true</bool>
+                      </property>
                       <column>
                        <property name="text">
                         <string>Trader</string>
@@ -9743,7 +9746,7 @@ background-color: transparent;
                       </column>
                       <column>
                        <property name="text">
-                        <string>Price (mBTC)</string>
+                        <string>Price (BTC)</string>
                        </property>
                       </column>
                      </widget>
@@ -9823,7 +9826,7 @@ background-color: transparent;
                     <item row="3" column="0">
                      <widget class="QLabel" name="label_54">
                       <property name="text">
-                       <string>Price (mBTC)</string>
+                       <string>Price (BTC)</string>
                       </property>
                      </widget>
                     </item>

@@ -250,15 +250,15 @@ class MarketCommunity(Community):
         :param quantity: The quantity of the order in MB (10^6)
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
-        :type quantity: float
+        :type quantity: int
         :type timeout: float
         :return: The created order
         :rtype: Order
         """
 
         # Convert values to value objects
-        price = Price.from_float(price)
-        quantity = Quantity.from_float(quantity)
+        price = Price(price)
+        quantity = Quantity(quantity)
         timeout = Timeout(timeout)
 
         # Create the order
@@ -347,15 +347,15 @@ class MarketCommunity(Community):
         :param quantity: The quantity of the order in MB (10^6)
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
-        :type quantity: float
+        :type quantity: int
         :type timeout: float
         :return: The created order
         :rtype: Order
         """
 
         # Convert values to value objects
-        price = Price.from_float(price)
-        quantity = Quantity.from_float(quantity)
+        price = Price(price)
+        quantity = Quantity(quantity)
         timeout = Timeout(timeout)
 
         # Create the order

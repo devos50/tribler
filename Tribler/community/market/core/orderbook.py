@@ -234,7 +234,7 @@ class OrderBook(object):
         Return the price in between the bid and the ask price
         :rtype: Price
         """
-        return Price.from_mil((int(self.ask_price) + int(self.bid_price)) / 2)
+        return Price((int(self.ask_price) + int(self.bid_price)) / 2)
 
     def bid_side_depth(self, price):
         """
