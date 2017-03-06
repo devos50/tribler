@@ -90,6 +90,9 @@ class MultiChainPaymentProvider(object):
         """
         total = self.multi_chain_community.persistence.get_total(self.public_key)
 
+        #TODO(Martijn): fake the quantity for now
+        return Quantity(100000)
+
         if total == (-1, -1):
             return Quantity(0)
         else:
