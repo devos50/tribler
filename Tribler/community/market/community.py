@@ -1,8 +1,6 @@
-from twisted.internet import reactor
-from twisted.web import server
-
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID
 from Tribler.Core.simpledefs import NTFY_UPDATE
+from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -37,6 +35,12 @@ from ttl import Ttl
 
 class MarketCommunity(Community):
     """Community for selling and buying multichain credits"""
+
+    def get_multichain_community(self):
+        # TODO error handling when community cannot be found!
+        for community in self.tribler_session.get_dispersy_instance().get_communities():
+            if isinstance(community, MultiChainCommunity):
+                return community
 
     @classmethod
     def get_master_members(cls, dispersy):
@@ -78,7 +82,7 @@ class MarketCommunity(Community):
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.tribler_session = tribler_session
 
-        #self.multi_chain_payment_provider = MultiChainPaymentProvider(multi_chain_community, self.pubkey)
+        self.multi_chain_payment_provider = MultiChainPaymentProvider(self.get_multichain_community(), self.pubkey)
         self.bitcoin_payment_provider = BitcoinPaymentProvider()
         transaction_repository = MemoryTransactionRepository(self.pubkey)
         self.transaction_manager = TransactionManager(transaction_repository)
@@ -770,7 +774,8 @@ class MarketCommunity(Community):
 
         try:
             self._logger.debug("Paying %s BTC to %s", bitcoin_payment.price, transaction.partner_trader_id)
-            self.bitcoin_payment_provider.transfer_bitcoin(bitcoin_payment.bitcoin_address, bitcoin_payment.price)
+            # TODO(Martijn): we temporarily disable BTC payments for testing purposes!
+            #self.bitcoin_payment_provider.transfer_bitcoin(bitcoin_payment.bitcoin_address, bitcoin_payment.price)
 
             meta = self.get_meta_message(u"bitcoin-payment")
             message = meta.impl(
