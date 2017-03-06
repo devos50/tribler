@@ -33,7 +33,7 @@ class BitcoinPaymentProvider(object):
         assert isinstance(price, Price), type(price)
 
         if self.balance() >= price:
-            bitcoin_price = int(price) * self.BITCOIN_MULTIPLIER
+            bitcoin_price = float(price) * self.BITCOIN_MULTIPLIER
             os.system('electrum payto -f 0 ' + str(bitcoin_address) + ' ' + str(bitcoin_price))
         else:
             raise InsufficientFunds()

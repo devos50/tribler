@@ -107,7 +107,7 @@ class PriceTimeStrategy(MatchingStrategy):
         assert isinstance(quantity_to_trade, Quantity), type(quantity_to_trade)
         assert isinstance(order, Order), type(order)
 
-        self._logger.debug("Searching in price level: %i", int(price))
+        self._logger.debug("Searching in price level: %i", float(price))
 
         if quantity_to_trade <= price_level.depth:  # All the quantity can be matched in this price level
             quantity_to_trade, proposed_trades = self._search_for_quantity_in_price_level(price_level.first_tick,
