@@ -9451,6 +9451,57 @@ background-color: transparent;
               </widget>
              </item>
              <item>
+              <spacer name="horizontalSpacer_75">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_7">
+               <property name="minimumSize">
+                <size>
+                 <width>28</width>
+                 <height>28</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>28</width>
+                 <height>28</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border: none;</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../images/history.png</normaloff>../images/history.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
               <spacer name="horizontalSpacer_70">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -9562,7 +9613,7 @@ background-color: transparent;
                         </widget>
                        </item>
                        <item>
-                        <widget class="EllipseButton" name="toolButton_6">
+                        <widget class="EllipseButton" name="create_ask_button">
                          <property name="minimumSize">
                           <size>
                            <width>36</width>
@@ -9683,7 +9734,7 @@ background-color: transparent;
                         </widget>
                        </item>
                        <item>
-                        <widget class="EllipseButton" name="toolButton_5">
+                        <widget class="EllipseButton" name="create_bid_button">
                          <property name="minimumSize">
                           <size>
                            <width>36</width>

@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
+from TriblerGUI.dialogs.newmarketorderdialog import NewMarketOrderDialog
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.widgets.tickwidgetitem import TickWidgetItem
 
@@ -17,6 +18,7 @@ class MarketPage(QWidget):
         QWidget.__init__(self)
         self.statistics = None
         self.request_mgr = None
+        self.dialog = None
 
     def initialize_market_page(self, statistics):
         self.statistics = statistics
@@ -25,6 +27,9 @@ class MarketPage(QWidget):
 
         self.window().core_manager.events_manager.received_market_ask.connect(self.on_ask)
         self.window().core_manager.events_manager.received_market_bid.connect(self.on_bid)
+
+        self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
+        self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
 
         # Sort asks ascending and bids descending
         self.window().asks_list.sortItems(2, Qt.AscendingOrder)
@@ -85,6 +90,15 @@ class MarketPage(QWidget):
         self.window().bids_list.addTopLevelItem(
             self.create_widget_item_from_tick(self.window().bids_list, bid, is_ask=False))
 
+    def create_order(self, is_ask, price, quantity):
+        post_data = str("price=%f&quantity=%d" % (price, quantity))
+        self.request_mgr = TriblerRequestManager()
+        self.request_mgr.perform_request("market/%s" % ('asks' if is_ask else 'bids'),
+                                         self.on_order_created, data=post_data, method='PUT')
+
+    def on_order_created(self, response):
+        print response
+
     def on_tick_item_clicked(self, tick_list):
         if len(tick_list.selectedItems()) == 0:
             return
@@ -98,3 +112,22 @@ class MarketPage(QWidget):
         self.window().market_detail_time_created_label.setText(tick["timestamp"])
 
         self.window().tick_detail_container.show()
+
+    def on_create_ask_clicked(self):
+        self.show_new_order_dialog(True)
+
+    def on_create_bid_clicked(self):
+        self.show_new_order_dialog(False)
+
+    def show_new_order_dialog(self, is_ask):
+        self.dialog = NewMarketOrderDialog(self.window().stackedWidget, is_ask)
+        self.dialog.button_clicked.connect(self.on_new_order_action)
+        self.dialog.show()
+
+    def on_new_order_action(self, action):
+        if action == 1:
+            print self.dialog.quantity
+            self.create_order(self.dialog.is_ask, self.dialog.price, self.dialog.quantity)
+
+        self.dialog.setParent(None)
+        self.dialog = None

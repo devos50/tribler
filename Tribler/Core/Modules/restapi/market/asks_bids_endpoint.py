@@ -26,7 +26,7 @@ class BaseAsksBidsEndpoint(resource.Resource):
             timeout = float(get_param(parameters, 'timeout'))
 
         price = float(get_param(parameters, 'price'))
-        quantity = float(get_param(parameters, 'quantity'))
+        quantity = int(get_param(parameters, 'quantity'))
 
         return price, quantity, timeout
 
