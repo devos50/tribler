@@ -197,12 +197,6 @@ class TriblerLaunchMany(TaskManager):
             self.dispersy.define_auto_load(AllChannelCommunity, self.session.dispersy_member, load=True,
                                            kargs=default_kwargs)
 
-        # Market Community
-        if self.session.get_market_community_enabled():
-            from Tribler.community.market.community import MarketCommunity
-            self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member, load=True,
-                                           kargs=default_kwargs)
-
         # Channel Community
         if self.session.get_channel_community_enabled():
             from Tribler.community.channel.community import ChannelCommunity
@@ -243,6 +237,15 @@ class TriblerLaunchMany(TaskManager):
 
             # We don't want to automatically load other instances of this community with other master members.
             self.dispersy.undefine_auto_load(HiddenTunnelCommunity)
+
+        # Market Community
+        if self.session.get_market_community_enabled():
+            from Tribler.community.market.community import MarketCommunity
+            self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member, load=True,
+                                           kargs=default_kwargs)
+
+        self.session.set_anon_proxy_settings(2, ("127.0.0.1",
+                                                 self.session.get_tunnel_community_socks5_listen_ports()))
 
         self._logger.info("tribler: communities are ready in %.2f seconds", timemod.time() - now_time)
 
