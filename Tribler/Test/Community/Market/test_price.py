@@ -10,9 +10,6 @@ class PriceTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.price = Price(63400)
-        self.price2 = Price.from_float(6.34)
-        self.price3 = Price.from_mil(63400)
-        self.price4 = Price.from_float(18.3)
         self.price5 = Price(0)
 
     def test_init(self):
