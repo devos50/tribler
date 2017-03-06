@@ -292,7 +292,7 @@ class MarketCommunity(Community):
         payload = ask.to_network()
 
         # Add ttl and the local wan address
-        payload += (Ttl.default(), self.dispersy.lan_address[0], self.dispersy.lan_address[1])
+        payload += (Ttl.default(), self.dispersy.wan_address[0], self.dispersy.wan_address[1])
 
         meta = self.get_meta_message(u"ask")
         message = meta.impl(
@@ -389,7 +389,7 @@ class MarketCommunity(Community):
         payload = bid.to_network()
 
         # Add ttl and the local wan address
-        payload += (Ttl.default(), self.dispersy.lan_address[0], self.dispersy.lan_address[1])
+        payload += (Ttl.default(), self.dispersy.wan_address[0], self.dispersy.wan_address[1])
 
         meta = self.get_meta_message(u"bid")
         message = meta.impl(
@@ -441,7 +441,7 @@ class MarketCommunity(Community):
         destination, payload = proposed_trade.to_network()
 
         # Add the local address to the payload
-        payload += (self.dispersy.lan_address[0], self.dispersy.lan_address[1])
+        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1])
 
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
@@ -509,7 +509,7 @@ class MarketCommunity(Community):
         destination, payload = accepted_trade.to_network()
 
         # Add ttl
-        payload += (self.dispersy.lan_address[0], self.dispersy.lan_address[1], Ttl.default())
+        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1], Ttl.default())
 
         meta = self.get_meta_message(u"accepted-trade")
         message = meta.impl(
@@ -580,7 +580,7 @@ class MarketCommunity(Community):
         destination, payload = counter_trade.to_network()
 
         # Add the local address to the payload
-        payload += (self.dispersy.lan_address[0], self.dispersy.lan_address[1])
+        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1])
 
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
