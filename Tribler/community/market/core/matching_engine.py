@@ -222,7 +222,8 @@ class PriceTimeStrategy(MatchingStrategy):
         quantity_to_trade = Quantity(0)
 
         self._logger.debug("Match with the id (%s) was found for order (%s). Price: %i, Quantity: %i)",
-                           str(tick_entry.order_id), str(order.order_id), int(tick_entry.price), int(trading_quantity))
+                           str(tick_entry.order_id), str(order.order_id),
+                           float(tick_entry.price), int(trading_quantity))
 
         reserved = order.reserve_quantity_for_tick(tick_entry.tick.order_id, trading_quantity)
 
