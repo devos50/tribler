@@ -54,6 +54,6 @@ class IncrementalPriceManager(object):
         incremental_prices = []
 
         for incremental_quantity in incremental_quantities:
-            incremental_prices.append(Price(int(price) * int(incremental_quantity)))
+            incremental_prices.append(Price(float(price) * int(incremental_quantity)))
 
         return incremental_prices
