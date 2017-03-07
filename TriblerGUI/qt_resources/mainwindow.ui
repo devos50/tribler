@@ -7782,8 +7782,8 @@ QTabBar::tab:selected {
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>131</width>
-                       <height>236</height>
+                       <width>653</width>
+                       <height>280</height>
                       </rect>
                      </property>
                      <layout class="QFormLayout" name="formLayout_4">
@@ -9268,6 +9268,63 @@ background-color: transparent;
               <number>0</number>
              </property>
              <item>
+              <spacer name="horizontalSpacer_76">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QToolButton" name="market_back_button">
+               <property name="minimumSize">
+                <size>
+                 <width>16</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border: none;</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_77">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Minimum</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
               <widget class="QLabel" name="market_header_label">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -9291,8 +9348,7 @@ background-color: transparent;
                 <string notr="true">color: #eee;
                                             background-color: transparent;
                                             font-size: 20px;
-                                            font-weight: bold;
-                                            margin: 10px;</string>
+                                            font-weight: bold;</string>
                </property>
                <property name="text">
                 <string>Trust market</string>
@@ -9467,7 +9523,7 @@ background-color: transparent;
               </spacer>
              </item>
              <item>
-              <widget class="QToolButton" name="toolButton_7">
+              <widget class="QToolButton" name="market_transactions_button">
                <property name="minimumSize">
                 <size>
                  <width>28</width>
@@ -9958,6 +10014,211 @@ background-color: transparent;
           </item>
          </layout>
         </widget>
+        <widget class="MarketTransactionsPage" name="market_transactions_page">
+         <property name="styleSheet">
+          <string notr="true">QLabel { color: #eee; }
+
+QTreeWidget {
+border: none;
+font-size: 13px;
+}
+QTreeWidget::item {
+color: #eee;
+height: 30px;
+border-bottom: 1px solid #303030;
+}
+QTreeWidget::item:hover {
+background-color: #303030;
+}
+QTreeWidget::item::selected {
+background-color: #444;
+}
+QHeaderView {
+background-color: transparent;
+}
+QHeaderView::section {
+background-color: transparent;
+border: none;
+color: #B5B5B5;
+padding: 10px;
+font-size: 14px;
+border-bottom: 1px solid #303030;
+}
+QHeaderView::section:hover {
+color: white;
+}
+QTableCornerButton::section {
+background-color: transparent;
+}</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QWidget" name="widget_28" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_44">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <spacer name="horizontalSpacer_78">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QToolButton" name="transactions_back_button">
+               <property name="minimumSize">
+                <size>
+                 <width>16</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border: none;</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_79">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="market_transactions_header_label">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">color: #eee;
+                                            background-color: transparent;
+                                            font-size: 20px;
+                                            font-weight: bold;</string>
+               </property>
+               <property name="text">
+                <string>Transactions</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTreeWidget" name="market_transactions_list">
+            <property name="indentation">
+             <number>0</number>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+            <attribute name="headerShowSortIndicator" stdset="0">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="headerStretchLastSection">
+             <bool>true</bool>
+            </attribute>
+            <column>
+             <property name="text">
+              <string>Time</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Trader</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Price (BTC)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Quantity</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Completed?</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>
@@ -10132,6 +10393,12 @@ background-color: transparent;
    <class>MarketPage</class>
    <extends>QWidget</extends>
    <header>TriblerGUI.widgets.marketpage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MarketTransactionsPage</class>
+   <extends>QWidget</extends>
+   <header>TriblerGUI.widgets.markettransactionspage.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -10466,6 +10733,38 @@ background-color: transparent;
     <hint type="sourcelabel">
      <x>94</x>
      <y>111</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>427</x>
+     <y>327</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>market_back_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_page_back_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>218</x>
+     <y>75</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>427</x>
+     <y>327</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>transactions_back_button</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_page_back_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>218</x>
+     <y>75</y>
     </hint>
     <hint type="destinationlabel">
      <x>427</x>

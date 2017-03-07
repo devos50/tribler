@@ -1,11 +1,14 @@
 import hashlib
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
+from TriblerGUI.defs import PAGE_MARKET_TRANSACTIONS
 from TriblerGUI.dialogs.newmarketorderdialog import NewMarketOrderDialog
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
+from TriblerGUI.utilities import get_image_path
 from TriblerGUI.widgets.tickwidgetitem import TickWidgetItem
 
 
@@ -19,29 +22,36 @@ class MarketPage(QWidget):
         self.statistics = None
         self.request_mgr = None
         self.dialog = None
+        self.initialized = False
 
     def initialize_market_page(self, statistics):
         self.statistics = statistics
         net_score = int(self.statistics["self_total_up_mb"]) - int(self.statistics["self_total_down_mb"])
         self.window().net_score_label.setText("%d" % net_score)
 
-        self.window().core_manager.events_manager.received_market_ask.connect(self.on_ask)
-        self.window().core_manager.events_manager.received_market_bid.connect(self.on_bid)
-        self.window().core_manager.events_manager.market_transaction_complete.connect(self.on_transaction_complete)
+        if not self.initialized:
+            self.window().market_back_button.setIcon(QIcon(get_image_path('page_back.png')))
 
-        self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
-        self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
+            self.window().core_manager.events_manager.received_market_ask.connect(self.on_ask)
+            self.window().core_manager.events_manager.received_market_bid.connect(self.on_bid)
+            self.window().core_manager.events_manager.market_transaction_complete.connect(self.on_transaction_complete)
 
-        # Sort asks ascending and bids descending
-        self.window().asks_list.sortItems(2, Qt.AscendingOrder)
-        self.window().bids_list.sortItems(2, Qt.DescendingOrder)
+            self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
+            self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
+            self.window().market_transactions_button.clicked.connect(self.on_transactions_button_clicked)
 
-        self.window().asks_list.itemSelectionChanged.connect(
-            lambda: self.on_tick_item_clicked(self.window().asks_list))
-        self.window().bids_list.itemSelectionChanged.connect(
-            lambda: self.on_tick_item_clicked(self.window().bids_list))
+            # Sort asks ascending and bids descending
+            self.window().asks_list.sortItems(2, Qt.AscendingOrder)
+            self.window().bids_list.sortItems(2, Qt.DescendingOrder)
 
-        self.window().tick_detail_container.hide()
+            self.window().asks_list.itemSelectionChanged.connect(
+                lambda: self.on_tick_item_clicked(self.window().asks_list))
+            self.window().bids_list.itemSelectionChanged.connect(
+                lambda: self.on_tick_item_clicked(self.window().bids_list))
+
+            self.window().tick_detail_container.hide()
+
+            self.initialized = True
 
         self.load_wallet_balance()
 
@@ -96,11 +106,19 @@ class MarketPage(QWidget):
                     % (float(transaction["price"]), int(transaction["quantity"]))
         self.window().tray_icon.showMessage("Transaction completed", main_text)
 
+        # Reload transactions
+        self.window().market_transactions_page.load_transactions()
+
     def create_order(self, is_ask, price, quantity):
         post_data = str("price=%f&quantity=%d" % (price, quantity))
         self.request_mgr = TriblerRequestManager()
         self.request_mgr.perform_request("market/%s" % ('asks' if is_ask else 'bids'),
                                          self.on_order_created, data=post_data, method='PUT')
+
+    def on_transactions_button_clicked(self):
+        self.window().market_transactions_page.initialize_transactions_page()
+        self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
+        self.window().stackedWidget.setCurrentIndex(PAGE_MARKET_TRANSACTIONS)
 
     def on_order_created(self, response):
         print response
