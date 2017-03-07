@@ -27,6 +27,7 @@ class MarketPage(QWidget):
 
         self.window().core_manager.events_manager.received_market_ask.connect(self.on_ask)
         self.window().core_manager.events_manager.received_market_bid.connect(self.on_bid)
+        self.window().core_manager.events_manager.market_transaction_complete.connect(self.on_transaction_complete)
 
         self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
         self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
@@ -90,6 +91,11 @@ class MarketPage(QWidget):
         self.window().bids_list.addTopLevelItem(
             self.create_widget_item_from_tick(self.window().bids_list, bid, is_ask=False))
 
+    def on_transaction_complete(self, transaction):
+        main_text = "Transaction with price %f and quantity %d completed." \
+                    % (float(transaction["price"]), int(transaction["quantity"]))
+        self.window().tray_icon.showMessage("Transaction completed", main_text)
+
     def create_order(self, is_ask, price, quantity):
         post_data = str("price=%f&quantity=%d" % (price, quantity))
         self.request_mgr = TriblerRequestManager()
@@ -103,6 +109,11 @@ class MarketPage(QWidget):
         if len(tick_list.selectedItems()) == 0:
             return
         tick = tick_list.selectedItems()[0].tick
+
+        if tick_list == self.window().asks_list:
+            self.window().bids_list.clearSelection()
+        else:
+            self.window().asks_list.clearSelection()
 
         self.window().market_detail_order_id_label.setText(
             hashlib.sha1(tick["trader_id"] + tick["order_id"]).hexdigest())
@@ -126,7 +137,6 @@ class MarketPage(QWidget):
 
     def on_new_order_action(self, action):
         if action == 1:
-            print self.dialog.quantity
             self.create_order(self.dialog.is_ask, self.dialog.price, self.dialog.quantity)
 
         self.dialog.setParent(None)

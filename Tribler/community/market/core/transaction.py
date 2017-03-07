@@ -213,6 +213,20 @@ class Transaction(object):
     def is_payment_complete(self):
         return self._current_payment >= (len(self._payment_list) - 1)
 
+    def to_dictionary(self):
+        """
+        Return a dictionary with a representation of this transaction.
+        """
+        return {
+            "trader_id": str(self.transaction_id.trader_id),
+            "partner_trader_id": str(self.partner_trader_id),
+            "transaction_number": str(self.transaction_id.transaction_number),
+            "price": str(self.price),
+            "quantity": int(self.total_quantity),
+            "timestamp": str(self.timestamp),
+            "payment_complete": self.is_payment_complete()
+        }
+
 
 class StartTransaction(Message):
     """Class for representing a message to indicate the start of a payment set"""

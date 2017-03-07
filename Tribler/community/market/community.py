@@ -1,4 +1,4 @@
-from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID
+from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.dispersy.authentication import MemberAuthentication
@@ -829,7 +829,14 @@ class MarketCommunity(Community):
         )
 
         self.dispersy.store_update_forward([message], True, False, True)
+        self.notify_transaction_complete(transaction)
 
     def on_end_transaction(self, messages):
         for message in messages:
             self._logger.debug("Finishing transaction %s", message.payload.transaction_number)
+            transaction_id = TransactionId(message.payload.transaction_trader_id, message.payload.transaction_number)
+            self.notify_transaction_complete(self.transaction_manager.find_by_id(transaction_id))
+
+    def notify_transaction_complete(self, transaction):
+        if self.tribler_session:
+            self.tribler_session.notifier.notify(NTFY_MARKET_ON_TRANSACTION_COMPLETE, NTFY_UPDATE, None, transaction)

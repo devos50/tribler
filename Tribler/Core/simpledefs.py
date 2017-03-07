@@ -91,6 +91,7 @@ NTFY_CLOSE_TICK = 'closetick'
 
 NTFY_MARKET_ON_ASK = 'onmarketask'
 NTFY_MARKET_ON_BID = 'onmarketbid'
+NTFY_MARKET_ON_TRANSACTION_COMPLETE = 'onmarkettransactioncomplete'
 
 # non data handler subjects
 NTFY_ACTIVITIES = 'activities'  # an activity was set (peer met/dns resolved)

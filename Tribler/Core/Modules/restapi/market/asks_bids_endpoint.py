@@ -1,20 +1,15 @@
 import json
 
 from twisted.web import http
-from twisted.web import resource
 
-from Tribler.community.market.community import MarketCommunity
+from Tribler.Core.Modules.restapi.market import BaseMarketEndpoint
 from Tribler.community.market.utils import has_param, get_param
 
 
-class BaseAsksBidsEndpoint(resource.Resource):
+class BaseAsksBidsEndpoint(BaseMarketEndpoint):
     """
     This class acts as the base class for the asks/bids endpoint.
     """
-
-    def __init__(self, session):
-        resource.Resource.__init__(self)
-        self.session = session
 
     def create_ask_bid_from_params(self, parameters):
         """
@@ -29,12 +24,6 @@ class BaseAsksBidsEndpoint(resource.Resource):
         quantity = int(get_param(parameters, 'quantity'))
 
         return price, quantity, timeout
-
-    def get_market_community(self):
-        # TODO error handling when community cannot be found!
-        for community in self.session.get_dispersy_instance().get_communities():
-            if isinstance(community, MarketCommunity):
-                return community
 
 
 class AsksEndpoint(BaseAsksBidsEndpoint):
