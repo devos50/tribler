@@ -10,7 +10,6 @@ from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.transaction import TransactionNumber
 from Tribler.community.market.payload import AcceptedTradePayload, DeclinedTradePayload, TradePayload, \
     OfferPayload, StartTransactionPayload, BitcoinPaymentPayload, MultiChainPaymentPayload
-from Tribler.community.market.socket_address import SocketAddress
 from Tribler.community.market.ttl import Ttl
 from Tribler.dispersy.meta import MetaObject
 
@@ -25,7 +24,7 @@ class AcceptedTradePayloadTestSuite(unittest.TestCase):
                                                                           OrderNumber('order_number'), TraderId('1'),
                                                                           OrderNumber('recipient_order_number'),
                                                                           Price(63400), Quantity(30),
-                                                                          Timestamp(1462224447.117), Ttl(2))
+                                                                          Timestamp(1462224447.117), '192.168.1.1', 1234, Ttl(2))
 
     def test_properties(self):
         # Test for properties
@@ -71,7 +70,7 @@ class ProposedTradePayloadTestSuite(unittest.TestCase):
                                                                   OrderNumber('order_number'), TraderId('1'),
                                                                   OrderNumber('recipient_order_number'),
                                                                   Price(63400), Quantity(30),
-                                                                  Timestamp(1462224447.117))
+                                                                  Timestamp(1462224447.117), '192.168.1.1', 1234)
 
     def test_properties(self):
         # Test for properties
@@ -117,7 +116,8 @@ class StartTransactionPayloadTestSuite(unittest.TestCase):
         self.start_transaction_payload = StartTransactionPayload.Implementation(MetaObject(), TraderId('0'),
                                                                                 MessageNumber('1'), TraderId('2'),
                                                                                 TransactionNumber('2'), TraderId('2'),
-                                                                                OrderNumber('3'), MessageNumber('4'),
+                                                                                OrderNumber('3'), TraderId('0'),
+                                                                                OrderNumber('4'), Price(2), Quantity(3),
                                                                                 Timestamp(0.0))
 
     def test_properties(self):

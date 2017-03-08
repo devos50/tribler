@@ -90,12 +90,12 @@ class OrderBookTestSuite(unittest.TestCase):
 
     def test_bid_ask_price_level(self):
         self.order_book.insert_ask(self.ask)
-        self.assertEquals('0.0030\t@\t0.0100\n', str(self.order_book.ask_price_level))
+        self.assertEquals('30\t@\t100.000000\n', str(self.order_book.ask_price_level))
 
     def test_bid_price_level(self):
         # Test for tick price
         self.order_book.insert_bid(self.bid2)
-        self.assertEquals('0.0030\t@\t0.0300\n', str(self.order_book.bid_price_level))
+        self.assertEquals('30\t@\t300.000000\n', str(self.order_book.bid_price_level))
 
     def test_ask_side_depth(self):
         # Test for ask side depth
@@ -134,15 +134,15 @@ class OrderBookTestSuite(unittest.TestCase):
         self.order_book.insert_trade(self.trade)
 
         self.assertEquals('------ Bids -------\n'
-                          '0.0030\t@\t0.0200\n\n'
+                          '30\t@\t200.000000\n\n'
                           '------ Asks -------\n'
-                          '0.0030\t@\t0.0100\n\n'
+                          '30\t@\t100.000000\n\n'
                           '------ Trades ------\n'
-                          '0.0030 @ 0.0100 (2016-05-02 23:27:27.117000)\n'
-                          '0.0030 @ 0.0100 (2016-05-02 23:27:27.117000)\n'
-                          '0.0030 @ 0.0100 (2016-05-02 23:27:27.117000)\n'
-                          '0.0030 @ 0.0100 (2016-05-02 23:27:27.117000)\n'
-                          '0.0030 @ 0.0100 (2016-05-02 23:27:27.117000)\n\n', str(self.order_book))
+                          '30 @ 100.000000 (2016-05-02 23:27:27.117000)\n'
+                          '30 @ 100.000000 (2016-05-02 23:27:27.117000)\n'
+                          '30 @ 100.000000 (2016-05-02 23:27:27.117000)\n'
+                          '30 @ 100.000000 (2016-05-02 23:27:27.117000)\n'
+                          '30 @ 100.000000 (2016-05-02 23:27:27.117000)\n\n', str(self.order_book))
 
 
 if __name__ == '__main__':

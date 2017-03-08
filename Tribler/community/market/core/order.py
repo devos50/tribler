@@ -275,7 +275,7 @@ class Order(object):
         :return: True if valid, False otherwise
         :rtype: bool
         """
-        return not self._timeout.is_timed_out(Timestamp.now())
+        return not self._timeout.is_timed_out(self._timestamp)
 
     def cancel(self):
         self._timeout = Timestamp.now()

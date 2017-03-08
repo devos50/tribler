@@ -4,6 +4,7 @@ from mock import Mock, MagicMock
 
 from twisted.python.threadable import registerAsIOThread
 
+from Tribler.Test.Core.base_test import MockObject
 from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.conversion import MarketConversion
 from Tribler.community.market.core.bitcoin_address import BitcoinAddress
@@ -46,11 +47,14 @@ class CommunityTestSuite(unittest.TestCase):
         # Object creation
         self.master_member = DummyMember(self.dispersy, 1, "a" * 20)
         self.member = self.dispersy.get_new_member(u"curve25519")
-        multi_chain_community = 1
-        self.market_community = MarketCommunity.init_community(self.dispersy, self.master_member, self.member)
-        self.market_community._request_cache = RequestCache()
-        self.market_community.socks_server = Socks5Server(self, 1234)
-        self.market_community.add_conversion(MarketConversion(self.market_community))
+        self.market_community = MarketCommunity(self.dispersy, self.master_member, self.member)
+
+        mock_session = MockObject()
+        mock_session.get_dispersy_instance = lambda: self.dispersy
+        mock_session.notifier = MockObject()
+        mock_session.notifier.notify = lambda *_: None
+
+        self.market_community.initialize(mock_session)
 
         self.tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
                          OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400), Quantity(30),
@@ -78,7 +82,8 @@ class CommunityTestSuite(unittest.TestCase):
         self.start_transaction = StartTransaction(MessageId(TraderId("0"), MessageNumber("1")),
                                                   TransactionId(TraderId("0"), TransactionNumber("1")),
                                                   OrderId(TraderId('0'), OrderNumber('order_number')),
-                                                  MessageId(TraderId("1"), MessageNumber("2")), Timestamp(0.0))
+                                                  OrderId(TraderId('1'), OrderNumber('order_number_rec')),
+                                                  Price(2), Quantity(3), Timestamp(0.0))
         self.multi_chain_payment = MultiChainPayment(MessageId(TraderId("0"), MessageNumber("1")),
                                                      TransactionId(TraderId("0"), TransactionNumber("1")),
                                                      BitcoinAddress("0"), Quantity(3), Price(2), Timestamp(4.0))
@@ -149,6 +154,7 @@ class CommunityTestSuite(unittest.TestCase):
         self.market_community.update_ip(TraderId('0'), ('2.2.2.2', 2))
         self.market_community.update_ip(TraderId('1'), ('3.3.3.3', 3))
         destination, payload = self.proposed_trade.to_network()
+        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1])
         candidate = Candidate(self.market_community.lookup_ip(destination), False)
         meta = self.market_community.get_meta_message(u"proposed-trade")
         message = meta.impl(
@@ -164,7 +170,7 @@ class CommunityTestSuite(unittest.TestCase):
         self.market_community.update_ip(TraderId('0'), ('2.2.2.2', 2))
         self.market_community.update_ip(TraderId('1'), ('3.3.3.3', 3))
         destination, payload = self.accepted_trade.to_network()
-        payload += (Ttl.default(),)
+        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1], Ttl.default())
         meta = self.market_community.get_meta_message(u"accepted-trade")
         message = meta.impl(
             authentication=(self.market_community.my_member,),
@@ -193,6 +199,7 @@ class CommunityTestSuite(unittest.TestCase):
         self.market_community.update_ip(TraderId('0'), ('2.2.2.2', 2))
         self.market_community.update_ip(TraderId('1'), ('3.3.3.3', 3))
         destination, payload = self.counter_trade.to_network()
+        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1])
         candidate = Candidate(self.market_community.lookup_ip(destination), False)
         meta = self.market_community.get_meta_message(u"counter-trade")
         message = meta.impl(

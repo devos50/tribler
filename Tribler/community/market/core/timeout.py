@@ -33,11 +33,7 @@ class Timeout(object):
         :rtype: bool
         """
         assert isinstance(timestamp, Timestamp), type(timestamp)
-
-        if (time.time() + self._timeout) < timestamp:
-            return True
-        else:
-            return False
+        return time.time() - float(timestamp) >= self._timeout
 
     def __float__(self):
         return float(self._timeout)

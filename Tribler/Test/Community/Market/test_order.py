@@ -1,5 +1,7 @@
 import unittest
 
+import time
+
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.order import Order, OrderId, OrderNumber, TickWasNotReserved
 from Tribler.community.market.core.price import Price
@@ -34,19 +36,14 @@ class OrderTestSuite(unittest.TestCase):
                           OrderId(TraderId('0'), OrderNumber("order_number")), Price(100), Quantity(100),
                           Timeout(0.0), Timestamp(float("inf")), True)
         self.order = Order(OrderId(TraderId("0"), OrderNumber("order_number")), Price(100), Quantity(30),
-                           Timeout(float("inf")), Timestamp(0.0), False)
+                           Timeout(5000), Timestamp(time.time()), False)
         self.order2 = Order(OrderId(TraderId("0"), OrderNumber("order_number")), Price(100), Quantity(30),
-                            Timeout(0.0), Timestamp(10.0), True)
+                            Timeout(5), Timestamp(time.time() - 1000), True)
 
     def test_add_trade(self):
         # Test for add trade
-        self.order.add_trade(self.accepted_trade)
-        self.assertEquals(self.accepted_trade, self.order._accepted_trades[self.accepted_trade.message_id])
-
-    def test_add_transaction(self):
-        # Test for add transaction
-        self.order.add_transaction(self.accepted_trade.message_id, self.transaction)
-        self.assertEquals(self.transaction.transaction_id, self.order._transactions[self.accepted_trade.message_id])
+        self.order.add_trade(self.accepted_trade, Quantity(10))
+        self.assertEquals(self.order._traded_quantity, Quantity(10))
 
     def test_is_ask(self):
         # Test for is ask
