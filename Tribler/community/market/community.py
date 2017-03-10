@@ -38,6 +38,9 @@ class MarketCommunity(Community):
 
     def get_multichain_community(self):
         # TODO error handling when community cannot be found!
+        if not self.tribler_session:
+            return None
+
         for community in self.tribler_session.get_dispersy_instance().get_communities():
             if isinstance(community, MultiChainCommunity):
                 return community
@@ -82,7 +85,8 @@ class MarketCommunity(Community):
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.tribler_session = tribler_session
 
-        self.multi_chain_payment_provider = MultiChainPaymentProvider(self.get_multichain_community(), self.pubkey)
+        self.multichain_community = self.get_multichain_community()
+        self.multi_chain_payment_provider = MultiChainPaymentProvider(self.multichain_community, self.pubkey)
         self.bitcoin_payment_provider = BitcoinPaymentProvider()
         transaction_repository = MemoryTransactionRepository(self.pubkey)
         self.transaction_manager = TransactionManager(transaction_repository)
