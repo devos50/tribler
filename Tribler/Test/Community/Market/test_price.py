@@ -9,8 +9,9 @@ class PriceTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.price = Price(63400)
-        self.price5 = Price(0)
+        self.price1 = Price(2.3)
+        self.price2 = Price(100)
+        self.price3 = Price(0)
 
     def test_init(self):
         # Test for init validation
@@ -30,11 +31,9 @@ class PriceTestSuite(unittest.TestCase):
 
     def test_addition(self):
         # Test for addition
-        self.assertEqual(Price.from_float(24.64), self.price2 + self.price4)
-        self.assertFalse(self.price4 is (self.price4 + self.price))
-        self.price3 += self.price5
-        self.assertEqual(Price.from_float(6.34), self.price3)
-        self.assertEqual(NotImplemented, self.price.__add__(10))
+        self.assertEqual(Price(102.3), self.price1 + self.price2)
+        self.assertFalse(self.price1 is (self.price1 + self.price2))
+        self.assertEqual(NotImplemented, self.price1.__add__(10))
 
     def test_subtraction(self):
         # Test for subtraction
