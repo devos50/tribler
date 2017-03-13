@@ -5,8 +5,8 @@ import sys
 import logging
 
 import Tribler
-from Tribler.dispersy.taskmanager import TaskManager
 
+from Tribler.Core.Modules.wallet.wallet import Wallet
 
 # Make sure we can find the electrum wallet
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(Tribler.__file__)), '..', 'electrum'))
@@ -18,16 +18,16 @@ from electrum import SimpleConfig
 from electrum import WalletStorage
 from electrum.mnemonic import Mnemonic
 from electrum import keystore
-from electrum import Wallet
+from electrum import Wallet as ElectrumWallet
 
 
-class WalletManager(TaskManager):
+class BitcoinWallet(Wallet):
     """
     This class is responsible for handling your wallet of bitcoins.
     """
 
     def __init__(self, session):
-        super(WalletManager, self).__init__()
+        super(BitcoinWallet, self).__init__()
 
         config = SimpleConfig(options={'cwd': session.get_state_dir(),
                                        'wallet_path': os.path.join('wallet', 'btc_wallet')})
@@ -38,7 +38,10 @@ class WalletManager(TaskManager):
         if not os.path.exists(os.path.join(session.get_state_dir(), 'wallet', 'btc_wallet')):
             self.wallet = self.create_wallet()
         else:
-            self.wallet = Wallet(self.storage)
+            self.wallet = ElectrumWallet(self.storage)
+
+    def get_identifier(self):
+        return 'btc'
 
     def create_wallet(self):
         """
@@ -51,7 +54,7 @@ class WalletManager(TaskManager):
         self.storage.put('use_encryption', False)
         self.storage.write()
 
-        wallet = Wallet(self.storage)
+        wallet = ElectrumWallet(self.storage)
         wallet.synchronize()
         wallet.storage.write()
 

@@ -16,7 +16,7 @@ from Tribler.Core.Modules.restapi.statistics_endpoint import StatisticsEndpoint
 from Tribler.Core.Modules.restapi.torrentinfo_endpoint import TorrentInfoEndpoint
 from Tribler.Core.Modules.restapi.torrents_endpoint import TorrentsEndpoint
 from Tribler.Core.Modules.restapi.variables_endpoint import VariablesEndpoint
-from Tribler.Core.Modules.restapi.wallet_endpoint import WalletEndpoint
+from Tribler.Core.Modules.restapi.wallets_endpoint import WalletsEndpoint
 
 
 class RootEndpoint(resource.Resource):
@@ -47,7 +47,7 @@ class RootEndpoint(resource.Resource):
                               "downloads": DownloadsEndpoint, "createtorrent": CreateTorrentEndpoint,
                               "torrents": TorrentsEndpoint, "debug": DebugEndpoint, "shutdown": ShutdownEndpoint,
                               "multichain": MultichainEndpoint, "statistics": StatisticsEndpoint,
-                              "torrentinfo": TorrentInfoEndpoint, "market": MarketEndpoint, "wallet": WalletEndpoint}
+                              "torrentinfo": TorrentInfoEndpoint, "market": MarketEndpoint, "wallets": WalletsEndpoint}
 
         for path, child_cls in child_handler_dict.iteritems():
             self.putChild(path, child_cls(self.session))

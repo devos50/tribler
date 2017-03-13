@@ -94,7 +94,7 @@ class TrustPage(QWidget):
         self.window().trade_button.clicked.connect(self.on_trade_button_clicked)
 
     def on_trade_button_clicked(self):
-        self.window().market_page.initialize_market_page(self.statistics)
+        self.window().market_page.initialize_market_page()
         self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
         self.window().stackedWidget.setCurrentIndex(PAGE_MARKET)
 

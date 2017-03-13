@@ -19,15 +19,13 @@ class MarketPage(QWidget):
 
     def __init__(self):
         QWidget.__init__(self)
-        self.statistics = None
+        self.btc_request_mgr = None
+        self.mc_request_mgr = None
         self.request_mgr = None
         self.dialog = None
         self.initialized = False
 
-    def initialize_market_page(self, statistics):
-        self.statistics = statistics
-        net_score = int(self.statistics["self_total_up_mb"]) - int(self.statistics["self_total_down_mb"])
-        self.window().net_score_label.setText("%d" % net_score)
+    def initialize_market_page(self):
 
         if not self.initialized:
             self.window().market_back_button.setIcon(QIcon(get_image_path('page_back.png')))
@@ -53,16 +51,25 @@ class MarketPage(QWidget):
 
             self.initialized = True
 
-        self.load_wallet_balance()
+        self.load_btc_wallet_balance()
+        self.load_mc_wallet_balance()
+        self.load_asks()
 
-    def load_wallet_balance(self):
-        self.request_mgr = TriblerRequestManager()
-        self.request_mgr.perform_request("wallet/balance", self.on_wallet_balance)
+    def load_btc_wallet_balance(self):
+        self.btc_request_mgr = TriblerRequestManager()
+        self.btc_request_mgr.perform_request("wallets/btc/balance", self.on_btc_wallet_balance)
 
-    def on_wallet_balance(self, balance):
+    def on_btc_wallet_balance(self, balance):
         balance = balance["balance"]
         self.window().btc_amount_label.setText("%s" % balance["confirmed"])
-        self.load_asks()
+
+    def load_mc_wallet_balance(self):
+        self.mc_request_mgr = TriblerRequestManager()
+        self.mc_request_mgr.perform_request("wallets/mc/balance", self.on_mc_wallet_balance)
+
+    def on_mc_wallet_balance(self, balance):
+        balance = balance["balance"]
+        self.window().net_score_label.setText("%s" % balance)
 
     def create_widget_item_from_tick(self, tick_list, tick, is_ask=True):
         tick["type"] = "ask" if is_ask else "bid"
