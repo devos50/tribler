@@ -18,8 +18,6 @@ class TtlTestSuite(unittest.TestCase):
         with self.assertRaises(ValueError):
             Ttl(-100)
         with self.assertRaises(ValueError):
-            Ttl(3)
-        with self.assertRaises(ValueError):
             Ttl('1')
 
     def test_default(self):

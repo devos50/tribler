@@ -46,7 +46,7 @@ class OrderTestSuite(unittest.TestCase):
 
     def test_str(self):
         # Test for tick string representation
-        self.assertEquals('0.0030\t@\t6.3400', str(self.tick_entry))
+        self.assertEquals('30\t@\t63400.000000', str(self.tick_entry))
 
     def test_is_valid(self):
         # Test for is valid

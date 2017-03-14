@@ -56,8 +56,8 @@ class PriceLevelTestSuite(unittest.TestCase):
         # Test for price level string representation
         self.price_level.append_tick(self.tick_entry1)
         self.price_level.append_tick(self.tick_entry2)
-        self.assertEquals('0.0030\t@\t6.3400\n'
-                          '0.0030\t@\t6.3400\n', str(self.price_level))
+        self.assertEquals('30\t@\t63400.000000\n'
+                          '30\t@\t63400.000000\n', str(self.price_level))
 
 
 if __name__ == '__main__':

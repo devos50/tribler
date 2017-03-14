@@ -32,7 +32,8 @@ class TransactionManagerTestSuite(unittest.TestCase):
         self.start_transaction = StartTransaction(MessageId(TraderId('0'), MessageNumber('1')),
                                                   TransactionId(TraderId("0"), TransactionNumber("1")),
                                                   OrderId(TraderId('0'), OrderNumber('1')),
-                                                  MessageId(TraderId('2'), MessageNumber('3')), Timestamp(0.0))
+                                                  OrderId(TraderId('1'), OrderNumber('2')),
+                                                  Price(3600), Quantity(20), Timestamp(0.0))
 
     def test_create_from_accepted_trade(self):
         # Test for create from accepted trade
@@ -53,8 +54,7 @@ class TransactionManagerTestSuite(unittest.TestCase):
 
     def test_create_from_start_transaction(self):
         # Test for create from start transaction
-        transaction = self.transaction_manager.create_from_start_transaction(self.start_transaction, Price(100),
-                                                                             Quantity(30), Timeout(0.0))
+        transaction = self.transaction_manager.create_from_start_transaction(self.start_transaction, Timeout(0.0))
         self.assertEquals(transaction, self.transaction_manager.find_by_id(transaction.transaction_id))
 
 
