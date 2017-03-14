@@ -5,7 +5,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
-from TriblerGUI.defs import PAGE_MARKET_TRANSACTIONS
+from TriblerGUI.defs import PAGE_MARKET_TRANSACTIONS, PAGE_MARKET_WALLETS
 from TriblerGUI.dialogs.newmarketorderdialog import NewMarketOrderDialog
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
@@ -37,6 +37,7 @@ class MarketPage(QWidget):
             self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
             self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
             self.window().market_transactions_button.clicked.connect(self.on_transactions_button_clicked)
+            self.window().market_wallets_button.clicked.connect(self.on_wallets_button_clicked)
 
             # Sort asks ascending and bids descending
             self.window().asks_list.sortItems(2, Qt.AscendingOrder)
@@ -126,6 +127,11 @@ class MarketPage(QWidget):
         self.window().market_transactions_page.initialize_transactions_page()
         self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
         self.window().stackedWidget.setCurrentIndex(PAGE_MARKET_TRANSACTIONS)
+
+    def on_wallets_button_clicked(self):
+        self.window().market_wallets_page.initialize_wallets_page()
+        self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
+        self.window().stackedWidget.setCurrentIndex(PAGE_MARKET_WALLETS)
 
     def on_order_created(self, response):
         print response
