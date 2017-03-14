@@ -70,7 +70,7 @@ class MarketPage(QWidget):
 
     def on_mc_wallet_balance(self, balance):
         balance = balance["balance"]
-        self.window().net_score_label.setText("%s" % balance)
+        self.window().net_score_label.setText("%s" % balance["net"])
 
     def create_widget_item_from_tick(self, tick_list, tick, is_ask=True):
         tick["type"] = "ask" if is_ask else "bid"

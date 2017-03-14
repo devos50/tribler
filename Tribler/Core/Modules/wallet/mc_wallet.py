@@ -28,7 +28,7 @@ class MultichainWallet(Wallet):
         total = self.multichain_community.persistence.get_total(self.multichain_community._public_key)
 
         #TODO(Martijn): fake the balance for now
-        return 100000
+        return {'total_up': 101000, 'total_down': 1000, 'net': 100000}
 
         if total == (-1, -1):
             return 0

@@ -9983,25 +9983,6 @@ background-color: transparent;
                     <property name="bottomMargin">
                      <number>0</number>
                     </property>
-                    <item>
-                     <widget class="EllipseButton" name="trade_offer_button">
-                      <property name="minimumSize">
-                       <size>
-                        <width>0</width>
-                        <height>28</height>
-                       </size>
-                      </property>
-                      <property name="maximumSize">
-                       <size>
-                        <width>16777215</width>
-                        <height>28</height>
-                       </size>
-                      </property>
-                      <property name="text">
-                       <string>TRADE</string>
-                      </property>
-                     </widget>
-                    </item>
                    </layout>
                   </widget>
                  </item>
@@ -10371,7 +10352,7 @@ background-color: #333;
               <number>12</number>
              </property>
              <item>
-              <widget class="QPushButton" name="pushButton">
+              <widget class="QPushButton" name="wallet_mc_overview_button">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -10409,7 +10390,7 @@ background-color: #333;
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_2">
+              <widget class="QPushButton" name="wallet_btc_overview_button">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -10511,11 +10492,65 @@ background-color: #333;
               </property>
               <item>
                <widget class="QWidget" name="mc_wallet_overview_container" native="true">
+                <property name="styleSheet">
+                 <string notr="true">color: white;
+font-size: 16px;</string>
+                </property>
                 <layout class="QFormLayout" name="formLayout_8">
+                 <property name="labelAlignment">
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                 </property>
+                 <property name="formAlignment">
+                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>8</number>
+                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="label_57">
                    <property name="text">
-                    <string>TextLabel</string>
+                    <string>Total MB given:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_58">
+                   <property name="text">
+                    <string>Total MB taken:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_59">
+                   <property name="styleSheet">
+                    <string notr="true">font-size: 20px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Net balance:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="mc_wallet_given_label">
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLabel" name="mc_wallet_taken_label">
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLabel" name="mc_wallet_balance_label">
+                   <property name="styleSheet">
+                    <string notr="true">font-size: 20px;</string>
+                   </property>
+                   <property name="text">
+                    <string>-</string>
                    </property>
                   </widget>
                  </item>
@@ -10524,7 +10559,80 @@ background-color: #333;
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="btc_wallet_overview"/>
+            <widget class="QWidget" name="btc_wallet_overview">
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QWidget" name="btc_wallet_overview_container" native="true">
+                <property name="styleSheet">
+                 <string notr="true">color: white;
+font-size: 16px;</string>
+                </property>
+                <layout class="QFormLayout" name="formLayout_9">
+                 <property name="formAlignment">
+                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                 </property>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_60">
+                   <property name="text">
+                    <string>Confirmed:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_61">
+                   <property name="text">
+                    <string>Unconfirmed:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_62">
+                   <property name="text">
+                    <string>Unmatured:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="btc_wallet_confirmed_label">
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLabel" name="btc_wallet_unconfirmed_label">
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLabel" name="btc_wallet_unmatured_label">
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
             <widget class="QWidget" name="no_wallet_selected_overview">
              <layout class="QVBoxLayout" name="verticalLayout">
               <property name="spacing">
