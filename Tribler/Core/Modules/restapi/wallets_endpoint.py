@@ -17,7 +17,8 @@ class WalletsEndpoint(resource.Resource):
         wallets = {}
         for wallet_id in self.session.lm.wallets.keys():
             wallet = self.session.lm.wallets[wallet_id]
-            wallets[wallet_id] = {'created': wallet.created, 'balance': wallet.get_balance()}
+            wallets[wallet_id] = {'created': wallet.created, 'balance': wallet.get_balance(),
+                                  'address': wallet.get_address()}
         return json.dumps({"wallets": wallets})
 
     def getChild(self, path, request):

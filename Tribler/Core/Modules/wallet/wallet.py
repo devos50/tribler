@@ -25,3 +25,6 @@ class Wallet(TaskManager):
 
     def transfer(self, *args, **kwargs):
         raise NotImplementedError("Please implement this method.")
+
+    def get_address(self):
+        raise NotImplementedError("Please implement this method.")

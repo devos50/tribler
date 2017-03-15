@@ -73,8 +73,14 @@ class BitcoinWallet(Wallet):
             return {"confirmed": 0, "unconfirmed": 0, "unmatured": 0}
 
     def transfer(self, amount, address):
+        self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)
         if self.get_balance()['confirmed'] >= amount:
-            #TODO(Martijn): actually transfer the BTC...
+            # TODO(Martijn): actually transfer the BTC...
             pass
         else:
             raise InsufficientFunds()
+
+    def get_address(self):
+        if not self.created:
+            return None
+        return self.wallet.get_receiving_address()

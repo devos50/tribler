@@ -42,3 +42,6 @@ class MultichainWallet(Wallet):
             self.multichain_community.schedule_block(candidate, -mb_quantity, mb_quantity)
         else:
             raise InsufficientFunds()
+
+    def get_address(self):
+        return ""

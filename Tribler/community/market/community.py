@@ -736,9 +736,7 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            self._logger.debug("Paying %s MultiChain credits to %s",
-                               multi_chain_payment.transferor_quantity, transaction.partner_trader_id)
-            mc_wallet.transfer_multi_chain(candidate, multi_chain_payment.transferor_quantity)
+            mc_wallet.transfer(candidate, multi_chain_payment.transferor_quantity)
 
             meta = self.get_meta_message(u"multi-chain-payment")
             message = meta.impl(
@@ -780,7 +778,6 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            self._logger.debug("Paying %s BTC to %s", bitcoin_payment.price, transaction.partner_trader_id)
             btc_wallet.transfer(bitcoin_payment.price, bitcoin_payment.bitcoin_address)
 
             meta = self.get_meta_message(u"bitcoin-payment")
