@@ -32,38 +32,42 @@ class BitcoinWallet(Wallet):
         config = SimpleConfig(options={'cwd': session.get_state_dir(),
                                        'wallet_path': os.path.join('wallet', 'btc_wallet')})
         self._logger = logging.getLogger(self.__class__.__name__)
+        self.created = False
         self.storage = WalletStorage(config.get_wallet_path())
         self.storage.read(None)
 
-        if not os.path.exists(os.path.join(session.get_state_dir(), 'wallet', 'btc_wallet')):
-            self.wallet = self.create_wallet()
-        else:
+        if os.path.exists(os.path.join(session.get_state_dir(), 'wallet', 'btc_wallet')):
             self.wallet = ElectrumWallet(self.storage)
+            self.created = True
 
     def get_identifier(self):
         return 'btc'
 
-    def create_wallet(self):
+    def create_wallet(self, password=''):
         """
         Create a new bitcoin wallet.
         """
         seed = Mnemonic('en').make_seed()
         k = keystore.from_seed(seed, '')
+        k.update_password(None, password)
         self.storage.put('keystore', k.dump())
         self.storage.put('wallet_type', 'standard')
-        self.storage.put('use_encryption', False)
+        self.storage.put('use_encryption', bool(password))
         self.storage.write()
 
-        wallet = ElectrumWallet(self.storage)
-        wallet.synchronize()
-        wallet.storage.write()
+        self.wallet = ElectrumWallet(self.storage)
+        self.wallet.synchronize()
+        self.wallet.storage.write()
+        self.created = True
 
-        self._logger.info("Bitcoin wallet saved in '%s'" % wallet.storage.path)
-        return wallet
+        self._logger.info("Bitcoin wallet saved in '%s'" % self.wallet.storage.path)
 
     def get_balance(self):
         """
         Return the balance of the wallet.
         """
-        confirmed, unconfirmed, unmatured = self.wallet.get_balance()
-        return {"confirmed": confirmed, "unconfirmed": unconfirmed, "unmatured": unmatured}
+        if self.created:
+            confirmed, unconfirmed, unmatured = self.wallet.get_balance()
+            return {"confirmed": confirmed, "unconfirmed": unconfirmed, "unmatured": unmatured}
+        else:
+            return {"confirmed": 0, "unconfirmed": 0, "unmatured": 0}

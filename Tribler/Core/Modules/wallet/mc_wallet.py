@@ -12,6 +12,7 @@ class MultichainWallet(Wallet):
 
         self.session = session
         self.multichain_community = self.get_multichain_community()
+        self.created = True
 
     def get_multichain_community(self):
         for community in self.session.get_dispersy_instance().get_communities():
@@ -21,7 +22,7 @@ class MultichainWallet(Wallet):
     def get_identifier(self):
         return 'mc'
 
-    def create_wallet(self):
+    def create_wallet(self, *args, **kwargs):
         pass
 
     def get_balance(self):

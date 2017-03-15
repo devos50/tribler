@@ -19,8 +19,6 @@ class MarketPage(QWidget):
 
     def __init__(self):
         QWidget.__init__(self)
-        self.btc_request_mgr = None
-        self.mc_request_mgr = None
         self.request_mgr = None
         self.dialog = None
         self.initialized = False
@@ -38,6 +36,7 @@ class MarketPage(QWidget):
             self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
             self.window().market_transactions_button.clicked.connect(self.on_transactions_button_clicked)
             self.window().market_wallets_button.clicked.connect(self.on_wallets_button_clicked)
+            self.window().market_create_wallet_button.clicked.connect(self.on_wallets_button_clicked)
 
             # Sort asks ascending and bids descending
             self.window().asks_list.sortItems(2, Qt.AscendingOrder)
@@ -49,28 +48,31 @@ class MarketPage(QWidget):
                 lambda: self.on_tick_item_clicked(self.window().bids_list))
 
             self.window().tick_detail_container.hide()
+            self.window().market_create_wallet_button.hide()
 
             self.initialized = True
 
-        self.load_btc_wallet_balance()
-        self.load_mc_wallet_balance()
+        self.load_wallets()
+
+    def load_wallets(self):
+        self.request_mgr = TriblerRequestManager()
+        self.request_mgr.perform_request("wallets", self.on_wallets)
+
+    def on_wallets(self, wallets):
+        wallets = wallets["wallets"]
+
+        if 'mc' in wallets and wallets["mc"]["created"]:
+            self.window().net_score_label.setText("%s" % wallets["mc"]["balance"]["net"])
+
+        if 'btc' in wallets and wallets["btc"]["created"]:
+            self.window().btc_amount_label.setText("%s" % wallets["btc"]["balance"]["confirmed"])
+
+        if len([wallet for wallet in wallets.values() if wallet["created"]]) < 2:
+            self.window().market_create_wallet_button.show()
+            self.window().create_ask_button.hide()
+            self.window().create_bid_button.hide()
+
         self.load_asks()
-
-    def load_btc_wallet_balance(self):
-        self.btc_request_mgr = TriblerRequestManager()
-        self.btc_request_mgr.perform_request("wallets/btc/balance", self.on_btc_wallet_balance)
-
-    def on_btc_wallet_balance(self, balance):
-        balance = balance["balance"]
-        self.window().btc_amount_label.setText("%s" % balance["confirmed"])
-
-    def load_mc_wallet_balance(self):
-        self.mc_request_mgr = TriblerRequestManager()
-        self.mc_request_mgr.perform_request("wallets/mc/balance", self.on_mc_wallet_balance)
-
-    def on_mc_wallet_balance(self, balance):
-        balance = balance["balance"]
-        self.window().net_score_label.setText("%s" % balance["net"])
 
     def create_widget_item_from_tick(self, tick_list, tick, is_ask=True):
         tick["type"] = "ask" if is_ask else "bid"

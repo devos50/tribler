@@ -10,7 +10,7 @@ class Wallet(TaskManager):
     def get_identifier(self):
         raise NotImplementedError("Please implement this method.")
 
-    def create_wallet(self):
+    def create_wallet(self, *args, **kwargs):
         raise NotImplementedError("Please implement this method.")
 
     def get_balance(self):

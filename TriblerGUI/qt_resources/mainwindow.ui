@@ -9393,7 +9393,7 @@ background-color: transparent;
                 <string notr="true">font-weight: bold; font-size: 14px;</string>
                </property>
                <property name="text">
-                <string>0</string>
+                <string>-</string>
                </property>
               </widget>
              </item>
@@ -9451,7 +9451,7 @@ background-color: transparent;
                 <string notr="true">font-weight: bold; font-size: 14px;</string>
                </property>
                <property name="text">
-                <string>0</string>
+                <string>-</string>
                </property>
               </widget>
              </item>
@@ -9574,6 +9574,41 @@ background-color: transparent;
               </spacer>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="market_create_wallet_button">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: #666;
+border: none;
+color: white;
+font-size: 12px;
+</string>
+            </property>
+            <property name="text">
+             <string>Before trading, please create a currency wallet first. Click here to open wallet management.</string>
+            </property>
            </widget>
           </item>
           <item>
@@ -10428,7 +10463,7 @@ background-color: #333;
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_3">
+              <widget class="QPushButton" name="add_wallet_button">
                <property name="enabled">
                 <bool>false</bool>
                </property>
