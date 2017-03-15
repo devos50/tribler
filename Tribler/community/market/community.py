@@ -1,3 +1,4 @@
+from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.multichain.community import MultiChainCommunity
@@ -18,7 +19,6 @@ from core.order_manager import OrderManager
 from core.order_repository import MemoryOrderRepository
 from core.orderbook import OrderBook
 from core.payment import BitcoinPayment, MultiChainPayment
-from core.payment_provider import BitcoinPaymentProvider, MultiChainPaymentProvider, InsufficientFunds
 from core.price import Price
 from core.quantity import Quantity
 from core.tick import Ask, Bid, Tick
@@ -86,8 +86,6 @@ class MarketCommunity(Community):
         self.tribler_session = tribler_session
 
         self.multichain_community = self.get_multichain_community()
-        self.multi_chain_payment_provider = MultiChainPaymentProvider(self.multichain_community, self.pubkey)
-        self.bitcoin_payment_provider = BitcoinPaymentProvider()
         transaction_repository = MemoryTransactionRepository(self.pubkey)
         self.transaction_manager = TransactionManager(transaction_repository)
 
@@ -240,15 +238,6 @@ class MarketCommunity(Community):
 
         self.pubkey_register[trader_id] = ip
 
-    def get_multichain_balance(self):
-        """
-        Return the current multichain balance from the payment provider
-
-        :return: The quantity (1 mil is 100 bytes)
-        :rtype: Quantity
-        """
-        return self.multi_chain_payment_provider.balance()
-
     # Ask
     def create_ask(self, price, quantity, timeout):
         """
@@ -263,6 +252,9 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
+        wallets = self.tribler_session.lm.wallets
+        if not wallets['btc']['created'] or not wallets['mc']['created']:
+            raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
 
         # Convert values to value objects
         price = Price(price)
@@ -360,6 +352,9 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
+        wallets = self.tribler_session.lm.wallets
+        if not wallets['btc']['created'] or not wallets['mc']['created']:
+            raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
 
         # Convert values to value objects
         price = Price(price)
@@ -733,13 +728,17 @@ class MarketCommunity(Community):
         assert isinstance(multi_chain_payment, MultiChainPayment), type(multi_chain_payment)
         payload = multi_chain_payment.to_network()
 
+        mc_wallet = self.tribler_session.lm.wallets['mc']
+        if not mc_wallet or not mc_wallet['created']:
+            raise RuntimeError("No MultiChain credit wallet present")
+
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
             self._logger.debug("Paying %s MultiChain credits to %s",
                                multi_chain_payment.transferor_quantity, transaction.partner_trader_id)
-            self.multi_chain_payment_provider.transfer_multi_chain(candidate, multi_chain_payment.transferor_quantity)
+            mc_wallet.transfer_multi_chain(candidate, multi_chain_payment.transferor_quantity)
 
             meta = self.get_meta_message(u"multi-chain-payment")
             message = meta.impl(
@@ -752,7 +751,7 @@ class MarketCommunity(Community):
             self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # Not enough funds
             self._logger.warning("Not enough multichain credits for this transaction (have %s, need %s)!",
-                                 self.multi_chain_payment_provider.balance(), multi_chain_payment.transferor_quantity)
+                                 mc_wallet.get_balance()['net'], multi_chain_payment.transferor_quantity)
 
     def on_multi_chain_payment(self, messages):
         for message in messages:
@@ -773,13 +772,16 @@ class MarketCommunity(Community):
         assert isinstance(bitcoin_payment, BitcoinPayment), type(bitcoin_payment)
         payload = bitcoin_payment.to_network()
 
+        btc_wallet = self.tribler_session.lm.wallets['btc']
+        if not btc_wallet or not btc_wallet['created']:
+            raise RuntimeError("No BitCoin wallet present")
+
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
             self._logger.debug("Paying %s BTC to %s", bitcoin_payment.price, transaction.partner_trader_id)
-            # TODO(Martijn): we temporarily disable BTC payments for testing purposes!
-            #self.bitcoin_payment_provider.transfer_bitcoin(bitcoin_payment.bitcoin_address, bitcoin_payment.price)
+            btc_wallet.transfer(bitcoin_payment.price, bitcoin_payment.bitcoin_address)
 
             meta = self.get_meta_message(u"bitcoin-payment")
             message = meta.impl(

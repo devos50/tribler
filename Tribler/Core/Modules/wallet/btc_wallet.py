@@ -6,7 +6,7 @@ import logging
 
 import Tribler
 
-from Tribler.Core.Modules.wallet.wallet import Wallet
+from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
 
 # Make sure we can find the electrum wallet
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(Tribler.__file__)), '..', 'electrum'))
@@ -71,3 +71,10 @@ class BitcoinWallet(Wallet):
             return {"confirmed": confirmed, "unconfirmed": unconfirmed, "unmatured": unmatured}
         else:
             return {"confirmed": 0, "unconfirmed": 0, "unmatured": 0}
+
+    def transfer(self, amount, address):
+        if self.get_balance()['confirmed'] >= amount:
+            #TODO(Martijn): actually transfer the BTC...
+            pass
+        else:
+            raise InsufficientFunds()

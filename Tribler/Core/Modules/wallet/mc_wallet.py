@@ -1,4 +1,4 @@
-from Tribler.Core.Modules.wallet.wallet import Wallet
+from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
 from Tribler.community.multichain.community import MultiChainCommunity
 
 
@@ -35,3 +35,10 @@ class MultichainWallet(Wallet):
             return 0
         else:
             return int(max(0, total[0] - total[1]) / 2)
+
+    def transfer(self, quantity, candidate):
+        if self.get_balance()['net'] >= quantity:
+            mb_quantity = quantity * 1024 * 1024
+            self.multichain_community.schedule_block(candidate, -mb_quantity, mb_quantity)
+        else:
+            raise InsufficientFunds()
