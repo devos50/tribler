@@ -3,6 +3,7 @@ import os
 import sys
 
 import logging
+from time import sleep
 
 import Tribler
 
@@ -16,6 +17,7 @@ imp.load_module('electrum', *imp.find_module('lib'))
 
 from electrum import SimpleConfig
 from electrum import WalletStorage
+from electrum import daemon
 from electrum.mnemonic import Mnemonic
 from electrum import keystore
 from electrum import Wallet as ElectrumWallet
@@ -32,13 +34,35 @@ class BitcoinWallet(Wallet):
         config = SimpleConfig(options={'cwd': session.get_state_dir(),
                                        'wallet_path': os.path.join('wallet', 'btc_wallet')})
         self._logger = logging.getLogger(self.__class__.__name__)
+        self.tribler_session = session
         self.created = False
+        self.daemon = None
         self.storage = WalletStorage(config.get_wallet_path())
         self.storage.read(None)
 
         if os.path.exists(os.path.join(session.get_state_dir(), 'wallet', 'btc_wallet')):
             self.wallet = ElectrumWallet(self.storage)
             self.created = True
+            self.start_daemon()
+
+    def start_daemon(self):
+        options = {'verbose': False, 'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
+                   'cwd': self.tribler_session.get_state_dir(), 'portable': False, 'password': '',
+                   'wallet_path': os.path.join('wallet', 'btc_wallet')}
+        config = SimpleConfig(options)
+        fd, server = daemon.get_fd_or_server(config)
+        self.daemon = daemon.Daemon(config, fd)
+        self.daemon.start()
+
+        options = {'password': None, 'subcommand': 'open', 'verbose': False, 'cmd': 'daemon', 'testnet': False,
+                   'oneserver': False, 'segwit': False, 'cwd': self.tribler_session.get_state_dir(), 'portable': False,
+                   'wallet_path': os.path.join('wallet', 'btc_wallet')}
+        config = SimpleConfig(options)
+
+        server = daemon.get_server(config)
+        if server is not None:
+            # Run the command to open the wallet
+            server.daemon(options)
 
     def get_identifier(self):
         return 'btc'
@@ -59,6 +83,7 @@ class BitcoinWallet(Wallet):
         self.wallet.synchronize()
         self.wallet.storage.write()
         self.created = True
+        self.start_daemon()
 
         self._logger.info("Bitcoin wallet saved in '%s'" % self.wallet.storage.path)
 
@@ -66,9 +91,12 @@ class BitcoinWallet(Wallet):
         """
         Return the balance of the wallet.
         """
+        divider = 100000000
         if self.created:
             confirmed, unconfirmed, unmatured = self.wallet.get_balance()
-            return {"confirmed": confirmed, "unconfirmed": unconfirmed, "unmatured": unmatured}
+            return {"confirmed": float(confirmed) / divider,
+                    "unconfirmed": float(unconfirmed) / divider,
+                    "unmatured": float(unmatured) / divider}
         else:
             return {"confirmed": 0, "unconfirmed": 0, "unmatured": 0}
 
