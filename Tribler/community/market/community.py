@@ -770,17 +770,11 @@ class MarketCommunity(Community):
                 transaction.add_payment(multi_chain_payment)
                 self.transaction_manager.transaction_repository.update(transaction)
 
-                message_id = self.order_book.message_repository.next_identity()
-                bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction,
-                                                                                  multi_chain_payment.transferee_price,
-                                                                                  multi_chain_payment.bitcoin_address)
-                self.send_bitcoin_payment(transaction, bitcoin_payment)
+                self.send_bitcoin_payment(transaction, multi_chain_payment.transferee_price,
+                                          multi_chain_payment.bitcoin_address)
 
     # Bitcoin payment
-    def send_bitcoin_payment(self, transaction, bitcoin_payment):
-        assert isinstance(bitcoin_payment, BitcoinPayment), type(bitcoin_payment)
-        payload = bitcoin_payment.to_network()
-
+    def send_bitcoin_payment(self, transaction, price, btc_address):
         btc_wallet = self.tribler_session.lm.wallets['btc']
         if not btc_wallet or not btc_wallet['created']:
             raise RuntimeError("No BitCoin wallet present")
@@ -789,7 +783,12 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            btc_wallet.transfer(bitcoin_payment.price, bitcoin_payment.bitcoin_address)
+            txid = btc_wallet.transfer(price, btc_address)
+
+            message_id = self.order_book.message_repository.next_identity()
+            bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction,
+                                                                              price, btc_address)
+            payload = bitcoin_payment.to_network()
 
             meta = self.get_meta_message(u"bitcoin-payment")
             message = meta.impl(
@@ -802,7 +801,7 @@ class MarketCommunity(Community):
             self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # not enough funds
             self._logger.warning("Not enough BitCoin for this transaction (have %s, need %s)!",
-                                 btc_wallet.get_balance()['confirmed'], bitcoin_payment.price)
+                                 btc_wallet.get_balance()['confirmed'], price)
 
     def on_bitcoin_payment(self, messages):
         for message in messages:

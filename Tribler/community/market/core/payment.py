@@ -1,3 +1,4 @@
+from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from bitcoin_address import BitcoinAddress
 from message import MessageId, Message, TraderId, MessageNumber
 from price import Price
@@ -83,14 +84,16 @@ class MultiChainPayment(Message):
 class BitcoinPayment(Message):
     """Class representing a bitcoin payment."""
 
-    def __init__(self, message_id, transaction_id, bitcoin_address, price, timestamp):
+    def __init__(self, message_id, transaction_id, bitcoin_address, price, txid, timestamp):
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
         assert isinstance(bitcoin_address, BitcoinAddress), type(bitcoin_address)
         assert isinstance(price, Price), type(price)
+        assert isinstance(txid, BitcoinTransactionId), type(txid)
         super(BitcoinPayment, self).__init__(message_id, timestamp)
         self._transaction_id = transaction_id
         self._bitcoin_address = bitcoin_address
         self._price = price
+        self._txid = txid
 
     @property
     def transaction_id(self):
@@ -103,6 +106,10 @@ class BitcoinPayment(Message):
     @property
     def price(self):
         return self._price
+
+    @property
+    def txid(self):
+        return self._txid
 
     @classmethod
     def from_network(cls, data):
@@ -119,6 +126,7 @@ class BitcoinPayment(Message):
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
         assert hasattr(data, 'bitcoin_address'), isinstance(data.bitcoin_address, BitcoinAddress)
         assert hasattr(data, 'price'), isinstance(data.price, Price)
+        assert hasattr(data, 'txid'), isinstance(data.txid, BitcoinTransactionId)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
 
         return cls(
@@ -126,6 +134,7 @@ class BitcoinPayment(Message):
             TransactionId(data.transaction_trader_id, data.transaction_number),
             data.bitcoin_address,
             data.price,
+            data.txid,
             data.timestamp,
         )
 
@@ -140,5 +149,6 @@ class BitcoinPayment(Message):
             self._transaction_id.transaction_number,
             self._bitcoin_address,
             self._price,
+            self._transaction_id,
             self._timestamp,
         )

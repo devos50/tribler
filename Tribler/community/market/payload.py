@@ -1,3 +1,4 @@
+from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.dispersy.payload import Payload
 
 from core.bitcoin_address import BitcoinAddress
@@ -257,14 +258,16 @@ class MultiChainPaymentPayload(TransactionPayload):
 class BitcoinPaymentPayload(TransactionPayload):
     class Implementation(TransactionPayload.Implementation):
         def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number, bitcoin_address,
-                     price, timestamp):
+                     price, txid, timestamp):
             assert isinstance(price, Price), type(price)
             assert isinstance(bitcoin_address, BitcoinAddress), type(bitcoin_address)
+            assert isinstance(txid, BitcoinTransactionId), type(txid)
             super(BitcoinPaymentPayload.Implementation, self).__init__(meta, trader_id, message_number,
                                                                        transaction_trader_id, transaction_number,
                                                                        timestamp)
             self._bitcoin_address = bitcoin_address
             self._price = price
+            self._txid = txid
 
         @property
         def bitcoin_address(self):
@@ -273,3 +276,7 @@ class BitcoinPaymentPayload(TransactionPayload):
         @property
         def price(self):
             return self._price
+
+        @property
+        def txid(self):
+            return self._txid

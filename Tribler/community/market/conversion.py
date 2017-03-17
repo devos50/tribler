@@ -1,4 +1,5 @@
 from Tribler.Core.Utilities.encoding import encode, decode
+from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.dispersy.conversion import BinaryConversion
 from Tribler.dispersy.message import DropPacket
 from core.bitcoin_address import BitcoinAddress
@@ -165,11 +166,12 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.bitcoin_address), float(payload.price), float(payload.timestamp)
+            str(payload.transaction_number), str(payload.bitcoin_address), float(payload.price), str(payload.txid),
+            float(payload.timestamp)
         ))
         return packet,
 
     def _decode_bitcoin_payment(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, TraderId, TransactionNumber, BitcoinAddress, Price,
-                                     Timestamp])
+                                     BitcoinTransactionId, Timestamp])

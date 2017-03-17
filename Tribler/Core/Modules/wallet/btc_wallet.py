@@ -106,7 +106,7 @@ class BitcoinWallet(Wallet):
         self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)
         if self.get_balance()['confirmed'] >= amount:
             # TODO(Martijn): actually transfer the BTC...
-            pass
+            return "abcd"
         else:
             raise InsufficientFunds()
 
