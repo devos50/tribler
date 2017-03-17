@@ -196,6 +196,16 @@ class MarketCommunity(Community):
                 self._logger.debug("Delaying message %s" % message)
                 yield DelayMessageByProof(message)
 
+    def get_bitcoin_address(self):
+        """
+        Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
+        """
+        wallets = self.tribler_session.lm.wallets
+        if not wallets['btc']['created'] or not wallets['mc']['created']:
+            raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
+
+        return wallets['btc'].get_address()
+
     def check_history(self, message):
         """
         Check if the message is already in the history, meaning it has already been received before
@@ -683,7 +693,7 @@ class MarketCommunity(Community):
 
                 if order.is_ask():  # Send multi chain payment
                     message_id = self.order_book.message_repository.next_identity()
-                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
+                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction, self.get_bitcoin_address())
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
                 else:  # Send continue transaction
                     self.send_continue_transaction(transaction)
@@ -720,7 +730,7 @@ class MarketCommunity(Community):
 
             if transaction:  # Send multi chain payment
                 message_id = self.order_book.message_repository.next_identity()
-                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
+                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction, self.get_bitcoin_address())
                 self.send_multi_chain_payment(transaction, multi_chain_payment)
 
     # Multi chain payment
@@ -762,7 +772,8 @@ class MarketCommunity(Community):
 
                 message_id = self.order_book.message_repository.next_identity()
                 bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction,
-                                                                                  multi_chain_payment)
+                                                                                  multi_chain_payment.transferee_price,
+                                                                                  multi_chain_payment.bitcoin_address)
                 self.send_bitcoin_payment(transaction, bitcoin_payment)
 
     # Bitcoin payment
@@ -791,7 +802,7 @@ class MarketCommunity(Community):
             self.dispersy.store_update_forward([message], True, False, True)
         except InsufficientFunds:  # not enough funds
             self._logger.warning("Not enough BitCoin for this transaction (have %s, need %s)!",
-                                 self.bitcoin_payment_provider.balance(), bitcoin_payment.price)
+                                 btc_wallet.get_balance()['confirmed'], bitcoin_payment.price)
 
     def on_bitcoin_payment(self, messages):
         for message in messages:
@@ -804,7 +815,7 @@ class MarketCommunity(Community):
 
                 if not transaction.is_payment_complete():
                     message_id = self.order_book.message_repository.next_identity()
-                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
+                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction, self.get_bitcoin_address())
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
                 else:
                     self.send_end_transaction(transaction)
