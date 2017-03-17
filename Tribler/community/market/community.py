@@ -805,19 +805,25 @@ class MarketCommunity(Community):
 
     def on_bitcoin_payment(self, messages):
         for message in messages:
-            bitcoin_payment = BitcoinPayment.from_network(message.payload)
-            transaction = self.transaction_manager.find_by_id(bitcoin_payment.transaction_id)
+            btc_payment = BitcoinPayment.from_network(message.payload)
+            transaction = self.transaction_manager.find_by_id(btc_payment.transaction_id)
 
-            if transaction:
-                transaction.add_payment(bitcoin_payment)
-                self.transaction_manager.transaction_repository.update(transaction)
+            btc_wallet = self.tribler_session.lm.wallets['btc']
+            transaction_deferred = btc_wallet.monitor_transaction(btc_payment.txid)
+            transaction_deferred.addCallback(lambda _: self.received_bitcoin_payment(btc_payment, transaction))
 
-                if not transaction.is_payment_complete():
-                    message_id = self.order_book.message_repository.next_identity()
-                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction, self.get_bitcoin_address())
-                    self.send_multi_chain_payment(transaction, multi_chain_payment)
-                else:
-                    self.send_end_transaction(transaction)
+    def received_bitcoin_payment(self, btc_payment, transaction):
+        if transaction:
+            transaction.add_payment(btc_payment)
+            self.transaction_manager.transaction_repository.update(transaction)
+
+            if not transaction.is_payment_complete():
+                message_id = self.order_book.message_repository.next_identity()
+                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction,
+                                                                                          self.get_bitcoin_address())
+                self.send_multi_chain_payment(transaction, multi_chain_payment)
+            else:
+                self.send_end_transaction(transaction)
 
     # End transaction
     def send_end_transaction(self, transaction):

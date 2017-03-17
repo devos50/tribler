@@ -7,6 +7,10 @@ from time import sleep
 
 import datetime
 
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.task import deferLater
+
 import Tribler
 
 from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
@@ -37,6 +41,7 @@ class BitcoinWallet(Wallet):
                                        'wallet_path': os.path.join('wallet', 'btc_wallet')})
         self._logger = logging.getLogger(self.__class__.__name__)
         self.tribler_session = session
+        self.min_confirmations = 0
         self.created = False
         self.daemon = None
         self.storage = WalletStorage(config.get_wallet_path())
@@ -109,6 +114,15 @@ class BitcoinWallet(Wallet):
             return "abcd"
         else:
             raise InsufficientFunds()
+
+    def monitor_txid(self, txid):
+        """
+        Monitor a given transaction ID. Returns a Deferred that fires when the transaction is present.
+        """
+        monitor_deferred = Deferred()
+        # TODO(Martijn): hard-coded confirmation of transaction!
+        deferLater(reactor, 2, lambda: monitor_deferred.callback(None))
+        return monitor_deferred
 
     def get_address(self):
         if not self.created:
