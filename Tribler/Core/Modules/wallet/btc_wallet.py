@@ -5,6 +5,8 @@ import sys
 import logging
 from time import sleep
 
+import datetime
+
 import Tribler
 
 from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
@@ -112,3 +114,24 @@ class BitcoinWallet(Wallet):
         if not self.created:
             return None
         return self.wallet.get_receiving_address()
+
+    def get_transactions(self):
+        self.wallet.load_transactions()
+        out = []
+        for item in self.wallet.get_history():
+            tx_hash, height, conf, timestamp, value, balance = item
+            if timestamp:
+                date = datetime.datetime.fromtimestamp(timestamp).isoformat(' ')[:-3]
+            else:
+                date = "----"
+            label = self.wallet.get_label(tx_hash)
+            out.append({
+                'txid': tx_hash,
+                'timestamp': timestamp,
+                'date': date,
+                'label': label,
+                'value': float(value) / 100000000 if value is not None else None,
+                'height': height,
+                'confirmations': conf
+            })
+        return out

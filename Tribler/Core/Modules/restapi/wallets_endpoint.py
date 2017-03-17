@@ -34,7 +34,7 @@ class WalletEndpoint(resource.Resource):
         self.session = session
         self.identifier = identifier
 
-        child_handler_dict = {"balance": WalletBalanceEndpoint}
+        child_handler_dict = {"balance": WalletBalanceEndpoint, "transactions": WalletTransactionsEndpoint}
         for path, child_cls in child_handler_dict.iteritems():
             self.putChild(path, child_cls(self.session, self.identifier))
 
@@ -69,3 +69,17 @@ class WalletBalanceEndpoint(resource.Resource):
 
     def render_GET(self, request):
         return json.dumps({"balance": self.session.lm.wallets[self.identifier].get_balance()})
+
+
+class WalletTransactionsEndpoint(resource.Resource):
+    """
+    This class handles requests regarding the transactions of a wallet.
+    """
+
+    def __init__(self, session, identifier):
+        resource.Resource.__init__(self)
+        self.session = session
+        self.identifier = identifier
+
+    def render_GET(self, request):
+        return json.dumps({"transactions": self.session.lm.wallets[self.identifier].get_transactions()})

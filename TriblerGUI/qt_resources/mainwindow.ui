@@ -10236,6 +10236,40 @@ background-color: transparent;
          </layout>
         </widget>
         <widget class="MarketWalletsPage" name="market_wallets_page">
+         <property name="styleSheet">
+          <string notr="true">QTreeWidget {
+border: none;
+font-size: 13px;
+}
+QTreeWidget::item {
+color: #eee;
+height: 30px;
+border-bottom: 1px solid #303030;
+}
+QTreeWidget::item:hover {
+background-color: #303030;
+}
+QTreeWidget::item::selected {
+background-color: #444;
+}
+QHeaderView {
+background-color: transparent;
+}
+QHeaderView::section {
+background-color: transparent;
+border: none;
+color: #B5B5B5;
+padding: 10px;
+font-size: 14px;
+border-bottom: 1px solid #303030;
+}
+QHeaderView::section:hover {
+color: white;
+}
+QTableCornerButton::section {
+background-color: transparent;
+}</string>
+         </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <property name="spacing">
            <number>0</number>
@@ -10617,50 +10651,130 @@ font-size: 16px;</string>
                  <string notr="true">color: white;
 font-size: 16px;</string>
                 </property>
-                <layout class="QFormLayout" name="formLayout_9">
-                 <property name="formAlignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                <layout class="QVBoxLayout" name="verticalLayout_19">
+                 <property name="spacing">
+                  <number>0</number>
                  </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_60">
-                   <property name="text">
-                    <string>Confirmed:</string>
-                   </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QWidget" name="widget_35" native="true">
+                   <layout class="QHBoxLayout" name="horizontalLayout_47">
+                    <item>
+                     <widget class="QWidget" name="widget_36" native="true">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>0</height>
+                       </size>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true"/>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_48">
+                       <item>
+                        <widget class="QLabel" name="label_60">
+                         <property name="text">
+                          <string>Confirmed:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="btc_wallet_confirmed_label">
+                         <property name="text">
+                          <string>-</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QWidget" name="widget_37" native="true">
+                      <layout class="QHBoxLayout" name="horizontalLayout_49">
+                       <item>
+                        <widget class="QLabel" name="label_61">
+                         <property name="text">
+                          <string>Unconfirmed:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="btc_wallet_unconfirmed_label">
+                         <property name="text">
+                          <string>-</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QWidget" name="widget_38" native="true">
+                      <layout class="QHBoxLayout" name="horizontalLayout_50">
+                       <item>
+                        <widget class="QLabel" name="label_62">
+                         <property name="text">
+                          <string>Unmatured:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="btc_wallet_unmatured_label">
+                         <property name="text">
+                          <string>-</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
                   </widget>
                  </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_61">
-                   <property name="text">
-                    <string>Unconfirmed:</string>
+                 <item>
+                  <widget class="QTreeWidget" name="btc_wallet_transactions_list">
+                   <property name="selectionMode">
+                    <enum>QAbstractItemView::NoSelection</enum>
                    </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_62">
-                   <property name="text">
-                    <string>Unmatured:</string>
+                   <property name="indentation">
+                    <number>0</number>
                    </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="btc_wallet_confirmed_label">
-                   <property name="text">
-                    <string>-</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLabel" name="btc_wallet_unconfirmed_label">
-                   <property name="text">
-                    <string>-</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLabel" name="btc_wallet_unmatured_label">
-                   <property name="text">
-                    <string>-</string>
-                   </property>
+                   <column>
+                    <property name="text">
+                     <string>Direction</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>ID</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Date</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Amount (BTC)</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Confirmations</string>
+                    </property>
+                   </column>
                   </widget>
                  </item>
                 </layout>

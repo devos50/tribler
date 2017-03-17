@@ -1,6 +1,7 @@
 from PyQt5.QtGui import QCursor
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction
+from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
 from TriblerGUI.defs import PAGE_WALLET_NONE, PAGE_WALLET_BTC, PAGE_WALLET_MC, BUTTON_TYPE_NORMAL, BUTTON_TYPE_CONFIRM
@@ -74,6 +75,22 @@ class MarketWalletsPage(QWidget):
         self.window().btc_wallet_confirmed_label.setText("%s" % balance["balance"]["confirmed"])
         self.window().btc_wallet_unconfirmed_label.setText("%s" % balance["balance"]["unconfirmed"])
         self.window().btc_wallet_unmatured_label.setText("%s" % balance["balance"]["unmatured"])
+        self.load_btc_transactions()
+
+    def load_btc_transactions(self):
+        self.request_mgr = TriblerRequestManager()
+        self.request_mgr.perform_request("wallets/btc/transactions", self.on_btc_transactions)
+
+    def on_btc_transactions(self, transactions):
+        self.window().btc_wallet_transactions_list.clear()
+        for transaction in transactions["transactions"]:
+            item = QTreeWidgetItem(self.window().btc_wallet_transactions_list)
+            item.setText(0, "sent" if transaction["value"] < 0 else "received")
+            item.setText(1, transaction["txid"])
+            item.setText(2, transaction["date"])
+            item.setText(3, "%f" % transaction["value"])
+            item.setText(4, "%d" % transaction["confirmations"])
+            self.window().btc_wallet_transactions_list.addTopLevelItem(item)
 
     def load_mc_wallet_balance(self):
         self.request_mgr = TriblerRequestManager()

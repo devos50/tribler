@@ -45,3 +45,7 @@ class MultichainWallet(Wallet):
 
     def get_address(self):
         return ""
+
+    def get_transactions(self):
+        # TODO(Martijn): implement this
+        return []

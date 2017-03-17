@@ -28,3 +28,6 @@ class Wallet(TaskManager):
 
     def get_address(self):
         raise NotImplementedError("Please implement this method.")
+
+    def get_transactions(self):
+        raise NotImplementedError("Please implement this method.")
