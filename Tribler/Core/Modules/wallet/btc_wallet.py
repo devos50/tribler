@@ -115,7 +115,7 @@ class BitcoinWallet(Wallet):
         else:
             raise InsufficientFunds()
 
-    def monitor_txid(self, txid):
+    def monitor_transaction(self, txid):
         """
         Monitor a given transaction ID. Returns a Deferred that fires when the transaction is present.
         """

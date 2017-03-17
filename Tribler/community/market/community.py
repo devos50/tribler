@@ -1,7 +1,6 @@
 from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE
 from Tribler.Core.simpledefs import NTFY_UPDATE
-from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -35,15 +34,6 @@ from ttl import Ttl
 
 class MarketCommunity(Community):
     """Community for selling and buying multichain credits"""
-
-    def get_multichain_community(self):
-        # TODO error handling when community cannot be found!
-        if not self.tribler_session:
-            return None
-
-        for community in self.tribler_session.get_dispersy_instance().get_communities():
-            if isinstance(community, MultiChainCommunity):
-                return community
 
     @classmethod
     def get_master_members(cls, dispersy):
@@ -85,7 +75,6 @@ class MarketCommunity(Community):
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.tribler_session = tribler_session
 
-        self.multichain_community = self.get_multichain_community()
         transaction_repository = MemoryTransactionRepository(self.pubkey)
         self.transaction_manager = TransactionManager(transaction_repository)
 
@@ -201,10 +190,21 @@ class MarketCommunity(Community):
         Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
         """
         wallets = self.tribler_session.lm.wallets
-        if not wallets['btc']['created'] or not wallets['mc']['created']:
-            raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
+        if not wallets['btc']['created']:
+            raise RuntimeError("No Bitcoin wallet available")
 
         return wallets['btc'].get_address()
+
+    def get_multichain_identity(self):
+        """
+        Get your identitiy (public key) in the multichain community. This is sent to the receiver of the multichain
+        credits so he can wait for the transaction to be completed.
+        """
+        wallets = self.tribler_session.lm.wallets
+        if not wallets['mc']['created']:
+            raise RuntimeError("No Multichain wallet available")
+
+        return wallets['mc'].get_address()
 
     def check_history(self, message):
         """
@@ -693,7 +693,9 @@ class MarketCommunity(Community):
 
                 if order.is_ask():  # Send multi chain payment
                     message_id = self.order_book.message_repository.next_identity()
-                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction, self.get_bitcoin_address())
+                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction,
+                                                                                              self.get_bitcoin_address(),
+                                                                                              self.get_multichain_identity())
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
                 else:  # Send continue transaction
                     self.send_continue_transaction(transaction)
@@ -730,7 +732,9 @@ class MarketCommunity(Community):
 
             if transaction:  # Send multi chain payment
                 message_id = self.order_book.message_repository.next_identity()
-                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction, self.get_bitcoin_address())
+                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction,
+                                                                                          self.get_bitcoin_address(),
+                                                                                          self.get_multichain_identity())
                 self.send_multi_chain_payment(transaction, multi_chain_payment)
 
     # Multi chain payment
@@ -746,8 +750,6 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            mc_wallet.transfer(candidate, multi_chain_payment.transferor_quantity)
-
             meta = self.get_meta_message(u"multi-chain-payment")
             message = meta.impl(
                 authentication=(self.my_member,),
@@ -757,6 +759,8 @@ class MarketCommunity(Community):
             )
 
             self.dispersy.store_update_forward([message], True, False, True)
+
+            mc_wallet.transfer(candidate, multi_chain_payment.transferor_quantity)
         except InsufficientFunds:  # Not enough funds
             self._logger.warning("Not enough multichain credits for this transaction (have %s, need %s)!",
                                  mc_wallet.get_balance()['net'], multi_chain_payment.transferor_quantity)
@@ -766,12 +770,18 @@ class MarketCommunity(Community):
             multi_chain_payment = MultiChainPayment.from_network(message.payload)
             transaction = self.transaction_manager.find_by_id(multi_chain_payment.transaction_id)
 
-            if transaction:
-                transaction.add_payment(multi_chain_payment)
-                self.transaction_manager.transaction_repository.update(transaction)
+            mc_wallet = self.tribler_session.lm.wallets['mc']
+            transaction_deferred = mc_wallet.monitor_transaction(multi_chain_payment.mc_address,
+                                                                 multi_chain_payment.transferor_quantity)
+            transaction_deferred.addCallback(lambda _: self.received_multichain_payment(multi_chain_payment, transaction))
 
-                self.send_bitcoin_payment(transaction, multi_chain_payment.transferee_price,
-                                          multi_chain_payment.bitcoin_address)
+    def received_multichain_payment(self, multi_chain_payment, transaction):
+        if transaction:
+            transaction.add_payment(multi_chain_payment)
+            self.transaction_manager.transaction_repository.update(transaction)
+
+            self.send_bitcoin_payment(transaction, multi_chain_payment.transferee_price,
+                                      multi_chain_payment.bitcoin_address)
 
     # Bitcoin payment
     def send_bitcoin_payment(self, transaction, price, btc_address):
@@ -787,7 +797,7 @@ class MarketCommunity(Community):
 
             message_id = self.order_book.message_repository.next_identity()
             bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction,
-                                                                              price, btc_address)
+                                                                              price, btc_address, txid)
             payload = bitcoin_payment.to_network()
 
             meta = self.get_meta_message(u"bitcoin-payment")
@@ -820,7 +830,8 @@ class MarketCommunity(Community):
             if not transaction.is_payment_complete():
                 message_id = self.order_book.message_repository.next_identity()
                 multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction,
-                                                                                          self.get_bitcoin_address())
+                                                                                          self.get_bitcoin_address(),
+                                                                                          self.get_multichain_identity())
                 self.send_multi_chain_payment(transaction, multi_chain_payment)
             else:
                 self.send_end_transaction(transaction)

@@ -1,3 +1,7 @@
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.task import deferLater
+
 from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
 from Tribler.community.multichain.community import MultiChainCommunity
 
@@ -43,8 +47,18 @@ class MultichainWallet(Wallet):
         else:
             raise InsufficientFunds()
 
+    def monitor_transaction(self, mc_address, amount):
+        """
+        Monitor an incoming transaction. Returns a deferred that fires when we receive a signature request that matches
+        the address and amount.
+        """
+        monitor_deferred = Deferred()
+        # TODO(Martijn): hard-coded confirmation of transaction!
+        deferLater(reactor, 2, lambda: monitor_deferred.callback(None))
+        return monitor_deferred
+
     def get_address(self):
-        return ""
+        return self.multichain_community._public_key
 
     def get_transactions(self):
         # TODO(Martijn): implement this
