@@ -166,8 +166,8 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.bitcoin_address), float(payload.price), str(payload.txid),
-            float(payload.timestamp)
+            str(payload.transaction_number), str(payload.bitcoin_address), float(payload.price),
+            str(payload.txid), float(payload.timestamp)
         ))
         return packet,
 

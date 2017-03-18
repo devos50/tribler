@@ -3,6 +3,7 @@ import os
 import sys
 
 import logging
+import threading
 from time import sleep
 
 import datetime
@@ -51,6 +52,7 @@ class BitcoinWallet(Wallet):
             self.wallet = ElectrumWallet(self.storage)
             self.created = True
             self.start_daemon()
+            self.open_wallet()
 
     def start_daemon(self):
         options = {'verbose': False, 'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
@@ -58,9 +60,14 @@ class BitcoinWallet(Wallet):
                    'wallet_path': os.path.join('wallet', 'btc_wallet')}
         config = SimpleConfig(options)
         fd, server = daemon.get_fd_or_server(config)
+
+        if not fd:
+            return
+
         self.daemon = daemon.Daemon(config, fd)
         self.daemon.start()
 
+    def open_wallet(self):
         options = {'password': None, 'subcommand': 'open', 'verbose': False, 'cmd': 'daemon', 'testnet': False,
                    'oneserver': False, 'segwit': False, 'cwd': self.tribler_session.get_state_dir(), 'portable': False,
                    'wallet_path': os.path.join('wallet', 'btc_wallet')}
@@ -78,6 +85,8 @@ class BitcoinWallet(Wallet):
         """
         Create a new bitcoin wallet.
         """
+        self._logger.info("Creating wallet in %s", self.tribler_session.get_state_dir())
+
         seed = Mnemonic('en').make_seed()
         k = keystore.from_seed(seed, '')
         k.update_password(None, password)
@@ -91,6 +100,7 @@ class BitcoinWallet(Wallet):
         self.wallet.storage.write()
         self.created = True
         self.start_daemon()
+        self.open_wallet()
 
         self._logger.info("Bitcoin wallet saved in '%s'" % self.wallet.storage.path)
 

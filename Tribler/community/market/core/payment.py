@@ -158,6 +158,6 @@ class BitcoinPayment(Message):
             self._transaction_id.transaction_number,
             self._bitcoin_address,
             self._price,
-            self._transaction_id,
+            self._txid,
             self._timestamp,
         )

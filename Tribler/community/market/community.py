@@ -1,6 +1,7 @@
 from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE
 from Tribler.Core.simpledefs import NTFY_UPDATE
+from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -190,7 +191,7 @@ class MarketCommunity(Community):
         Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
         """
         wallets = self.tribler_session.lm.wallets
-        if not wallets['btc']['created']:
+        if not wallets['btc'].created:
             raise RuntimeError("No Bitcoin wallet available")
 
         return wallets['btc'].get_address()
@@ -201,7 +202,7 @@ class MarketCommunity(Community):
         credits so he can wait for the transaction to be completed.
         """
         wallets = self.tribler_session.lm.wallets
-        if not wallets['mc']['created']:
+        if not wallets['mc'].created:
             raise RuntimeError("No Multichain wallet available")
 
         return wallets['mc'].get_address()
@@ -263,7 +264,7 @@ class MarketCommunity(Community):
         :rtype: Order
         """
         wallets = self.tribler_session.lm.wallets
-        if not wallets['btc']['created'] or not wallets['mc']['created']:
+        if not wallets['btc'].created or not wallets['mc'].created:
             raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
 
         # Convert values to value objects
@@ -363,7 +364,7 @@ class MarketCommunity(Community):
         :rtype: Order
         """
         wallets = self.tribler_session.lm.wallets
-        if not wallets['btc']['created'] or not wallets['mc']['created']:
+        if not wallets['btc'].created or not wallets['mc'].created:
             raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
 
         # Convert values to value objects
@@ -743,7 +744,7 @@ class MarketCommunity(Community):
         payload = multi_chain_payment.to_network()
 
         mc_wallet = self.tribler_session.lm.wallets['mc']
-        if not mc_wallet or not mc_wallet['created']:
+        if not mc_wallet or not mc_wallet.created:
             raise RuntimeError("No MultiChain credit wallet present")
 
         # Lookup the remote address of the peer with the pubkey
@@ -760,7 +761,7 @@ class MarketCommunity(Community):
 
             self.dispersy.store_update_forward([message], True, False, True)
 
-            mc_wallet.transfer(candidate, multi_chain_payment.transferor_quantity)
+            mc_wallet.transfer(int(multi_chain_payment.transferor_quantity), candidate)
         except InsufficientFunds:  # Not enough funds
             self._logger.warning("Not enough multichain credits for this transaction (have %s, need %s)!",
                                  mc_wallet.get_balance()['net'], multi_chain_payment.transferor_quantity)
@@ -786,14 +787,14 @@ class MarketCommunity(Community):
     # Bitcoin payment
     def send_bitcoin_payment(self, transaction, price, btc_address):
         btc_wallet = self.tribler_session.lm.wallets['btc']
-        if not btc_wallet or not btc_wallet['created']:
+        if not btc_wallet or not btc_wallet.created:
             raise RuntimeError("No BitCoin wallet present")
 
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            txid = btc_wallet.transfer(price, btc_address)
+            txid = BitcoinTransactionId(btc_wallet.transfer(float(price), btc_address))
 
             message_id = self.order_book.message_repository.next_identity()
             bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction,
