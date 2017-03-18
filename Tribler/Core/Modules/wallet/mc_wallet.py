@@ -17,7 +17,6 @@ class MultichainWallet(Wallet):
         super(MultichainWallet, self).__init__()
 
         self.session = session
-        self.multichain_community = self.get_multichain_community()
         self.created = True
 
     def get_multichain_community(self):
@@ -32,7 +31,7 @@ class MultichainWallet(Wallet):
         pass
 
     def get_balance(self):
-        total = self.multichain_community.persistence.get_total(self.multichain_community._public_key)
+        total = self.get_multichain_community().persistence.get_total(self.get_multichain_community()._public_key)
 
         #TODO(Martijn): fake the balance for now
         return {'total_up': 101000, 'total_down': 1000, 'net': 100000}
@@ -45,7 +44,7 @@ class MultichainWallet(Wallet):
     def transfer(self, quantity, candidate):
         if self.get_balance()['net'] >= quantity:
             mb_quantity = quantity * 1024 * 1024
-            self.multichain_community.schedule_block(candidate, -mb_quantity, mb_quantity)
+            self.get_multichain_community().schedule_block(candidate, 0, mb_quantity)
         else:
             raise InsufficientFunds()
 
@@ -60,7 +59,7 @@ class MultichainWallet(Wallet):
         return monitor_deferred
 
     def get_address(self):
-        return b64encode(self.multichain_community._public_key)
+        return b64encode(self.get_multichain_community()._public_key)
 
     def get_transactions(self):
         # TODO(Martijn): implement this

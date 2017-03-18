@@ -4,7 +4,7 @@ This reputation system builds a tamper proof interaction history contained in a 
 Every node has a chain and these chains intertwine by blocks shared by chains.
 """
 import logging
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, Deferred
 
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
@@ -63,6 +63,9 @@ class MultiChainCommunity(Community):
         # The key is the public key of the peer being interacted with, the value a tuple of the up and down bytes
         # This data is not used to create outgoing requests, but _only_ to verify incoming requests
         self.pending_bytes = dict()
+
+        # No response is expected yet.
+        self.expected_intro_responses = {}
 
         self.logger.debug("The multichain community started with Public Key: %s",
                           self.my_member.public_key.encode("hex"))
@@ -135,6 +138,21 @@ class MultiChainCommunity(Community):
             self.dispersy.store_update_forward([message], False, False, True)
         except DelayPacketByMissingMember:
             self.logger.warn("Missing member in MultiChain community to send signature request to")
+
+    def on_introduction_response(self, messages):
+        super(MultiChainCommunity, self).on_introduction_response(messages)
+        for message in messages:
+            if message.candidate.sock_addr in self.expected_intro_responses:
+                self.expected_intro_responses[message.candidate.sock_addr].callback(None)
+                del self.expected_intro_responses[message.candidate.sock_addr]
+
+    def wait_for_intro_of_candidate(self, candidate):
+        """
+        Returns a Deferred that fires when we receive an introduction response from a given candidate.
+        """
+        response_deferred = Deferred()
+        self.expected_intro_responses[candidate.sock_addr] = response_deferred
+        return response_deferred
 
     def sign_block(self, candidate, public_key=None, bytes_up=None, bytes_down=None, linked=None):
         """

@@ -131,6 +131,11 @@ class Transaction(object):
         self._timestamp = timestamp
         self._payments = {}
 
+        self.sent_wallet_info = False
+        self.received_wallet_info = False
+        self.destination_btc_address = None
+        self.destination_mc_candidate = None
+
         quantity_list = IncrementalQuantityManager.determine_incremental_quantity_list(quantity)
         price_list = IncrementalPriceManager.determine_incremental_price_list(price, quantity_list)
 

@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 from Tribler.Test.common import TESTS_DATA_DIR
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.community.market.community import MarketCommunity
+from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.dispersy.crypto import ECCrypto
 from Tribler.dispersy.discovery.community import BOOTSTRAP_FILE_ENVNAME
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
@@ -20,6 +21,19 @@ class MarketCommunityTests(MarketCommunity):
     @classmethod
     def get_master_members(cls, dispersy):
         master_key_hex = MarketCommunityTests.master_key.decode("HEX")
+        master = dispersy.get_member(public_key=master_key_hex)
+        return [master]
+
+
+class MultiChainCommunityTests(MultiChainCommunity):
+    """
+    We are using a seperate community so we do not interact with the live market.
+    """
+    master_key = ""
+
+    @classmethod
+    def get_master_members(cls, dispersy):
+        master_key_hex = MultiChainCommunityTests.master_key.decode("HEX")
         master = dispersy.get_member(public_key=master_key_hex)
         return [master]
 
@@ -46,8 +60,11 @@ class TestMarketBase(TestAsServer):
         self.eccrypto = ECCrypto()
         ec = self.eccrypto.generate_key(u"curve25519")
         MarketCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
+        ec = self.eccrypto.generate_key(u"curve25519")
+        MultiChainCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
 
         self.market_communities = {}
+        self.load_multichain_community_in_session(self.session)
         self.load_market_community_in_session(self.session)
         self.create_btc_wallet_in_session(self.session)
 
@@ -64,8 +81,8 @@ class TestMarketBase(TestAsServer):
         self.config.set_dispersy(True)
         self.config.set_libtorrent(False)
         self.config.set_videoserver_enabled(False)
-        self.config.set_enable_multichain(True)
-        self.config.set_tunnel_community_enabled(True)
+        self.config.set_enable_multichain(False)
+        self.config.set_tunnel_community_enabled(False)
         self.config.set_market_community_enabled(False)
 
     @blocking_call_on_reactor_thread
@@ -78,6 +95,17 @@ class TestMarketBase(TestAsServer):
         dispersy_member = dispersy.get_member(private_key=dispersy.crypto.key_to_bin(keypair))
         self.market_communities[session] = dispersy.define_auto_load(
             MarketCommunityTests, dispersy_member, (session,), load=True)[0]
+
+    @blocking_call_on_reactor_thread
+    def load_multichain_community_in_session(self, session):
+        """
+        Load a custom instance of the multichain community in a given session.
+        """
+        dispersy = session.get_dispersy_instance()
+        keypair = dispersy.crypto.generate_key(u"curve25519")
+        dispersy_member = dispersy.get_member(private_key=dispersy.crypto.key_to_bin(keypair))
+        multichain_kwargs = {'tribler_session': session}
+        dispersy.define_auto_load(MultiChainCommunityTests, dispersy_member, load=True, kargs=multichain_kwargs)
 
     def create_btc_wallet_in_session(self, session):
         session.lm.btc_wallet.create_wallet()
@@ -101,5 +129,6 @@ class TestMarketBase(TestAsServer):
 
         self.create_btc_wallet_in_session(session)
 
+        self.load_multichain_community_in_session(session)
         self.load_market_community_in_session(session)
         returnValue(session)

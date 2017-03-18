@@ -34,11 +34,13 @@ class MarketConversion(BinaryConversion):
                                  self._encode_start_transaction, self._decode_start_transaction)
         self.define_meta_message(chr(8), community.get_meta_message(u"continue-transaction"),
                                  self._encode_transaction, self._decode_transaction)
-        self.define_meta_message(chr(9), community.get_meta_message(u"multi-chain-payment"),
+        self.define_meta_message(chr(9), community.get_meta_message(u"wallet-info"),
+                                 self._encode_wallet_info, self._decode_wallet_info)
+        self.define_meta_message(chr(10), community.get_meta_message(u"multi-chain-payment"),
                                  self._encode_multi_chain_payment, self._decode_multi_chain_payment)
-        self.define_meta_message(chr(10), community.get_meta_message(u"bitcoin-payment"),
+        self.define_meta_message(chr(11), community.get_meta_message(u"bitcoin-payment"),
                                  self._encode_bitcoin_payment, self._decode_bitcoin_payment)
-        self.define_meta_message(chr(11), community.get_meta_message(u"end-transaction"),
+        self.define_meta_message(chr(12), community.get_meta_message(u"end-transaction"),
                                  self._encode_transaction, self._decode_transaction)
 
     def _decode_payload(self, placeholder, offset, data, types):
@@ -147,6 +149,19 @@ class MarketConversion(BinaryConversion):
     def _decode_transaction(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, TraderId, TransactionNumber, Timestamp])
+
+    def _encode_wallet_info(self, message):
+        payload = message.payload
+        packet = encode((
+            str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
+            str(payload.transaction_number), str(payload.incoming_address), str(payload.outgoing_address),
+            float(payload.timestamp)
+        ))
+        return packet,
+
+    def _decode_wallet_info(self, placeholder, offset, data):
+        return self._decode_payload(placeholder, offset, data,
+                                    [TraderId, MessageNumber, TraderId, TransactionNumber, str, str, Timestamp])
 
     def _encode_multi_chain_payment(self, message):
         payload = message.payload

@@ -228,6 +228,26 @@ class StartTransactionPayload(TransactionPayload):
             return self._quantity
 
 
+class WalletInfoPayload(TransactionPayload):
+    class Implementation(TransactionPayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number,
+                     incoming_address, outgoing_address, timestamp):
+            assert isinstance(incoming_address, str), type(incoming_address)
+            assert isinstance(outgoing_address, str), type(outgoing_address)
+            super(WalletInfoPayload.Implementation, self).__init__(meta, trader_id, message_number,
+                                                                   transaction_trader_id, transaction_number, timestamp)
+            self._incoming_address = incoming_address
+            self._outgoing_address = outgoing_address
+
+        @property
+        def incoming_address(self):
+            return self._incoming_address
+
+        @property
+        def outgoing_address(self):
+            return self._outgoing_address
+
+
 class MultiChainPaymentPayload(TransactionPayload):
     class Implementation(TransactionPayload.Implementation):
         def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number, bitcoin_address,
