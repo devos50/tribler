@@ -1,3 +1,5 @@
+from base64 import b64encode
+
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.task import deferLater
@@ -58,7 +60,7 @@ class MultichainWallet(Wallet):
         return monitor_deferred
 
     def get_address(self):
-        return self.multichain_community._public_key
+        return b64encode(self.multichain_community._public_key)
 
     def get_transactions(self):
         # TODO(Martijn): implement this
