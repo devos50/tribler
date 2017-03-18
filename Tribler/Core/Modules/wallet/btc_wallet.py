@@ -47,6 +47,7 @@ class BitcoinWallet(Wallet):
         self.daemon = None
         self.storage = WalletStorage(config.get_wallet_path())
         self.storage.read(None)
+        self.monitored_transactions = {}
 
         if os.path.exists(os.path.join(session.get_state_dir(), 'wallet', 'btc_wallet')):
             self.wallet = ElectrumWallet(self.storage)
@@ -77,6 +78,16 @@ class BitcoinWallet(Wallet):
         if server is not None:
             # Run the command to open the wallet
             server.daemon(options)
+
+        self.wallet.receive_tx_callback = self.on_received_tx
+
+    def on_received_tx(self, tx_hash, tx, tx_height):
+        self.wallet.add_transaction(tx_hash, tx)
+        self.wallet.add_unverified_tx(tx_hash, tx_height)
+
+        if tx_hash in self.monitored_transactions:
+            self.monitored_transactions[tx_hash].callback(None)
+            del self.monitored_transactions[tx_hash]
 
     def get_identifier(self):
         return 'btc'
@@ -130,8 +141,7 @@ class BitcoinWallet(Wallet):
         Monitor a given transaction ID. Returns a Deferred that fires when the transaction is present.
         """
         monitor_deferred = Deferred()
-        # TODO(Martijn): hard-coded confirmation of transaction!
-        deferLater(reactor, 2, lambda: monitor_deferred.callback(None))
+        self.monitored_transactions[txid] = monitor_deferred
         return monitor_deferred
 
     def get_address(self):
@@ -140,6 +150,7 @@ class BitcoinWallet(Wallet):
         return self.wallet.get_receiving_address()
 
     def get_transactions(self):
+        # TODO(Martijn): We should probably reload the storage/wallet...
         self.wallet.load_transactions()
         out = []
         for item in self.wallet.get_history():

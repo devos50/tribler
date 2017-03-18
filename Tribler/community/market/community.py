@@ -888,7 +888,7 @@ class MarketCommunity(Community):
             transaction = self.transaction_manager.find_by_id(btc_payment.transaction_id)
 
             btc_wallet = self.tribler_session.lm.wallets['btc']
-            transaction_deferred = btc_wallet.monitor_transaction(btc_payment.txid)
+            transaction_deferred = btc_wallet.monitor_transaction(str(btc_payment.txid))
             transaction_deferred.addCallback(lambda _: self.received_bitcoin_payment(btc_payment, transaction))
 
     def received_bitcoin_payment(self, btc_payment, transaction):
