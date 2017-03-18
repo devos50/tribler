@@ -64,8 +64,8 @@ class MultiChainCommunity(Community):
         # This data is not used to create outgoing requests, but _only_ to verify incoming requests
         self.pending_bytes = dict()
 
-        # No response is expected yet.
         self.expected_intro_responses = {}
+        self.expected_sig_requests = {}
 
         self.logger.debug("The multichain community started with Public Key: %s",
                           self.my_member.public_key.encode("hex"))
@@ -152,6 +152,15 @@ class MultiChainCommunity(Community):
         """
         response_deferred = Deferred()
         self.expected_intro_responses[candidate.sock_addr] = response_deferred
+        return response_deferred
+
+    def wait_for_signature_request_of_member(self, member, up, down):
+        """
+        Returns a Deferred that fires when we receive a signature from a given member with some amount to sign.
+        Used in the market community so we can monitor transactions.
+        """
+        response_deferred = Deferred()
+        self.expected_sig_requests[(member.public_key, up, down)] = response_deferred
         return response_deferred
 
     def sign_block(self, candidate, public_key=None, bytes_up=None, bytes_down=None, linked=None):

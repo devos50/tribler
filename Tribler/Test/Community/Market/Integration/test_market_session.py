@@ -40,3 +40,5 @@ class TestMarketSession(TestMarketBase):
         yield self.async_sleep(1)
         ask_community.create_ask(1, 1, 3600)
         yield test_deferred
+
+        self.assertEqual(self.session.lm.wallets['mc'].get_balance()['net'], 9)

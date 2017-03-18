@@ -32,14 +32,7 @@ class MultichainWallet(Wallet):
 
     def get_balance(self):
         total = self.get_multichain_community().persistence.get_total(self.get_multichain_community()._public_key)
-
-        #TODO(Martijn): fake the balance for now
-        return {'total_up': 101000, 'total_down': 1000, 'net': 100000}
-
-        if total == (-1, -1):
-            return 0
-        else:
-            return int(max(0, total[0] - total[1]) / 2)
+        return {'total_up': total[0], 'total_down': total[1], 'net': total[0] - total[1]}
 
     def transfer(self, quantity, candidate):
         if self.get_balance()['net'] >= quantity:
@@ -48,15 +41,12 @@ class MultichainWallet(Wallet):
         else:
             raise InsufficientFunds()
 
-    def monitor_transaction(self, mc_address, amount):
+    def monitor_transaction(self, mc_member, amount):
         """
         Monitor an incoming transaction. Returns a deferred that fires when we receive a signature request that matches
         the address and amount.
         """
-        monitor_deferred = Deferred()
-        # TODO(Martijn): hard-coded confirmation of transaction!
-        deferLater(reactor, 2, lambda: monitor_deferred.callback(None))
-        return monitor_deferred
+        return self.get_multichain_community().wait_for_signature_request_of_member(mc_member, 0, amount)
 
     def get_address(self):
         return b64encode(self.get_multichain_community()._public_key)

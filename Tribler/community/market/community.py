@@ -774,16 +774,12 @@ class MarketCommunity(Community):
             transaction.received_wallet_info = True
 
             if not transaction.sent_wallet_info:
-                # candidate = Candidate(self.lookup_ip(transaction.transaction_id.trader_id), False)
-                #
-                # pub_key = b64decode(message.payload.outgoing_address)
-                # member = self.tribler_session.get_dispersy_instance().get_member(public_key=pub_key)
-                # candidate.associate(member)
-                # mc_community = self.tribler_session.lm.wallets['mc'].get_multichain_community()
-                # print "my mid: %s" % mc_community.my_member.public_key
-                # print "other: %s" % pub_key
-                # mc_community.add_discovered_candidate(candidate)
+                candidate = Candidate(self.lookup_ip(transaction.transaction_id.trader_id), False)
+                pub_key = b64decode(message.payload.outgoing_address)
+                member = self.tribler_session.get_dispersy_instance().get_member(public_key=pub_key)
+                candidate.associate(member)
 
+                transaction.destination_mc_candidate = candidate
                 transaction.destination_btc_address = message.payload.incoming_address
 
                 self.send_wallet_info(transaction, self.get_multichain_identity(), self.get_bitcoin_address())
@@ -794,6 +790,7 @@ class MarketCommunity(Community):
                 candidate.associate(member)
 
                 transaction.destination_mc_candidate = candidate
+                transaction.destination_btc_address = message.payload.outgoing_address
 
                 def send_mc_payment(_):
                     message_id = self.order_book.message_repository.next_identity()
@@ -843,8 +840,8 @@ class MarketCommunity(Community):
             transaction = self.transaction_manager.find_by_id(multi_chain_payment.transaction_id)
 
             mc_wallet = self.tribler_session.lm.wallets['mc']
-            transaction_deferred = mc_wallet.monitor_transaction(multi_chain_payment.mc_address,
-                                                                 multi_chain_payment.transferor_quantity)
+            transaction_deferred = mc_wallet.monitor_transaction(transaction.destination_mc_candidate.get_member(),
+                                                                 int(multi_chain_payment.transferor_quantity))
             transaction_deferred.addCallback(lambda _: self.received_multichain_payment(multi_chain_payment, transaction))
 
     def received_multichain_payment(self, multi_chain_payment, transaction):

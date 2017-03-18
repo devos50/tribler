@@ -3,6 +3,7 @@ import os
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 
+from Tribler.Test.Community.Multichain.test_multichain_utilities import TestBlock
 from Tribler.Test.common import TESTS_DATA_DIR
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.community.market.community import MarketCommunity
@@ -64,7 +65,8 @@ class TestMarketBase(TestAsServer):
         MultiChainCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
 
         self.market_communities = {}
-        self.load_multichain_community_in_session(self.session)
+        mc_community = self.load_multichain_community_in_session(self.session)
+        self.give_multichain_credits(mc_community, 10)
         self.load_market_community_in_session(self.session)
         self.create_btc_wallet_in_session(self.session)
 
@@ -84,6 +86,15 @@ class TestMarketBase(TestAsServer):
         self.config.set_enable_multichain(False)
         self.config.set_tunnel_community_enabled(False)
         self.config.set_market_community_enabled(False)
+
+    def give_multichain_credits(self, mc_community, amount):
+        block = TestBlock()
+        block.up = amount
+        block.down = 0
+        block.total_up_requester = amount
+        block.total_down_requester = 0
+        block.public_key_requester = mc_community._public_key
+        mc_community.persistence.add_block(block)
 
     @blocking_call_on_reactor_thread
     def load_market_community_in_session(self, session):
@@ -105,7 +116,7 @@ class TestMarketBase(TestAsServer):
         keypair = dispersy.crypto.generate_key(u"curve25519")
         dispersy_member = dispersy.get_member(private_key=dispersy.crypto.key_to_bin(keypair))
         multichain_kwargs = {'tribler_session': session}
-        dispersy.define_auto_load(MultiChainCommunityTests, dispersy_member, load=True, kargs=multichain_kwargs)
+        return dispersy.define_auto_load(MultiChainCommunityTests, dispersy_member, load=True, kargs=multichain_kwargs)[0]
 
     def create_btc_wallet_in_session(self, session):
         session.lm.btc_wallet.create_wallet()
