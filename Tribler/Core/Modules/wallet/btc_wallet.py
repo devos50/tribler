@@ -3,14 +3,12 @@ import os
 import sys
 
 import logging
-import threading
-from time import sleep
 
 import datetime
+from threading import Thread
 
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
-from twisted.internet.task import deferLater
 
 import Tribler
 
@@ -98,17 +96,25 @@ class BitcoinWallet(Wallet):
         """
         self._logger.info("Creating wallet in %s", self.tribler_session.get_state_dir())
 
+        def run_on_thread(callable):
+            # We are running code that writes to the wallet on a separate thread.
+            # This is done because ethereum does not allow writing to a wallet from a daemon thread.
+            wallet_thread = Thread(target=lambda: callable(), name="ethereum-create-wallet")
+            wallet_thread.setDaemon(False)
+            wallet_thread.start()
+            wallet_thread.join()
+
         seed = Mnemonic('en').make_seed()
         k = keystore.from_seed(seed, '')
         k.update_password(None, password)
         self.storage.put('keystore', k.dump())
         self.storage.put('wallet_type', 'standard')
         self.storage.put('use_encryption', bool(password))
-        self.storage.write()
+        run_on_thread(self.storage.write)
 
         self.wallet = ElectrumWallet(self.storage)
         self.wallet.synchronize()
-        self.wallet.storage.write()
+        run_on_thread(self.wallet.storage.write)
         self.created = True
         self.start_daemon()
         self.open_wallet()
