@@ -36,9 +36,9 @@ class TestMarketSession(TestMarketBase):
         bid_community.add_discovered_candidate(
             Candidate(self.session.get_dispersy_instance().lan_address, tunnel=False))
         yield self.async_sleep(5)
-        bid_community.create_bid(1, 1, 3600)
+        bid_community.create_bid(1, 2, 3600)
         yield self.async_sleep(1)
-        ask_community.create_ask(1, 1, 3600)
+        ask_community.create_ask(1, 2, 3600)
         yield test_deferred
 
-        self.assertEqual(self.session.lm.wallets['mc'].get_balance()['net'], 9)
+        self.assertEqual(self.session.lm.wallets['mc'].get_balance()['net'], 8)

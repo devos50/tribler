@@ -2,58 +2,38 @@ from price import Price
 from quantity import Quantity
 
 
-class IncrementalQuantityManager(object):
-    """Incremental Quantity Manager which determines an incremental quantity list for payments"""
+class IncrementalManager(object):
+    """Incremental Manager which determines an incremental quantity list for payments"""
 
-    INITIAL_QUANTITY = 20
+    MIN_QUANTITY = 1
     MAX_TRANSACTIONS = 10
-    INCREMENTAL_QUANTITY = 200
 
     @staticmethod
-    def determine_incremental_quantity_list(total_quantity):
+    def determine_incremental_payments_list(price, total_quantity):
         """
-        Determines an incremental quantity list
-
-        :type total_quantity: Quantity
-        :return: Incremental quantity list
-        :rtype: List[Quantity]
-        """
-
-        # Check whether we should change the INCREMENTAL_QUANTITY to avoid not going over our MAX transactions
-        quantity_per_trade = IncrementalQuantityManager.INCREMENTAL_QUANTITY
-        if quantity_per_trade * IncrementalQuantityManager.MAX_TRANSACTIONS < int(total_quantity):
-            quantity_per_trade = int(total_quantity) / IncrementalQuantityManager.MAX_TRANSACTIONS
-
-        incremental_quantities = []
-        remaining_quantity = int(total_quantity)
-        if remaining_quantity > 0:
-            initial_quantity = min(IncrementalQuantityManager.INITIAL_QUANTITY, remaining_quantity)
-            incremental_quantities.append(Quantity(initial_quantity))
-            remaining_quantity -= initial_quantity
-
-            while remaining_quantity > 0:
-                incremental_quantity = min(quantity_per_trade, remaining_quantity)
-                incremental_quantities.append(Quantity(incremental_quantity))
-                remaining_quantity -= incremental_quantity
-        return incremental_quantities
-
-
-class IncrementalPriceManager(object):
-    """Incremental Price Manager which determines an incremental price list for payments"""
-
-    @staticmethod
-    def determine_incremental_price_list(price, incremental_quantities):
-        """
-        Determines an incremental price list parallel to the incremental quantity list
+        Determines an incremental payments list
 
         :type price: Price
-        :type incremental_quantities: List[Quantity]
-        :return: Incremental price list
-        :rtype: List[Price]
+        :type total_quantity: Quantity
+        :return: Incremental quantity list
+        :rtype: List[(Quantity, Price)]
         """
-        incremental_prices = []
 
-        for incremental_quantity in incremental_quantities:
-            incremental_prices.append(Price(float(price) * int(incremental_quantity)))
+        if int(total_quantity) < IncrementalManager.MIN_QUANTITY * IncrementalManager.MAX_TRANSACTIONS:
+            num_transactions = int(total_quantity)
+            min_quantity_per_trade = IncrementalManager.MIN_QUANTITY
+        else:
+            num_transactions = IncrementalManager.MAX_TRANSACTIONS
+            min_quantity_per_trade = int(total_quantity) / IncrementalManager.MAX_TRANSACTIONS
 
-        return incremental_prices
+        incremental_payments = []
+        remaining_quantity = int(total_quantity)
+        for ind in xrange(num_transactions):
+            if ind == num_transactions - 1:  # We are at the last transaction
+                transfer_quantity = remaining_quantity
+            else:
+                transfer_quantity = min_quantity_per_trade
+            remaining_quantity -= transfer_quantity
+            incremental_payments.append((Quantity(transfer_quantity), Price(float(price) * transfer_quantity)))
+
+        return incremental_payments

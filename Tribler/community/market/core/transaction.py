@@ -1,4 +1,4 @@
-from incremental_manager import IncrementalQuantityManager, IncrementalPriceManager
+from Tribler.community.market.core.incremental_manager import IncrementalManager
 from message import TraderId, Message, MessageId, MessageNumber
 from order import OrderId, OrderNumber
 from price import Price
@@ -136,10 +136,7 @@ class Transaction(object):
         self.destination_btc_address = None
         self.destination_mc_candidate = None
 
-        quantity_list = IncrementalQuantityManager.determine_incremental_quantity_list(quantity)
-        price_list = IncrementalPriceManager.determine_incremental_price_list(price, quantity_list)
-
-        self._payment_list = zip(quantity_list, price_list)
+        self._payment_list = IncrementalManager.determine_incremental_payments_list(price, quantity)
         self._current_payment = 0
 
     @classmethod
@@ -216,7 +213,7 @@ class Transaction(object):
             return -1, -1
 
     def is_payment_complete(self):
-        return self._current_payment >= (len(self._payment_list) - 1)
+        return len(self._payments.keys()) >= len(self._payment_list) * 2
 
     def to_dictionary(self):
         """
