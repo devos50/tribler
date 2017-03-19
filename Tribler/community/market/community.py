@@ -794,9 +794,7 @@ class MarketCommunity(Community):
 
                 def send_mc_payment(_):
                     message_id = self.order_book.message_repository.next_identity()
-                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction,
-                                                                                              self.get_bitcoin_address(),
-                                                                                              self.get_multichain_identity())
+                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
 
                 # Send an introduction request to this member.
@@ -849,11 +847,10 @@ class MarketCommunity(Community):
             transaction.add_payment(multi_chain_payment)
             self.transaction_manager.transaction_repository.update(transaction)
 
-            self.send_bitcoin_payment(transaction, multi_chain_payment.transferee_price,
-                                      multi_chain_payment.bitcoin_address)
+            self.send_bitcoin_payment(transaction, multi_chain_payment.transferee_price)
 
     # Bitcoin payment
-    def send_bitcoin_payment(self, transaction, price, btc_address):
+    def send_bitcoin_payment(self, transaction, price):
         btc_wallet = self.tribler_session.lm.wallets['btc']
         if not btc_wallet or not btc_wallet.created:
             raise RuntimeError("No BitCoin wallet present")
@@ -862,11 +859,10 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            txid = BitcoinTransactionId(btc_wallet.transfer(float(price), btc_address))
+            txid = BitcoinTransactionId(btc_wallet.transfer(float(price), transaction.destination_btc_address))
 
             message_id = self.order_book.message_repository.next_identity()
-            bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction,
-                                                                              price, btc_address, txid)
+            bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction, price, txid)
             payload = bitcoin_payment.to_network()
 
             meta = self.get_meta_message(u"bitcoin-payment")
@@ -898,9 +894,7 @@ class MarketCommunity(Community):
 
             if not transaction.is_payment_complete():
                 message_id = self.order_book.message_repository.next_identity()
-                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction,
-                                                                                          self.get_bitcoin_address(),
-                                                                                          self.get_multichain_identity())
+                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
                 self.send_multi_chain_payment(transaction, multi_chain_payment)
             else:
                 self.send_end_transaction(transaction)

@@ -10,31 +10,19 @@ from transaction import TransactionNumber, TransactionId
 class MultiChainPayment(Message):
     """Class representing a multi chain payment."""
 
-    def __init__(self, message_id, transaction_id, bitcoin_address, mc_address, transferor_quantity,
+    def __init__(self, message_id, transaction_id, transferor_quantity,
                  transferee_price, timestamp):
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
-        assert isinstance(bitcoin_address, BitcoinAddress), type(bitcoin_address)
-        assert isinstance(mc_address, str), type(mc_address)
         assert isinstance(transferor_quantity, Quantity), type(transferor_quantity)
         assert isinstance(transferee_price, Price), type(transferee_price)
         super(MultiChainPayment, self).__init__(message_id, timestamp)
         self._transaction_id = transaction_id
-        self._bitcoin_address = bitcoin_address
-        self._mc_address = mc_address
         self._transferor_quantity = transferor_quantity
         self._transferee_price = transferee_price
 
     @property
     def transaction_id(self):
         return self._transaction_id
-
-    @property
-    def bitcoin_address(self):
-        return self._bitcoin_address
-
-    @property
-    def mc_address(self):
-        return self._mc_address
 
     @property
     def transferor_quantity(self):
@@ -57,8 +45,6 @@ class MultiChainPayment(Message):
         assert hasattr(data, 'message_number'), isinstance(data.message_number, MessageNumber)
         assert hasattr(data, 'transaction_trader_id'), isinstance(data.transaction_trader_id, TraderId)
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
-        assert hasattr(data, 'bitcoin_address'), isinstance(data.bitcoin_address, BitcoinAddress)
-        assert hasattr(data, 'mc_address'), isinstance(data.mc_address, str)
         assert hasattr(data, 'transferor_quantity'), isinstance(data.transferor_quantity, Quantity)
         assert hasattr(data, 'transferee_price'), isinstance(data.transferee_price, Price)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
@@ -66,8 +52,6 @@ class MultiChainPayment(Message):
         return cls(
             MessageId(data.trader_id, data.message_number),
             TransactionId(data.transaction_trader_id, data.transaction_number),
-            data.bitcoin_address,
-            data.mc_address,
             data.transferor_quantity,
             data.transferee_price,
             data.timestamp,
@@ -82,8 +66,6 @@ class MultiChainPayment(Message):
             self._message_id.message_number,
             self._transaction_id.trader_id,
             self._transaction_id.transaction_number,
-            self._bitcoin_address,
-            self._mc_address,
             self._transferor_quantity,
             self._transferee_price,
             self._timestamp,
@@ -93,24 +75,18 @@ class MultiChainPayment(Message):
 class BitcoinPayment(Message):
     """Class representing a bitcoin payment."""
 
-    def __init__(self, message_id, transaction_id, bitcoin_address, price, txid, timestamp):
+    def __init__(self, message_id, transaction_id, price, txid, timestamp):
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
-        assert isinstance(bitcoin_address, BitcoinAddress), type(bitcoin_address)
         assert isinstance(price, Price), type(price)
         assert isinstance(txid, BitcoinTransactionId), type(txid)
         super(BitcoinPayment, self).__init__(message_id, timestamp)
         self._transaction_id = transaction_id
-        self._bitcoin_address = bitcoin_address
         self._price = price
         self._txid = txid
 
     @property
     def transaction_id(self):
         return self._transaction_id
-
-    @property
-    def bitcoin_address(self):
-        return self._bitcoin_address
 
     @property
     def price(self):
@@ -133,7 +109,6 @@ class BitcoinPayment(Message):
         assert hasattr(data, 'message_number'), isinstance(data.message_number, MessageNumber)
         assert hasattr(data, 'transaction_trader_id'), isinstance(data.transaction_trader_id, TraderId)
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
-        assert hasattr(data, 'bitcoin_address'), isinstance(data.bitcoin_address, BitcoinAddress)
         assert hasattr(data, 'price'), isinstance(data.price, Price)
         assert hasattr(data, 'txid'), isinstance(data.txid, BitcoinTransactionId)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
@@ -141,7 +116,6 @@ class BitcoinPayment(Message):
         return cls(
             MessageId(data.trader_id, data.message_number),
             TransactionId(data.transaction_trader_id, data.transaction_number),
-            data.bitcoin_address,
             data.price,
             data.txid,
             data.timestamp,
@@ -156,7 +130,6 @@ class BitcoinPayment(Message):
             self._message_id.message_number,
             self._transaction_id.trader_id,
             self._transaction_id.transaction_number,
-            self._bitcoin_address,
             self._price,
             self._txid,
             self._timestamp,

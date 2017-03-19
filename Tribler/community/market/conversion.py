@@ -167,26 +167,24 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.bitcoin_address), str(payload.mc_address),
-            int(payload.transferor_quantity), float(payload.transferee_price), float(payload.timestamp)
+            str(payload.transaction_number), int(payload.transferor_quantity),
+            float(payload.transferee_price), float(payload.timestamp)
         ))
         return packet,
 
     def _decode_multi_chain_payment(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, TraderId, TransactionNumber, BitcoinAddress, str,
-                                     Quantity, Price, Timestamp])
+                                    [TraderId, MessageNumber, TraderId, TransactionNumber, Quantity, Price, Timestamp])
 
     def _encode_bitcoin_payment(self, message):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.bitcoin_address), float(payload.price),
-            str(payload.txid), float(payload.timestamp)
+            str(payload.transaction_number), float(payload.price), str(payload.txid), float(payload.timestamp)
         ))
         return packet,
 
     def _decode_bitcoin_payment(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, TraderId, TransactionNumber, BitcoinAddress, Price,
+                                    [TraderId, MessageNumber, TraderId, TransactionNumber, Price,
                                      BitcoinTransactionId, Timestamp])

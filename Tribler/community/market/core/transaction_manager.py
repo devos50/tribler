@@ -59,18 +59,17 @@ class TransactionManager(object):
 
         return transaction
 
-    def create_multi_chain_payment(self, message_id, transaction, btc_address, mc_address):
+    def create_multi_chain_payment(self, message_id, transaction):
         payment = transaction.next_payment()
-        multi_chain_payment = MultiChainPayment(message_id, transaction.transaction_id, BitcoinAddress(btc_address),
-                                                mc_address, payment[0], payment[1], Timestamp.now())
+        multi_chain_payment = MultiChainPayment(message_id, transaction.transaction_id,
+                                                payment[0], payment[1], Timestamp.now())
         transaction.add_payment(multi_chain_payment)
         self.transaction_repository.update(transaction)
 
         return multi_chain_payment
 
-    def create_bitcoin_payment(self, message_id, transaction, price, btc_address, txid):
-        bitcoin_payment = BitcoinPayment(message_id, transaction.transaction_id, btc_address,
-                                         price, txid, Timestamp.now())
+    def create_bitcoin_payment(self, message_id, transaction, price, txid):
+        bitcoin_payment = BitcoinPayment(message_id, transaction.transaction_id, price, txid, Timestamp.now())
         transaction.add_payment(bitcoin_payment)
         self.transaction_repository.update(transaction)
 
