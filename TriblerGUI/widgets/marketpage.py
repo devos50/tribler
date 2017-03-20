@@ -125,7 +125,8 @@ class MarketPage(QWidget):
         post_data = str("price=%f&quantity=%d" % (price, quantity))
         self.request_mgr = TriblerRequestManager()
         self.request_mgr.perform_request("market/%s" % ('asks' if is_ask else 'bids'),
-                                         self.on_order_created, data=post_data, method='PUT')
+                                         lambda response: self.on_order_created(response, is_ask),
+                                         data=post_data, method='PUT')
 
     def on_transactions_button_clicked(self):
         self.window().market_transactions_page.initialize_transactions_page()
@@ -137,8 +138,11 @@ class MarketPage(QWidget):
         self.window().navigation_stack.append(self.window().stackedWidget.currentIndex())
         self.window().stackedWidget.setCurrentIndex(PAGE_MARKET_WALLETS)
 
-    def on_order_created(self, response):
-        print response
+    def on_order_created(self, response, is_ask):
+        if is_ask:
+            self.load_asks()
+        else:
+            self.load_bids()
 
     def on_tick_item_clicked(self, tick_list):
         if len(tick_list.selectedItems()) == 0:
