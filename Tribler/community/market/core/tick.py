@@ -1,3 +1,5 @@
+import time
+
 from message import TraderId, MessageNumber, MessageId, Message
 from order import OrderId, OrderNumber, Order
 from price import Price
@@ -113,7 +115,7 @@ class Tick(Message):
         :return: True if valid, False otherwise
         :rtype: bool
         """
-        return not self._timeout.is_timed_out(Timestamp.now())
+        return not self._timeout.is_timed_out(self._timestamp) and not time.time() < float(self.timestamp)
 
     def to_network(self):
         """

@@ -1,6 +1,14 @@
 import logging
 from collections import deque
 
+import time
+
+from twisted.internet import reactor
+from twisted.internet.defer import fail
+from twisted.internet.task import deferLater
+from twisted.python.failure import Failure
+
+from Tribler.dispersy.taskmanager import TaskManager
 from message import Message
 from message_repository import MessageRepository
 from order import OrderId
@@ -12,13 +20,14 @@ from timestamp import Timestamp
 from trade import Trade, AcceptedTrade
 
 
-class OrderBook(object):
+class OrderBook(TaskManager):
     """
     OrderBook is used for searching through all the orders and giving an indication to the user of what other offers
     are out there.
     """
 
     def __init__(self, message_repository):
+        super(OrderBook, self).__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
 
         assert isinstance(message_repository, MessageRepository), type(message_repository)
@@ -40,6 +49,19 @@ class OrderBook(object):
             self._last_timestamp = message.timestamp
         self._last_message = message
 
+    def timeout_ask(self, order_id):
+        ask = self.get_ask(order_id).tick
+        self.remove_tick(order_id)
+        return ask
+
+    def timeout_bid(self, order_id):
+        bid = self.get_bid(order_id).tick
+        self.remove_tick(order_id)
+        return bid
+
+    def on_timeout_error(self, _):
+        pass
+
     def insert_ask(self, ask):
         """
         :type ask: Ask
@@ -48,8 +70,13 @@ class OrderBook(object):
 
         self._process_message(ask)
 
-        if not self._asks.tick_exists(ask.order_id):
+        if not self._asks.tick_exists(ask.order_id) and ask.is_valid():
             self._asks.insert_tick(ask)
+            timeout_delay = float(ask.timestamp) + float(ask.timeout) - time.time()
+            task = deferLater(reactor, timeout_delay, self.timeout_ask, ask.order_id)
+            self.register_task("ask_%s_timeout" % ask.order_id, task)
+            return task.addErrback(self.on_timeout_error)
+        return fail(Failure(RuntimeError("ask invalid")))
 
     def remove_ask(self, order_id):
         """
@@ -58,6 +85,7 @@ class OrderBook(object):
         assert isinstance(order_id, OrderId), type(order_id)
 
         if self._asks.tick_exists(order_id):
+            self.cancel_pending_task("ask_%s_timeout" % order_id)
             self._asks.remove_tick(order_id)
 
     def insert_bid(self, bid):
@@ -68,8 +96,13 @@ class OrderBook(object):
 
         self._process_message(bid)
 
-        if not self._bids.tick_exists(bid.order_id):
+        if not self._bids.tick_exists(bid.order_id) and bid.is_valid():
             self._bids.insert_tick(bid)
+            timeout_delay = float(bid.timestamp) + float(bid.timeout) - time.time()
+            task = deferLater(reactor, timeout_delay, self.timeout_bid, bid.order_id)
+            self.register_task("bid_%s_timeout" % bid.order_id, task)
+            return task.addErrback(self.on_timeout_error)
+        return fail(Failure(RuntimeError("bid invalid")))
 
     def remove_bid(self, order_id):
         """
@@ -78,6 +111,7 @@ class OrderBook(object):
         assert isinstance(order_id, OrderId), type(order_id)
 
         if self._bids.tick_exists(order_id):
+            self.cancel_pending_task("bid_%s_timeout" % order_id)
             self._bids.remove_tick(order_id)
 
     def trade_tick(self, order_id, recipient_order_id, quantity):
@@ -141,7 +175,7 @@ class OrderBook(object):
         """
         :param order_id: The order id to search for
         :type order_id: OrderId
-        :rtype: Tick
+        :rtype: TickEntry
         """
         assert isinstance(order_id, OrderId), type(order_id)
 
@@ -151,7 +185,7 @@ class OrderBook(object):
         """
         :param order_id: The order id to search for
         :type order_id: OrderId
-        :rtype: Tick
+        :rtype: TickEntry
         """
         assert isinstance(order_id, OrderId), type(order_id)
 

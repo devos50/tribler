@@ -30,6 +30,8 @@ class MarketPage(QWidget):
 
             self.window().core_manager.events_manager.received_market_ask.connect(self.on_ask)
             self.window().core_manager.events_manager.received_market_bid.connect(self.on_bid)
+            self.window().core_manager.events_manager.expired_market_ask.connect(self.on_ask_timeout)
+            self.window().core_manager.events_manager.expired_market_bid.connect(self.on_bid_timeout)
             self.window().core_manager.events_manager.market_transaction_complete.connect(self.on_transaction_complete)
 
             self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
@@ -174,3 +176,20 @@ class MarketPage(QWidget):
 
         self.dialog.setParent(None)
         self.dialog = None
+
+    def on_ask_timeout(self, ask):
+        self.remove_tick_with_msg_id(self.window().asks_list, ask["message_id"])
+
+    def on_bid_timeout(self, bid):
+        self.remove_tick_with_msg_id(self.window().bids_list, bid["message_id"])
+
+    def remove_tick_with_msg_id(self, tick_list, msg_id):
+        index_to_remove = -1
+        for ind in xrange(tick_list.topLevelItemCount()):
+            item = tick_list.topLevelItem(ind)
+            if item.tick["message_id"] == msg_id:
+                index_to_remove = ind
+                break
+
+        if index_to_remove != -1:
+            tick_list.takeTopLevelItem(index_to_remove)

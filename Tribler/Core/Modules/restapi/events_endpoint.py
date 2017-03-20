@@ -6,7 +6,8 @@ from Tribler.Core.simpledefs import (NTFY_CHANNELCAST, SIGNAL_CHANNEL, SIGNAL_ON
                                      NTFY_UPGRADER, NTFY_STARTED, NTFY_WATCH_FOLDER_CORRUPT_TORRENT, NTFY_INSERT,
                                      NTFY_NEW_VERSION, NTFY_FINISHED, NTFY_TRIBLER, NTFY_UPGRADER_TICK, NTFY_CHANNEL,
                                      NTFY_DISCOVERED, NTFY_TORRENT, NTFY_ERROR, NTFY_DELETE, NTFY_MARKET_ON_ASK,
-                                     NTFY_UPDATE, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE)
+                                     NTFY_UPDATE, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE,
+                                     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT)
 from Tribler.Core.version import version_id
 
 
@@ -43,6 +44,8 @@ class EventsEndpoint(resource.Resource):
     - tribler_exception: An exception has occurred in Tribler. The event includes a readable string of the error.
     - market_ask: Tribler learned about a new ask in the market. The event includes information about the ask.
     - market_bid: Tribler learned about a new bid in the market. The event includes information about the bid.
+    - market_ask_timeout: An ask has expired. The event includes information about the ask.
+    - market_bid_timeout: An bid has expired. The event includes information about the bid.
     - market_transaction_complete: A transaction has been completed in the market. The event contains the transaction
       that was completed.
     """
@@ -72,6 +75,8 @@ class EventsEndpoint(resource.Resource):
         self.session.add_observer(self.on_torrent_error, NTFY_TORRENT, [NTFY_ERROR])
         self.session.add_observer(self.on_market_ask, NTFY_MARKET_ON_ASK, [NTFY_UPDATE])
         self.session.add_observer(self.on_market_bid, NTFY_MARKET_ON_BID, [NTFY_UPDATE])
+        self.session.add_observer(self.on_market_ask_timeout, NTFY_MARKET_ON_ASK_TIMEOUT, [NTFY_UPDATE])
+        self.session.add_observer(self.on_market_bid_timeout, NTFY_MARKET_ON_BID_TIMEOUT, [NTFY_UPDATE])
         self.session.add_observer(self.on_market_transaction_complete,
                                   NTFY_MARKET_ON_TRANSACTION_COMPLETE, [NTFY_UPDATE])
 
@@ -168,6 +173,12 @@ class EventsEndpoint(resource.Resource):
 
     def on_market_bid(self, subject, changetype, objectID, *args):
         self.write_data({"type": "market_bid", "event": args[0].to_dictionary()})
+
+    def on_market_ask_timeout(self, subject, changetype, objectID, *args):
+        self.write_data({"type": "market_ask_timeout", "event": args[0].to_dictionary()})
+
+    def on_market_bid_timeout(self, subject, changetype, objectID, *args):
+        self.write_data({"type": "market_bid_timeout", "event": args[0].to_dictionary()})
 
     def on_market_transaction_complete(self, subject, changetype, objectID, *args):
         self.write_data({"type": "market_transaction_complete", "event": args[0].to_dictionary()})

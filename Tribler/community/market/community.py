@@ -1,7 +1,10 @@
 from base64 import b64decode
 
+from twisted.internet.defer import inlineCallbacks
+
 from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
-from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE
+from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE, \
+    NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.dispersy.authentication import MemberAuthentication
@@ -196,6 +199,11 @@ class MarketCommunity(Community):
                 self._logger.debug("Delaying message %s" % message)
                 yield DelayMessageByProof(message)
 
+    @inlineCallbacks
+    def unload_community(self):
+        self.order_book.cancel_all_pending_tasks()
+        yield super(MarketCommunity, self).unload_community()
+
     def get_bitcoin_address(self):
         """
         Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
@@ -259,6 +267,14 @@ class MarketCommunity(Community):
 
         self.pubkey_register[trader_id] = ip
 
+    def on_ask_timeout(self, ask):
+        if self.tribler_session:
+            self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_UPDATE, None, ask)
+
+    def on_bid_timeout(self, bid):
+        if self.tribler_session:
+            self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID_TIMEOUT, NTFY_UPDATE, None, bid)
+
     # Ask
     def create_ask(self, price, quantity, timeout):
         """
@@ -273,6 +289,8 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
+
+        # TODO(Martijn): balance check?
         wallets = self.tribler_session.lm.wallets
         if not wallets['btc'].created or not wallets['mc'].created:
             raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
@@ -292,7 +310,7 @@ class MarketCommunity(Community):
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Ask), type(tick)
-        self.order_book.insert_ask(tick)
+        self.order_book.insert_ask(tick).addCallback(self.on_ask_timeout)
         self.send_ask_messages([tick])
 
         self._logger.debug("Ask created with price %s and quantity %s" % (price, quantity))
@@ -338,9 +356,9 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(ask.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
-            if not str(ask.order_id) in self.relayed_asks:  # Message has not been received before
+            if not str(ask.order_id) in self.relayed_asks and not self.order_book.tick_exists(ask.order_id):
                 self.relayed_asks.append(str(ask.order_id))
-                self.order_book.insert_ask(ask)
+                self.order_book.insert_ask(ask).addCallback(self.on_ask_timeout)
 
                 if self.tribler_session:
                     self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK, NTFY_UPDATE, None, ask)
@@ -373,6 +391,8 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
+
+        # TODO(Martijn): balance check?
         wallets = self.tribler_session.lm.wallets
         if not wallets['btc'].created or not wallets['mc'].created:
             raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
@@ -392,7 +412,7 @@ class MarketCommunity(Community):
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Bid), type(tick)
-        self.order_book.insert_bid(tick)
+        self.order_book.insert_bid(tick).addCallback(self.on_bid_timeout)
         self.send_bid_messages([tick])
 
         self._logger.debug("Bid created with price %s and quantity %s" % (price, quantity))
@@ -438,9 +458,9 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(bid.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
-            if not str(bid.order_id) in self.relayed_bids:  # Message has not been received before
+            if not str(bid.order_id) in self.relayed_bids and not self.order_book.tick_exists(bid.order_id):
                 self.relayed_bids.append(str(bid.order_id))
-                self.order_book.insert_bid(bid)
+                self.order_book.insert_bid(bid).addCallback(self.on_bid_timeout)
 
                 if self.tribler_session:
                     self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID, NTFY_UPDATE, None, bid)
