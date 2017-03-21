@@ -16,3 +16,19 @@ class BitcoinTransactionId(object):
 
     def __str__(self):
         return "%s" % self._transaction_id
+
+    def __eq__(self, other):
+        if not isinstance(other, BitcoinTransactionId):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self._transaction_id == \
+                   other._transaction_id
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self._transaction_id)
+

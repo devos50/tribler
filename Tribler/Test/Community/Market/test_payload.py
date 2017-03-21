@@ -8,6 +8,7 @@ from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.transaction import TransactionNumber
+from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.community.market.payload import AcceptedTradePayload, DeclinedTradePayload, TradePayload, \
     OfferPayload, StartTransactionPayload, BitcoinPaymentPayload, MultiChainPaymentPayload
 from Tribler.community.market.ttl import Ttl
@@ -136,8 +137,8 @@ class BitcoinPaymentPayloadTestSuite(unittest.TestCase):
                                                                             MessageNumber('1'),
                                                                             TraderId('2'),
                                                                             TransactionNumber('2'),
-                                                                            BitcoinAddress('3'),
                                                                             Price(10),
+                                                                            BitcoinTransactionId('3'),
                                                                             Timestamp(0.0))
 
     def test_properties(self):
@@ -145,6 +146,7 @@ class BitcoinPaymentPayloadTestSuite(unittest.TestCase):
         self.assertEquals(MessageNumber('1'), self.bitcoin_payment_payload.message_number)
         self.assertEquals(TransactionNumber('2'), self.bitcoin_payment_payload.transaction_number)
         self.assertEquals(10, int(self.bitcoin_payment_payload.price))
+        self.assertEquals('3', str(self.bitcoin_payment_payload.txid))
         self.assertEquals(Timestamp(0.0), self.bitcoin_payment_payload.timestamp)
 
 
@@ -157,7 +159,6 @@ class MultiChainPaymentPayloadTestSuite(unittest.TestCase):
                                                                                    MessageNumber('1'),
                                                                                    TraderId('2'),
                                                                                    TransactionNumber('2'),
-                                                                                   BitcoinAddress('3'),
                                                                                    Quantity(10),
                                                                                    Price(9),
                                                                                    Timestamp(0.0))
@@ -166,7 +167,6 @@ class MultiChainPaymentPayloadTestSuite(unittest.TestCase):
         # Test for properties
         self.assertEquals(MessageNumber('1'), self.multi_chain_payment_payload.message_number)
         self.assertEquals(TransactionNumber('2'), self.multi_chain_payment_payload.transaction_number)
-        self.assertEquals('3', str(self.multi_chain_payment_payload.bitcoin_address))
         self.assertEquals(10, int(self.multi_chain_payment_payload.transferor_quantity))
         self.assertEquals(9, int(self.multi_chain_payment_payload.transferee_price))
         self.assertEquals(Timestamp(0.0), self.multi_chain_payment_payload.timestamp)

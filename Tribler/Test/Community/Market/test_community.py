@@ -18,6 +18,7 @@ from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.trade import Trade
 from Tribler.community.market.core.transaction import Transaction, StartTransaction, TransactionId, TransactionNumber
+from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.community.market.socket_address import SocketAddress
 from Tribler.community.market.ttl import Ttl
 from Tribler.community.tunnel.Socks5.server import Socks5Server
@@ -86,10 +87,11 @@ class CommunityTestSuite(unittest.TestCase):
                                                   Price(2), Quantity(3), Timestamp(0.0))
         self.multi_chain_payment = MultiChainPayment(MessageId(TraderId("0"), MessageNumber("1")),
                                                      TransactionId(TraderId("0"), TransactionNumber("1")),
-                                                     BitcoinAddress("0"), Quantity(3), Price(2), Timestamp(4.0))
+                                                     Quantity(3), Price(2), Timestamp(4.0))
         self.bitcoin_payment = BitcoinPayment(MessageId(TraderId("0"), MessageNumber("1")),
-                                              TransactionId(TraderId("0"), TransactionNumber("1")), BitcoinAddress("1"),
+                                              TransactionId(TraderId("0"), TransactionNumber("1")),
                                               Price(10),
+                                              BitcoinTransactionId("1"),
                                               Timestamp(4.0))
 
     def test_get_master_members(self):
