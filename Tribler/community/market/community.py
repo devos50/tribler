@@ -1,6 +1,8 @@
 from base64 import b64decode
 
 import time
+
+from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
@@ -37,7 +39,8 @@ from core.transaction import StartTransaction, TransactionId, Transaction
 from core.transaction_manager import TransactionManager
 from core.transaction_repository import MemoryTransactionRepository
 from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTradePayload, StartTransactionPayload, \
-    MultiChainPaymentPayload, BitcoinPaymentPayload, TransactionPayload, WalletInfoPayload, MarketIntroPayload
+    MultiChainPaymentPayload, BitcoinPaymentPayload, TransactionPayload, WalletInfoPayload, MarketIntroPayload, \
+    OfferSyncPayload
 from ttl import Ttl
 
 
@@ -107,6 +110,14 @@ class MarketCommunity(Community):
                     OfferPayload(),
                     self.check_message,
                     self.on_bid),
+            Message(self, u"offer-sync",
+                    MemberAuthentication(),
+                    PublicResolution(),
+                    DirectDistribution(),
+                    CandidateDestination(),
+                    OfferSyncPayload(),
+                    self.check_message,
+                    self.on_offer_sync),
             Message(self, u"proposed-trade",
                     MemberAuthentication(),
                     PublicResolution(),
@@ -203,9 +214,12 @@ class MarketCommunity(Community):
     def create_introduction_request(self, destination, allow_sync):
         assert isinstance(destination, WalkCandidate), [type(destination), destination]
 
-        order_ids = self.order_book.get_order_ids()
-        orders_bloom_filter = BloomFilter(0.005, len(order_ids), prefix=' ')
-        orders_bloom_filter.add_keys(order_ids)
+        order_ids = map(str, self.order_book.get_order_ids())
+        if len(order_ids) == 0:
+            orders_bloom_filter = None
+        else:
+            orders_bloom_filter = BloomFilter(0.005, len(order_ids), prefix=' ')
+            orders_bloom_filter.add_keys(order_ids)
 
         cache = self._request_cache.add(IntroductionRequestCache(self, destination))
         payload = (destination.sock_addr, self._dispersy._lan_address, self._dispersy._wan_address, True,
@@ -228,7 +242,17 @@ class MarketCommunity(Community):
     def on_introduction_request(self, messages):
         super(MarketCommunity, self).on_introduction_request(messages)
 
-        # TODO(Martijn): check orders and send orders not available at the other side
+        for message in messages:
+            orders_bloom_filter = message.payload.orders_bloom_filter
+            if orders_bloom_filter:
+                for order_id in self.order_book.get_order_ids():
+                    if str(order_id) not in orders_bloom_filter:
+                        is_ask = self.order_book.ask_exists(order_id)
+                        entry = self.order_book.get_ask(order_id) if is_ask else self.order_book.get_bid(order_id)
+                        self.send_offer_sync(message.candidate, entry.tick)
+
+    def on_introduction_response(self, messages):
+        super(MarketCommunity, self).on_introduction_response(messages)
 
     def check_message(self, messages):
         for message in messages:
@@ -506,12 +530,6 @@ class MarketCommunity(Community):
                 if self.tribler_session:
                     self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID, NTFY_UPDATE, None, bid)
 
-                # Check for new matches against the orders of this node
-                #for order in self.order_manager.order_repository.find_all():
-                #    if order.is_ask() and order.is_valid():
-                #        proposed_trades = self.matching_engine.match_order(order)
-                #        self.send_proposed_trade_messages(proposed_trades)
-
                 # Check if message needs to be send on
                 ttl = message.payload.ttl
 
@@ -519,6 +537,56 @@ class MarketCommunity(Community):
 
                 if ttl.is_alive():  # The ttl is still alive and can be forwarded
                     self.dispersy.store_update_forward([message], True, True, True)
+
+    def send_offer_sync(self, target_candidate, tick):
+        """
+        Send an offer sync message
+
+        :param target_candidate: The candidate to send this message to
+        :type: target_candidate: WalkCandidate
+        :param bid: The message to send
+        :type bid: Bid
+        """
+        assert isinstance(target_candidate, WalkCandidate), type(target_candidate)
+        assert isinstance(tick, Tick), type(tick)
+
+        self._logger.debug("Offer sync send with id: %s for order with id: %s",
+                           str(tick.message_id), str(tick.order_id))
+
+        payload = tick.to_network()
+
+        # Add ttl and the trader wan address
+        trader_ip = self.lookup_ip(tick.order_id.trader_id)
+        payload += (Ttl(1),) + trader_ip + (isinstance(tick, Ask),)
+
+        meta = self.get_meta_message(u"offer-sync")
+        message = meta.impl(
+            authentication=(self.my_member,),
+            distribution=(self.claim_global_time(),),
+            destination=(target_candidate,),
+            payload=payload
+        )
+
+        self.dispersy.store_update_forward([message], True, False, True)
+
+    def on_offer_sync(self, messages):
+        for message in messages:
+            if message.payload.is_ask:
+                tick = Ask.from_network(message.payload)
+                insert_method = self.order_book.insert_ask
+                timeout_method = self.on_ask_timeout
+            else:
+                tick = Bid.from_network(message.payload)
+                insert_method = self.order_book.insert_bid
+                timeout_method = self.on_bid_timeout
+
+            self.update_ip(tick.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
+
+            if not self.order_book.tick_exists(tick.order_id):
+                insert_method(tick).addCallback(timeout_method)
+
+                if self.tribler_session:
+                    self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID, NTFY_UPDATE, None, tick)
 
     # Proposed trade
     def send_proposed_trade(self, proposed_trade):

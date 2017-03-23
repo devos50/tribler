@@ -374,7 +374,7 @@ class OrderBook(TaskManager):
         """
         Return all IDs of the orders in the orderbook, both asks and bids. The returned list is sorted.
 
-        :rtype: [String]
+        :rtype: [OrderId]
         """
         ids = []
 

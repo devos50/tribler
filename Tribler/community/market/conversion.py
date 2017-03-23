@@ -27,25 +27,27 @@ class MarketConversion(BinaryConversion):
                                  self._encode_offer, self._decode_offer)
         self.define_meta_message(chr(2), community.get_meta_message(u"bid"),
                                  self._encode_offer, self._decode_offer)
-        self.define_meta_message(chr(3), community.get_meta_message(u"proposed-trade"),
+        self.define_meta_message(chr(3), community.get_meta_message(u"offer-sync"),
+                                 self._encode_offer_sync, self._decode_offer_sync)
+        self.define_meta_message(chr(4), community.get_meta_message(u"proposed-trade"),
                                  self._encode_proposed_trade, self._decode_proposed_trade)
-        self.define_meta_message(chr(4), community.get_meta_message(u"accepted-trade"),
+        self.define_meta_message(chr(5), community.get_meta_message(u"accepted-trade"),
                                  self._encode_accepted_trade, self._decode_accepted_trade)
-        self.define_meta_message(chr(5), community.get_meta_message(u"declined-trade"),
+        self.define_meta_message(chr(6), community.get_meta_message(u"declined-trade"),
                                  self._encode_declined_trade, self._decode_declined_trade)
-        self.define_meta_message(chr(6), community.get_meta_message(u"counter-trade"),
+        self.define_meta_message(chr(7), community.get_meta_message(u"counter-trade"),
                                  self._encode_proposed_trade, self._decode_proposed_trade)
-        self.define_meta_message(chr(7), community.get_meta_message(u"start-transaction"),
+        self.define_meta_message(chr(8), community.get_meta_message(u"start-transaction"),
                                  self._encode_start_transaction, self._decode_start_transaction)
-        self.define_meta_message(chr(8), community.get_meta_message(u"continue-transaction"),
+        self.define_meta_message(chr(9), community.get_meta_message(u"continue-transaction"),
                                  self._encode_transaction, self._decode_transaction)
-        self.define_meta_message(chr(9), community.get_meta_message(u"wallet-info"),
+        self.define_meta_message(chr(10), community.get_meta_message(u"wallet-info"),
                                  self._encode_wallet_info, self._decode_wallet_info)
-        self.define_meta_message(chr(10), community.get_meta_message(u"multi-chain-payment"),
+        self.define_meta_message(chr(11), community.get_meta_message(u"multi-chain-payment"),
                                  self._encode_multi_chain_payment, self._decode_multi_chain_payment)
-        self.define_meta_message(chr(11), community.get_meta_message(u"bitcoin-payment"),
+        self.define_meta_message(chr(12), community.get_meta_message(u"bitcoin-payment"),
                                  self._encode_bitcoin_payment, self._decode_bitcoin_payment)
-        self.define_meta_message(chr(12), community.get_meta_message(u"end-transaction"),
+        self.define_meta_message(chr(13), community.get_meta_message(u"end-transaction"),
                                  self._encode_transaction, self._decode_transaction)
 
     def _encode_introduction_request(self, message):
@@ -54,36 +56,37 @@ class MarketConversion(BinaryConversion):
         if message.payload.orders_bloom_filter:
             data.extend((pack('!BH', message.payload.orders_bloom_filter.functions,
                               message.payload.orders_bloom_filter.size), message.payload.orders_bloom_filter.prefix,
-                         message.payload.taste_bloom_filter.bytes))
+                         message.payload.orders_bloom_filter.bytes))
         return data
 
     def _decode_introduction_request(self, placeholder, offset, data):
         offset, payload = BinaryConversion._decode_introduction_request(self, placeholder, offset, data)
 
-        if len(data) < offset + 8:
-            raise DropPacket("Insufficient packet size")
+        if len(data) > offset:
+            if len(data) < offset + 5:
+                raise DropPacket("Insufficient packet size")
 
-        functions, size = unpack_from('!BH', data, offset)
-        offset += 7
+            functions, size = unpack_from('!BH', data, offset)
+            offset += 3
 
-        prefix = data[offset]
-        offset += 1
+            prefix = data[offset]
+            offset += 1
 
-        if not 0 < functions:
-            raise DropPacket("Invalid functions value")
-        if not 0 < size:
-            raise DropPacket("Invalid size value")
-        if not size % 8 == 0:
-            raise DropPacket("Invalid size value, must be a multiple of eight")
+            if not 0 < functions:
+                raise DropPacket("Invalid functions value")
+            if not 0 < size:
+                raise DropPacket("Invalid size value")
+            if not size % 8 == 0:
+                raise DropPacket("Invalid size value, must be a multiple of eight")
 
-        length = int(ceil(size / 8))
-        if not length == len(data) - offset:
-            raise DropPacket("Invalid number of bytes available (irq) %d, %d, %d" % (length, len(data) - offset, size))
+            length = int(ceil(size / 8))
+            if not length == len(data) - offset:
+                raise DropPacket("Invalid number of bytes available (irq) %d, %d, %d" % (length, len(data) - offset, size))
 
-        orders_bloom_filter = BloomFilter(data[offset:offset + length], functions, prefix=prefix)
-        offset += length
+            orders_bloom_filter = BloomFilter(data[offset:offset + length], functions, prefix=prefix)
+            offset += length
 
-        payload.set_orders_bloom_filter(orders_bloom_filter)
+            payload.set_orders_bloom_filter(orders_bloom_filter)
 
         return offset, payload
 
@@ -125,6 +128,20 @@ class MarketConversion(BinaryConversion):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp, Ttl,
                                      str, int])
+
+    def _encode_offer_sync(self, message):
+        payload = message.payload
+        packet = encode((
+            str(payload.trader_id), str(payload.message_number), str(payload.order_number), float(payload.price),
+            int(payload.quantity), float(payload.timeout), float(payload.timestamp), int(payload.ttl),
+            str(payload.address.ip), int(payload.address.port), bool(payload.is_ask)
+        ))
+        return packet,
+
+    def _decode_offer_sync(self, placeholder, offset, data):
+        return self._decode_payload(placeholder, offset, data,
+                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp, Ttl,
+                                     str, int, bool])
 
     def _encode_proposed_trade(self, message):
         payload = message.payload

@@ -17,7 +17,7 @@ class MarketIntroPayload(IntroductionRequestPayload):
 
     class Implementation(IntroductionRequestPayload.Implementation):
 
-        def __init__(self, meta, destination_address, source_lan_address, source_wan_address, advice, connection_type, sync, identifier, orders_bloom_filter):
+        def __init__(self, meta, destination_address, source_lan_address, source_wan_address, advice, connection_type, sync, identifier, orders_bloom_filter=None):
             IntroductionRequestPayload.Implementation.__init__(self, meta, destination_address, source_lan_address, source_wan_address, advice, connection_type, sync, identifier)
 
             self._orders_bloom_filter = orders_bloom_filter
@@ -97,6 +97,20 @@ class OfferPayload(MessagePayload):
         @property
         def address(self):
             return SocketAddress(self._ip, self._port)
+
+
+class OfferSyncPayload(OfferPayload):
+    class Implementation(OfferPayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp, ttl,
+                     ip, port, is_ask):
+            assert isinstance(is_ask, bool), type(is_ask)
+            super(OfferSyncPayload.Implementation, self).__init__(meta, trader_id, message_number, order_number, price,
+                                                                  quantity, timeout, timestamp, ttl, ip, port)
+            self._is_ask = is_ask
+
+        @property
+        def is_ask(self):
+            return self._is_ask
 
 
 class TradePayload(MessagePayload):
