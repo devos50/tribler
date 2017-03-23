@@ -7,6 +7,7 @@ import logging
 import datetime
 from threading import Thread
 
+import keyring
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 
@@ -43,8 +44,9 @@ class BitcoinWallet(Wallet):
         self.min_confirmations = 0
         self.created = False
         self.daemon = None
+        self.wallet_password = self.get_wallet_password()
         self.storage = WalletStorage(config.get_wallet_path())
-        self.storage.read(None)
+        self.storage.read(self.wallet_password)
         self.monitored_transactions = {}
 
         if os.path.exists(os.path.join(session.get_state_dir(), 'wallet', 'btc_wallet')):
@@ -52,6 +54,12 @@ class BitcoinWallet(Wallet):
             self.created = True
             self.start_daemon()
             self.open_wallet()
+
+    def get_wallet_password(self):
+        return keyring.get_password('tribler', 'btc_wallet_password')
+
+    def set_wallet_password(self, password):
+        keyring.set_password('tribler', 'btc_wallet_password', password)
 
     def start_daemon(self):
         options = {'verbose': False, 'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
@@ -67,8 +75,9 @@ class BitcoinWallet(Wallet):
         self.daemon.start()
 
     def open_wallet(self):
-        options = {'password': None, 'subcommand': 'open', 'verbose': False, 'cmd': 'daemon', 'testnet': False,
-                   'oneserver': False, 'segwit': False, 'cwd': self.tribler_session.get_state_dir(), 'portable': False,
+        options = {'password': self.wallet_password, 'subcommand': 'open', 'verbose': False,
+                   'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
+                   'cwd': self.tribler_session.get_state_dir(), 'portable': False,
                    'wallet_path': os.path.join('wallet', 'btc_wallet')}
         config = SimpleConfig(options)
 
@@ -109,13 +118,17 @@ class BitcoinWallet(Wallet):
         k.update_password(None, password)
         self.storage.put('keystore', k.dump())
         self.storage.put('wallet_type', 'standard')
-        self.storage.put('use_encryption', bool(password))
+        self.storage.set_password(password, bool(password))
         run_on_thread(self.storage.write)
 
         self.wallet = ElectrumWallet(self.storage)
         self.wallet.synchronize()
         run_on_thread(self.wallet.storage.write)
         self.created = True
+
+        self.set_wallet_password(password)
+        self.wallet_password = password
+
         self.start_daemon()
         self.open_wallet()
 
