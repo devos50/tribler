@@ -244,12 +244,11 @@ class MarketCommunity(Community):
 
         for message in messages:
             orders_bloom_filter = message.payload.orders_bloom_filter
-            if orders_bloom_filter:
-                for order_id in self.order_book.get_order_ids():
-                    if str(order_id) not in orders_bloom_filter:
-                        is_ask = self.order_book.ask_exists(order_id)
-                        entry = self.order_book.get_ask(order_id) if is_ask else self.order_book.get_bid(order_id)
-                        self.send_offer_sync(message.candidate, entry.tick)
+            for order_id in self.order_book.get_order_ids():
+                if not orders_bloom_filter or str(order_id) not in orders_bloom_filter:
+                    is_ask = self.order_book.ask_exists(order_id)
+                    entry = self.order_book.get_ask(order_id) if is_ask else self.order_book.get_bid(order_id)
+                    self.send_offer_sync(message.candidate, entry.tick)
 
     def on_introduction_response(self, messages):
         super(MarketCommunity, self).on_introduction_response(messages)
