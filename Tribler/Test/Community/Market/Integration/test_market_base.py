@@ -70,7 +70,7 @@ class TestMarketBase(TestAsServer):
         mc_community = self.load_multichain_community_in_session(self.session)
         self.give_multichain_credits(mc_community, 10)
         self.load_market_community_in_session(self.session)
-        self.create_btc_wallet_in_session(self.session)
+        self.load_btc_wallet_in_session(self.session, 0)
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
@@ -120,6 +120,14 @@ class TestMarketBase(TestAsServer):
         multichain_kwargs = {'tribler_session': session}
         return dispersy.define_auto_load(MultiChainCommunityTests, dispersy_member, load=True, kargs=multichain_kwargs)[0]
 
+    def load_btc_wallet_in_session(self, session, index):
+        if os.environ.get('SESSION_%d_BTC_WALLET_PATH' % index):
+            wallet_path = os.environ.get('SESSION_%d_BTC_WALLET_PATH' % index)
+            wallet_dir, wallet_file_name = os.path.split(wallet_path)
+            session.lm.btc_wallet.load_wallet(wallet_dir, wallet_file_name)
+        else:
+            self.create_btc_wallet_in_session(session)
+
     def create_btc_wallet_in_session(self, session):
         session.lm.btc_wallet.create_wallet()
 
@@ -161,7 +169,7 @@ class TestMarketBase(TestAsServer):
         yield session.start()
         self.sessions.append(session)
 
-        self.create_btc_wallet_in_session(session)
+        self.load_btc_wallet_in_session(session, index)
 
         self.load_multichain_community_in_session(session)
         self.load_market_community_in_session(session)
