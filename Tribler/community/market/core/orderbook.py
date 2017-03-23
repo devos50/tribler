@@ -370,6 +370,24 @@ class OrderBook(TaskManager):
         """
         return self._asks.min_price_list
 
+    def get_order_ids(self):
+        """
+        Return all IDs of the orders in the orderbook, both asks and bids. The returned list is sorted.
+
+        :rtype: [String]
+        """
+        ids = []
+
+        for _, price_level in self.asks.price_level_list.items():
+            for ask in price_level:
+                ids.append(ask.tick.order_id)
+
+        for _, price_level in self.bids.price_level_list.items():
+            for bid in price_level:
+                ids.append(bid.tick.order_id)
+
+        return sorted(ids)
+
     def __str__(self):
         from cStringIO import StringIO
 

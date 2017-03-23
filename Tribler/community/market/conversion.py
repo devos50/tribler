@@ -1,5 +1,10 @@
+from struct import pack, unpack_from
+
+from math import ceil
+
 from Tribler.Core.Utilities.encoding import encode, decode
 from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
+from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.conversion import BinaryConversion
 from Tribler.dispersy.message import DropPacket
 from core.bitcoin_address import BitcoinAddress
@@ -42,6 +47,45 @@ class MarketConversion(BinaryConversion):
                                  self._encode_bitcoin_payment, self._decode_bitcoin_payment)
         self.define_meta_message(chr(12), community.get_meta_message(u"end-transaction"),
                                  self._encode_transaction, self._decode_transaction)
+
+    def _encode_introduction_request(self, message):
+        data = BinaryConversion._encode_introduction_request(self, message)
+
+        if message.payload.orders_bloom_filter:
+            data.extend((pack('!BH', message.payload.orders_bloom_filter.functions,
+                              message.payload.orders_bloom_filter.size), message.payload.orders_bloom_filter.prefix,
+                         message.payload.taste_bloom_filter.bytes))
+        return data
+
+    def _decode_introduction_request(self, placeholder, offset, data):
+        offset, payload = BinaryConversion._decode_introduction_request(self, placeholder, offset, data)
+
+        if len(data) < offset + 8:
+            raise DropPacket("Insufficient packet size")
+
+        functions, size = unpack_from('!BH', data, offset)
+        offset += 7
+
+        prefix = data[offset]
+        offset += 1
+
+        if not 0 < functions:
+            raise DropPacket("Invalid functions value")
+        if not 0 < size:
+            raise DropPacket("Invalid size value")
+        if not size % 8 == 0:
+            raise DropPacket("Invalid size value, must be a multiple of eight")
+
+        length = int(ceil(size / 8))
+        if not length == len(data) - offset:
+            raise DropPacket("Invalid number of bytes available (irq) %d, %d, %d" % (length, len(data) - offset, size))
+
+        orders_bloom_filter = BloomFilter(data[offset:offset + length], functions, prefix=prefix)
+        offset += length
+
+        payload.set_orders_bloom_filter(orders_bloom_filter)
+
+        return offset, payload
 
     def _decode_payload(self, placeholder, offset, data, types):
         try:

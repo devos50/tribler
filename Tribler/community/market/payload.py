@@ -1,5 +1,5 @@
 from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
-from Tribler.dispersy.payload import Payload
+from Tribler.dispersy.payload import Payload, IntroductionRequestPayload
 
 from core.bitcoin_address import BitcoinAddress
 from core.message import TraderId, MessageNumber
@@ -11,6 +11,23 @@ from core.timestamp import Timestamp
 from core.transaction import TransactionNumber
 from socket_address import SocketAddress
 from ttl import Ttl
+
+
+class MarketIntroPayload(IntroductionRequestPayload):
+
+    class Implementation(IntroductionRequestPayload.Implementation):
+
+        def __init__(self, meta, destination_address, source_lan_address, source_wan_address, advice, connection_type, sync, identifier, orders_bloom_filter):
+            IntroductionRequestPayload.Implementation.__init__(self, meta, destination_address, source_lan_address, source_wan_address, advice, connection_type, sync, identifier)
+
+            self._orders_bloom_filter = orders_bloom_filter
+
+        def set_orders_bloom_filter(self, bloom_filter):
+            self._orders_bloom_filter = bloom_filter
+
+        @property
+        def orders_bloom_filter(self):
+            return self._orders_bloom_filter
 
 
 class MessagePayload(Payload):

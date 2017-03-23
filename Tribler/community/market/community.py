@@ -1,5 +1,6 @@
 from base64 import b64decode
 
+import time
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
@@ -8,12 +9,14 @@ from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
 from Tribler.dispersy.authentication import MemberAuthentication
-from Tribler.dispersy.candidate import Candidate
+from Tribler.dispersy.bloomfilter import BloomFilter
+from Tribler.dispersy.candidate import Candidate, WalkCandidate
 from Tribler.dispersy.community import Community
 from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.dispersy.destination import CommunityDestination, CandidateDestination
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.message import Message, DelayMessageByProof
+from Tribler.dispersy.requestcache import IntroductionRequestCache
 from Tribler.dispersy.resolution import PublicResolution
 from conversion import MarketConversion
 from core.matching_engine import MatchingEngine, PriceTimeStrategy
@@ -34,7 +37,7 @@ from core.transaction import StartTransaction, TransactionId, Transaction
 from core.transaction_manager import TransactionManager
 from core.transaction_repository import MemoryTransactionRepository
 from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTradePayload, StartTransactionPayload, \
-    MultiChainPaymentPayload, BitcoinPaymentPayload, TransactionPayload, WalletInfoPayload
+    MultiChainPaymentPayload, BitcoinPaymentPayload, TransactionPayload, WalletInfoPayload, MarketIntroPayload
 from ttl import Ttl
 
 
@@ -186,8 +189,46 @@ class MarketCommunity(Community):
                     self.on_end_transaction)
         ]
 
+    def _initialize_meta_messages(self):
+        super(MarketCommunity, self)._initialize_meta_messages()
+
+        ori = self._meta_messages[u"dispersy-introduction-request"]
+        new = Message(self, ori.name, ori.authentication, ori.resolution,
+                      ori.distribution, ori.destination, MarketIntroPayload(), ori.check_callback, ori.handle_callback)
+        self._meta_messages[u"dispersy-introduction-request"] = new
+
     def initiate_conversions(self):
         return [DefaultConversion(self), MarketConversion(self)]
+
+    def create_introduction_request(self, destination, allow_sync):
+        assert isinstance(destination, WalkCandidate), [type(destination), destination]
+
+        order_ids = self.order_book.get_order_ids()
+        orders_bloom_filter = BloomFilter(0.005, len(order_ids), prefix=' ')
+        orders_bloom_filter.add_keys(order_ids)
+
+        cache = self._request_cache.add(IntroductionRequestCache(self, destination))
+        payload = (destination.sock_addr, self._dispersy._lan_address, self._dispersy._wan_address, True,
+                   self._dispersy._connection_type, None, cache.number, orders_bloom_filter)
+
+        destination.walk(time.time())
+        self.add_candidate(destination)
+
+        meta_request = self.get_meta_message(u"dispersy-introduction-request")
+        request = meta_request.impl(authentication=(self.my_member,),
+                                    distribution=(self.global_time,),
+                                    destination=(destination,),
+                                    payload=payload)
+
+        self._logger.debug(u"%s %s sending introduction request to %s", self.cid.encode("HEX"), type(self), destination)
+
+        self._dispersy._forward([request])
+        return request
+
+    def on_introduction_request(self, messages):
+        super(MarketCommunity, self).on_introduction_request(messages)
+
+        # TODO(Martijn): check orders and send orders not available at the other side
 
     def check_message(self, messages):
         for message in messages:
