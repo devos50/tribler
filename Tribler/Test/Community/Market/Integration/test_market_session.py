@@ -37,12 +37,10 @@ class TestMarketSession(TestMarketBase):
         bid_community.add_discovered_candidate(
             Candidate(self.session.get_dispersy_instance().lan_address, tunnel=False))
         yield self.async_sleep(5)  # TODO(Martijn): make this event-based
-        bid_community.create_bid(1, 2, 3600)
+        bid_community.create_bid(0.0001, 2, 3600)
         yield self.async_sleep(1)
-        ask_community.create_ask(1, 2, 3600)
+        ask_community.create_ask(0.0001, 2, 3600)
         yield test_deferred
-
-        self.assertEqual(self.session.lm.wallets['mc'].get_balance()['net'], 8)
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks

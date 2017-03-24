@@ -8,8 +8,10 @@ import datetime
 from threading import Thread
 
 import keyring
+from jsonrpclib import ProtocolError
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
+from twisted.internet.task import LoopingCall
 
 import Tribler
 
@@ -26,6 +28,7 @@ from electrum import WalletStorage
 from electrum import daemon
 from electrum.mnemonic import Mnemonic
 from electrum import keystore
+from electrum.transaction import Transaction
 from electrum import Wallet as ElectrumWallet
 
 
@@ -46,7 +49,6 @@ class BitcoinWallet(Wallet):
         self.daemon = None
         keychain_pw = self.get_wallet_password()
         self.wallet_password = keychain_pw if len(keychain_pw) > 0 else None
-        self.monitored_transactions = {}
         self.storage = None
         self.wallet = None
         self.load_wallet(self.wallet_dir, self.wallet_file)
@@ -94,16 +96,6 @@ class BitcoinWallet(Wallet):
         if server is not None:
             # Run the command to open the wallet
             server.daemon(options)
-
-        self.wallet.receive_tx_callback = self.on_received_tx
-
-    def on_received_tx(self, tx_hash, tx, tx_height):
-        self.wallet.add_transaction(tx_hash, tx)
-        self.wallet.add_unverified_tx(tx_hash, tx_height)
-
-        if tx_hash in self.monitored_transactions:
-            self.monitored_transactions[tx_hash].callback(None)
-            del self.monitored_transactions[tx_hash]
 
     def get_identifier(self):
         return 'btc'
@@ -159,8 +151,26 @@ class BitcoinWallet(Wallet):
     def transfer(self, amount, address):
         self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)
         if self.get_balance()['confirmed'] >= amount:
-            # TODO(Martijn): actually transfer the BTC...
-            return "abcd"
+            options = {'tx_fee': '0.0001', 'password': self.wallet_password, 'verbose': False, 'nocheck': False,
+                       'cmd': 'payto', 'wallet_path': self.wallet_file, 'destination': address,
+                       'cwd': self.wallet_dir, 'testnet': False, 'rbf': False, 'amount': amount,
+                       'segwit': False, 'unsigned': False, 'portable': False}
+            config = SimpleConfig(options)
+
+            server = daemon.get_server(config)
+            result = server.run_cmdline(options)
+            transaction_hex = result['hex']
+
+            # Broadcast this transaction
+            options = {'password': None, 'verbose': False, 'tx': transaction_hex, 'cmd': 'broadcast', 'testnet': False,
+                       'timeout': 30, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
+            config = SimpleConfig(options)
+
+            server = daemon.get_server(config)
+            result = server.run_cmdline(options)
+
+            # TODO(Martijn): check whether the broadcast has been successful
+            return str(result[1])
         else:
             raise InsufficientFunds()
 
@@ -169,32 +179,29 @@ class BitcoinWallet(Wallet):
         Monitor a given transaction ID. Returns a Deferred that fires when the transaction is present.
         """
         monitor_deferred = Deferred()
-        self.monitored_transactions[txid] = monitor_deferred
+
+        def monitor_loop():
+            transactions = self.get_transactions()
+            for transaction in transactions:
+                if transaction['txid'] == txid:
+                    monitor_deferred.callback(None)
+                    monitor_lc.stop()
+
+        monitor_lc = LoopingCall(monitor_loop)
+        monitor_lc.start(1)
+
         return monitor_deferred
 
     def get_address(self):
         if not self.created:
             return None
-        return self.wallet.get_receiving_address()
+        return str(self.wallet.get_receiving_address())
 
     def get_transactions(self):
-        # TODO(Martijn): We should probably reload the storage/wallet...
-        self.wallet.load_transactions()
-        out = []
-        for item in self.wallet.get_history():
-            tx_hash, height, conf, timestamp, value, balance = item
-            if timestamp:
-                date = datetime.datetime.fromtimestamp(timestamp).isoformat(' ')[:-3]
-            else:
-                date = "----"
-            label = self.wallet.get_label(tx_hash)
-            out.append({
-                'txid': tx_hash,
-                'timestamp': timestamp,
-                'date': date,
-                'label': label,
-                'value': float(value) / 100000000 if value is not None else None,
-                'height': height,
-                'confirmations': conf
-            })
-        return out
+        options = {'password': None, 'verbose': False, 'cmd': 'history', 'wallet_path': self.wallet_file,
+                   'testnet': False, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
+        config = SimpleConfig(options)
+
+        server = daemon.get_server(config)
+        result = server.run_cmdline(options)
+        return result

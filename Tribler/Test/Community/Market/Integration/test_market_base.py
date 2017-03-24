@@ -126,15 +126,11 @@ class TestMarketBase(TestAsServer):
             wallet_dir, wallet_file_name = os.path.split(wallet_path)
             session.lm.btc_wallet.load_wallet(wallet_dir, wallet_file_name)
         else:
-            self.create_btc_wallet_in_session(session)
+            session.lm.btc_wallet.create_wallet(password=session.lm.btc_wallet.get_wallet_password())
 
-    def create_btc_wallet_in_session(self, session):
-        session.lm.btc_wallet.create_wallet()
-
-        def mocked_monitor_transaction(txid):
+        def mocked_monitor_transaction(_):
             monitor_deferred = Deferred()
-            session.lm.btc_wallet.monitored_transactions[txid] = monitor_deferred
-            reactor.callLater(0.5, add_transaction, txid)
+            reactor.callLater(0.5, monitor_deferred.callback, None)
             return monitor_deferred
 
         def add_transaction(txid):
@@ -153,6 +149,7 @@ class TestMarketBase(TestAsServer):
 
         if self.should_fake_btc:
             session.lm.btc_wallet.get_balance = lambda: {"confirmed": 50, "unconfirmed": 0, "unmatured": 0}
+            session.lm.btc_wallet.transfer = lambda *_: 'abcd'
             session.lm.btc_wallet.monitor_transaction = mocked_monitor_transaction
 
     @inlineCallbacks
