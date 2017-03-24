@@ -48,7 +48,7 @@ class BitcoinWallet(Wallet):
         self.created = False
         self.daemon = None
         keychain_pw = self.get_wallet_password()
-        self.wallet_password = keychain_pw if len(keychain_pw) > 0 else None
+        self.wallet_password = keychain_pw if keychain_pw else None  # Convert empty passwords to None
         self.storage = None
         self.wallet = None
         self.load_wallet(self.wallet_dir, self.wallet_file)
@@ -127,7 +127,8 @@ class BitcoinWallet(Wallet):
         run_on_thread(self.wallet.storage.write)
         self.created = True
 
-        self.set_wallet_password(password)
+        if password is not None:
+            self.set_wallet_password(password)
         self.wallet_password = password
 
         self.start_daemon()
