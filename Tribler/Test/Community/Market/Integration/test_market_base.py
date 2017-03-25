@@ -1,6 +1,8 @@
 import os
 
 import sys
+
+import logging
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 
@@ -13,6 +15,9 @@ from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.dispersy.crypto import ECCrypto
 from Tribler.dispersy.discovery.community import BOOTSTRAP_FILE_ENVNAME
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class MarketCommunityTests(MarketCommunity):
@@ -124,28 +129,15 @@ class TestMarketBase(TestAsServer):
         if os.environ.get('SESSION_%d_BTC_WALLET_PATH' % index):
             wallet_path = os.environ.get('SESSION_%d_BTC_WALLET_PATH' % index)
             wallet_dir, wallet_file_name = os.path.split(wallet_path)
+            session.lm.btc_wallet.wallet_password = os.environ.get('SESSION_%d_BTC_WALLET_PASSWORD' % index)
             session.lm.btc_wallet.load_wallet(wallet_dir, wallet_file_name)
         else:
-            session.lm.btc_wallet.create_wallet(password=session.lm.btc_wallet.get_wallet_password())
+            session.lm.btc_wallet.create_wallet()
 
         def mocked_monitor_transaction(_):
             monitor_deferred = Deferred()
             reactor.callLater(0.5, monitor_deferred.callback, None)
             return monitor_deferred
-
-        def add_transaction(txid):
-            # Make sure we can find the electrum wallet
-            sys.path.append(os.path.join(os.path.dirname(os.path.abspath(Tribler.__file__)), '..', 'electrum'))
-            import imp
-            imp.load_module('electrum', *imp.find_module('lib'))
-            from electrum import Transaction
-
-            fake_transaction = Transaction(None)
-            fake_transaction._inputs = [{'is_coinbase': False,
-                                         'prevout_hash': '3140eb24b43386f35ba69e3875eb6c93130ac66201d01c58f598defc949a5c2a',
-                                         'prevout_n': 0}]
-            fake_transaction._outputs = [[0, 395599, False]]
-            session.lm.btc_wallet.wallet.receive_tx_callback(txid, fake_transaction, 0)
 
         if self.should_fake_btc:
             session.lm.btc_wallet.get_balance = lambda: {"confirmed": 50, "unconfirmed": 0, "unmatured": 0}
