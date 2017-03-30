@@ -166,6 +166,18 @@ class Session(SessionConfigInterface):
                 permidmod.save_keypair_multichain(self.multichain_keypair, multichain_pairfilename)
                 permidmod.save_pub_key_multichain(self.multichain_keypair, multichain_pubfilename)
 
+            tradechain_pairfilename = scfg.get_tradechain_permid_keypair_filename()
+
+            if os.path.exists(tradechain_pairfilename):
+                self.tradechain_keypair = permidmod.read_keypair_multichain(tradechain_pairfilename)
+            else:
+                self.tradechain_keypair = permidmod.generate_keypair_multichain()
+
+                # Save keypair
+                tradechain_pubfilename = os.path.join(scfg.get_state_dir(), 'ecpub_tradechain.pem')
+                permidmod.save_keypair_multichain(self.tradechain_keypair, tradechain_pairfilename)
+                permidmod.save_pub_key_multichain(self.tradechain_keypair, tradechain_pubfilename)
+
         if not scfg.get_megacache():
             scfg.set_torrent_checking(0)
 

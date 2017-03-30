@@ -204,6 +204,25 @@ class SessionConfigInterface(object):
             self.set_multichain_permid_keypair_filename(file_name)
         return file_name
 
+    def set_tradechain_permid_keypair_filename(self, keypairfilename):
+        """ Set the filename containing the Elliptic Curve keypair to use for
+        PermID-based authentication for tradechain in this Session.
+
+        Note: if a Session is started with a SessionStartupConfig that
+        points to an existing state dir and that state dir contains a saved
+        keypair, that keypair will be used unless a different keypair is
+        explicitly configured via this method.
+        """
+        self.sessconfig.set(u'general', u'ec_keypair_filename_tradechain', keypairfilename)
+
+    def get_tradechain_permid_keypair_filename(self):
+        """ Returns the filename of the Session's tradechain keypair.
+        @return An absolute path name. """
+        file_name = self.sessconfig.get(u'general', u'ec_keypair_filename_tradechain')
+        if not file_name:
+            file_name = os.path.join(self.get_state_dir(), 'ec_tradechain.pem')
+            self.set_tradechain_permid_keypair_filename(file_name)
+        return file_name
 
     def set_listen_port(self, port):
         """ Set the UDP and TCP listen port for this Session.
