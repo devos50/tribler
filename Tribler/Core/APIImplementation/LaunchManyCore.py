@@ -210,6 +210,7 @@ class TriblerLaunchMany(TaskManager):
             self.dispersy.define_auto_load(PreviewChannelCommunity,
                                            self.session.dispersy_member, kargs=default_kwargs)
 
+        mc_community = None
         if self.session.get_tunnel_community_enabled():
             tunnel_settings = TunnelSettings(tribler_session=self.session)
             tunnel_kwargs = {'tribler_session': self.session, 'settings': tunnel_settings}
@@ -223,10 +224,10 @@ class TriblerLaunchMany(TaskManager):
                 dispersy_member = self.dispersy.get_member(private_key=keypair.key_to_bin())
 
                 from Tribler.community.multichain.community import MultiChainCommunity
-                self.dispersy.define_auto_load(MultiChainCommunity,
-                                               dispersy_member,
-                                               load=True,
-                                               kargs=multichain_kwargs)
+                mc_community = self.dispersy.define_auto_load(MultiChainCommunity,
+                                                              dispersy_member,
+                                                              load=True,
+                                                              kargs=multichain_kwargs)
 
             else:
                 keypair = self.dispersy.crypto.generate_key(u"curve25519")
@@ -245,7 +246,7 @@ class TriblerLaunchMany(TaskManager):
             btc_wallet = BitcoinWallet(os.path.join(self.session.get_state_dir(), 'wallet'))
             wallets[btc_wallet.get_identifier()] = btc_wallet
 
-            mc_wallet = MultichainWallet(self.session)
+            mc_wallet = MultichainWallet(mc_community)
             wallets[mc_wallet.get_identifier()] = mc_wallet
 
             from Tribler.community.market.community import MarketCommunity

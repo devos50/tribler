@@ -923,7 +923,7 @@ class MarketCommunity(Community):
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
 
                 # Send an introduction request to this member.
-                mc_community = self.wallets['mc'].get_multichain_community()
+                mc_community = self.wallets['mc'].mc_community
                 mc_community.add_discovered_candidate(candidate)
                 new_candidate = mc_community.get_candidate(candidate.sock_addr)
                 mc_community.create_introduction_request(new_candidate, False)

@@ -107,8 +107,8 @@ class TestMarketBase(TestAsServer):
         market_member = self.generate_member(self.session)
 
         self.market_communities = {}
-        self.load_multichain_community_in_session(self.session)
-        market_community = self.load_market_community_in_session(self.session, market_member)
+        mc_community = self.load_multichain_community_in_session(self.session)
+        market_community = self.load_market_community_in_session(self.session, market_member, mc_community)
         self.load_btc_wallet_in_market(market_community, 0)
 
     @blocking_call_on_reactor_thread
@@ -134,12 +134,12 @@ class TestMarketBase(TestAsServer):
         return dispersy.get_member(private_key=dispersy.crypto.key_to_bin(keypair))
 
     @blocking_call_on_reactor_thread
-    def load_market_community_in_session(self, session, market_member):
+    def load_market_community_in_session(self, session, market_member, mc_community):
         """
         Load the market community and tradechain community in a given session.
         """
         wallets = {'btc': BitcoinWallet(os.path.join(session.get_state_dir(), 'wallet')),
-                   'mc': MultichainWallet(session)}
+                   'mc': MultichainWallet(mc_community)}
         wallets['mc'].check_negative_balance = False
 
         dispersy = session.get_dispersy_instance()
@@ -200,7 +200,7 @@ class TestMarketBase(TestAsServer):
         self.sessions.append(session)
 
         market_member = self.generate_member(session)
-        self.load_multichain_community_in_session(session)
-        market_community = self.load_market_community_in_session(session, market_member)
+        mc_community = self.load_multichain_community_in_session(session)
+        market_community = self.load_market_community_in_session(session, market_member, mc_community)
         self.load_btc_wallet_in_market(market_community, index)
         returnValue(session)
