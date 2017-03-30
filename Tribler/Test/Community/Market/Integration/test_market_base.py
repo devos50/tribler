@@ -7,6 +7,8 @@ from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 
 import Tribler
+from Tribler.Core.Modules.wallet.btc_wallet import BitcoinWallet
+from Tribler.Core.Modules.wallet.mc_wallet import MultichainWallet
 from Tribler.Test.Community.Multichain.test_multichain_utilities import TestBlock
 from Tribler.Test.common import TESTS_DATA_DIR
 from Tribler.Test.test_as_server import TestAsServer
@@ -106,10 +108,9 @@ class TestMarketBase(TestAsServer):
 
         self.market_communities = {}
         mc_community = self.load_multichain_community_in_session(self.session)
-        self.session.lm.tradechain_community = self.load_tradechain_community_in_session(self.session, market_member)
         self.give_multichain_credits(mc_community, 10)
-        self.load_market_community_in_session(self.session, market_member)
-        self.load_btc_wallet_in_session(self.session, 0)
+        market_community = self.load_market_community_in_session(self.session, market_member)
+        self.load_btc_wallet_in_market(market_community, 0)
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
@@ -145,11 +146,23 @@ class TestMarketBase(TestAsServer):
     @blocking_call_on_reactor_thread
     def load_market_community_in_session(self, session, market_member):
         """
-        Load the market community in a given session.
+        Load the market community and tradechain community in a given session.
         """
+        wallets = {'btc': BitcoinWallet(os.path.join(session.get_state_dir(), 'wallet')),
+                   'mc': MultichainWallet(session)}
+
         dispersy = session.get_dispersy_instance()
+
+        # Load TradeChain
+        tradechain_kwargs = {'tribler_session': session}
+        tradechain_community = dispersy.define_auto_load(TradeChainCommunityTests,
+                                                         market_member, load=True, kargs=tradechain_kwargs)[0]
+
+        # Load MarketCommunity
+        market_kargs = {'tribler_session': session, 'tradechain_community': tradechain_community, 'wallets': wallets}
         self.market_communities[session] = dispersy.define_auto_load(
-            MarketCommunityTests, market_member, (session,), load=True)[0]
+            MarketCommunityTests, market_member, kargs=market_kargs, load=True)[0]
+        return self.market_communities[session]
 
     @blocking_call_on_reactor_thread
     def load_multichain_community_in_session(self, session):
@@ -162,23 +175,14 @@ class TestMarketBase(TestAsServer):
         multichain_kwargs = {'tribler_session': session}
         return dispersy.define_auto_load(MultiChainCommunityTests, dispersy_member, load=True, kargs=multichain_kwargs)[0]
 
-    @blocking_call_on_reactor_thread
-    def load_tradechain_community_in_session(self, session, market_member):
-        """
-        Load a custom instance of the tradechain community in a given session.
-        """
-        dispersy = session.get_dispersy_instance()
-        tradechain_kwargs = {'tribler_session': session}
-        return dispersy.define_auto_load(TradeChainCommunityTests, market_member, load=True, kargs=tradechain_kwargs)[0]
-
-    def load_btc_wallet_in_session(self, session, index):
+    def load_btc_wallet_in_market(self, market, index):
         if os.environ.get('SESSION_%d_BTC_WALLET_PATH' % index):
             wallet_path = os.environ.get('SESSION_%d_BTC_WALLET_PATH' % index)
             wallet_dir, wallet_file_name = os.path.split(wallet_path)
-            session.lm.btc_wallet.wallet_password = os.environ.get('SESSION_%d_BTC_WALLET_PASSWORD' % index)
-            session.lm.btc_wallet.load_wallet(wallet_dir, wallet_file_name)
+            market.wallets['btc'].wallet_password = os.environ.get('SESSION_%d_BTC_WALLET_PASSWORD' % index)
+            market.wallets['btc'].load_wallet(wallet_dir, wallet_file_name)
         else:
-            session.lm.btc_wallet.create_wallet()
+            market.wallets['btc'].create_wallet()
 
         def mocked_monitor_transaction(_):
             monitor_deferred = Deferred()
@@ -186,9 +190,9 @@ class TestMarketBase(TestAsServer):
             return monitor_deferred
 
         if self.should_fake_btc:
-            session.lm.btc_wallet.get_balance = lambda: {"confirmed": 50, "unconfirmed": 0, "unmatured": 0}
-            session.lm.btc_wallet.transfer = lambda *_: 'abcd'
-            session.lm.btc_wallet.monitor_transaction = mocked_monitor_transaction
+            market.wallets['btc'].get_balance = lambda: {"confirmed": 50, "unconfirmed": 0, "unmatured": 0}
+            market.wallets['btc'].transfer = lambda *_: 'abcd'
+            market.wallets['btc'].monitor_transaction = mocked_monitor_transaction
 
     @inlineCallbacks
     def create_session(self, index):
@@ -204,10 +208,8 @@ class TestMarketBase(TestAsServer):
         yield session.start()
         self.sessions.append(session)
 
-        self.load_btc_wallet_in_session(session, index)
-
         market_member = self.generate_member(session)
         self.load_multichain_community_in_session(session)
-        session.lm.tradechain_community = self.load_tradechain_community_in_session(session, market_member)
-        self.load_market_community_in_session(session, market_member)
+        market_community = self.load_market_community_in_session(session, market_member)
+        self.load_btc_wallet_in_market(market_community, index)
         returnValue(session)

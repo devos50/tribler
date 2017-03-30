@@ -90,14 +90,10 @@ class TriblerLaunchMany(TaskManager):
         self.tracker_manager = None
         self.torrent_checker = None
         self.tunnel_community = None
-        self.tradechain_community = None
 
         self.startup_deferred = Deferred()
 
         self.boosting_manager = None
-        self.wallets = {}
-        self.mc_wallet = None
-        self.btc_wallet = None
 
     def register(self, session, sesslock):
         assert isInIOThread()
@@ -245,6 +241,13 @@ class TriblerLaunchMany(TaskManager):
 
         # Use the permanent multichain ID for Market community/TradeChain if it's available
         if self.session.get_market_community_enabled():
+            wallets = {}
+            btc_wallet = BitcoinWallet(os.path.join(self.session.get_state_dir(), 'wallet'))
+            wallets[btc_wallet.get_identifier()] = btc_wallet
+
+            mc_wallet = MultichainWallet(self.session)
+            wallets[mc_wallet.get_identifier()] = mc_wallet
+
             from Tribler.community.market.community import MarketCommunity
             if self.session.get_enable_multichain():
                 keypair = self.session.multichain_keypair
@@ -255,8 +258,10 @@ class TriblerLaunchMany(TaskManager):
             self.tradechain_community = self.dispersy.define_auto_load(TradeChainCommunity,
                                                                        dispersy_member, load=True,
                                                                        kargs=default_kwargs)
+            market_kwargs = {'tribler_session': self.session, 'wallets': wallets,
+                             'tradechain_community': self.tradechain_community}
             self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member,
-                                           load=True, kargs=default_kwargs)
+                                           load=True, kargs=market_kwargs)
 
         self.session.set_anon_proxy_settings(2, ("127.0.0.1",
                                                  self.session.get_tunnel_community_socks5_listen_ports()))
@@ -335,12 +340,6 @@ class TriblerLaunchMany(TaskManager):
         if self.session.get_creditmining_enable():
             from Tribler.Core.CreditMining.BoostingManager import BoostingManager
             self.boosting_manager = BoostingManager(self.session)
-
-        self.btc_wallet = BitcoinWallet(self.session)
-        self.wallets[self.btc_wallet.get_identifier()] = self.btc_wallet
-
-        self.mc_wallet = MultichainWallet(self.session)
-        self.wallets[self.mc_wallet.get_identifier()] = self.mc_wallet
 
         self.version_check_manager = VersionCheckManager(self.session)
         self.session.set_download_states_callback(self.sesscb_states_callback)

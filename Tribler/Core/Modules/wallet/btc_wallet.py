@@ -28,7 +28,6 @@ from electrum import WalletStorage
 from electrum import daemon
 from electrum.mnemonic import Mnemonic
 from electrum import keystore
-from electrum.transaction import Transaction
 from electrum import Wallet as ElectrumWallet
 
 
@@ -37,13 +36,12 @@ class BitcoinWallet(Wallet):
     This class is responsible for handling your wallet of bitcoins.
     """
 
-    def __init__(self, session):
+    def __init__(self, wallet_dir):
         super(BitcoinWallet, self).__init__()
 
-        self.wallet_dir = os.path.join(session.get_state_dir(), 'wallet')
+        self.wallet_dir = wallet_dir
         self.wallet_file = 'btc_wallet'
         self._logger = logging.getLogger(self.__class__.__name__)
-        self.tribler_session = session
         self.min_confirmations = 0
         self.created = False
         self.daemon = None
@@ -75,7 +73,7 @@ class BitcoinWallet(Wallet):
 
     def start_daemon(self):
         options = {'verbose': False, 'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
-                   'cwd': self.tribler_session.get_state_dir(), 'portable': False, 'password': '',
+                   'cwd': self.wallet_dir, 'portable': False, 'password': '',
                    'wallet_path': os.path.join('wallet', 'btc_wallet')}
         config = SimpleConfig(options)
         fd, server = daemon.get_fd_or_server(config)
@@ -104,7 +102,7 @@ class BitcoinWallet(Wallet):
         """
         Create a new bitcoin wallet.
         """
-        self._logger.info("Creating wallet in %s", self.tribler_session.get_state_dir())
+        self._logger.info("Creating wallet in %s", self.wallet_dir)
 
         def run_on_thread(callable):
             # We are running code that writes to the wallet on a separate thread.

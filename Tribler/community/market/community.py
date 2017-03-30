@@ -70,7 +70,7 @@ class MarketCommunity(Community):
         master = dispersy.get_member(public_key=master_key)
         return [master]
 
-    def initialize(self, tribler_session=None):
+    def initialize(self, tribler_session=None, tradechain_community=None, wallets={}):
         super(MarketCommunity, self).initialize()
         self._logger.info("Market community initialized")
 
@@ -85,7 +85,8 @@ class MarketCommunity(Community):
         self.order_book = OrderBook(message_repository)
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.tribler_session = tribler_session
-        self.tradechain_community = self.tribler_session.lm.tradechain_community
+        self.tradechain_community = tradechain_community
+        self.wallets = wallets
 
         transaction_repository = MemoryTransactionRepository(self.mid)
         self.transaction_manager = TransactionManager(transaction_repository)
@@ -272,22 +273,20 @@ class MarketCommunity(Community):
         """
         Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
         """
-        wallets = self.tribler_session.lm.wallets
-        if not wallets['btc'].created:
+        if 'btc' not in self.wallets or not self.wallets['btc'].created:
             raise RuntimeError("No Bitcoin wallet available")
 
-        return wallets['btc'].get_address()
+        return self.wallets['btc'].get_address()
 
     def get_multichain_identity(self):
         """
         Get your identitiy (public key) in the multichain community. This is sent to the receiver of the multichain
         credits so he can wait for the transaction to be completed.
         """
-        wallets = self.tribler_session.lm.wallets
-        if not wallets['mc'].created:
+        if 'mc' not in self.wallets or not self.wallets['mc'].created:
             raise RuntimeError("No Multichain wallet available")
 
-        return wallets['mc'].get_address()
+        return self.wallets['mc'].get_address()
 
     def check_history(self, message):
         """
@@ -355,8 +354,7 @@ class MarketCommunity(Community):
         """
 
         # TODO(Martijn): balance check?
-        wallets = self.tribler_session.lm.wallets
-        if not wallets['btc'].created or not wallets['mc'].created:
+        if not self.wallets['btc'].created or not self.wallets['mc'].created:
             raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
 
         # Convert values to value objects
@@ -457,8 +455,7 @@ class MarketCommunity(Community):
         """
 
         # TODO(Martijn): balance check?
-        wallets = self.tribler_session.lm.wallets
-        if not wallets['btc'].created or not wallets['mc'].created:
+        if not self.wallets['btc'].created or not self.wallets['mc'].created:
             raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
 
         # Convert values to value objects
@@ -904,7 +901,7 @@ class MarketCommunity(Community):
             if not transaction.sent_wallet_info:
                 candidate = Candidate(self.lookup_ip(transaction.transaction_id.trader_id), False)
                 pub_key = b64decode(message.payload.outgoing_address)
-                member = self.tribler_session.get_dispersy_instance().get_member(public_key=pub_key)
+                member = self.dispersy.get_member(public_key=pub_key)
                 candidate.associate(member)
 
                 transaction.destination_mc_candidate = candidate
@@ -914,7 +911,7 @@ class MarketCommunity(Community):
             else:
                 candidate = Candidate(self.lookup_ip(transaction.transaction_id.trader_id), False)
                 pub_key = b64decode(message.payload.incoming_address)
-                member = self.tribler_session.get_dispersy_instance().get_member(public_key=pub_key)
+                member = self.dispersy.get_member(public_key=pub_key)
                 candidate.associate(member)
 
                 transaction.destination_mc_candidate = candidate
@@ -926,7 +923,7 @@ class MarketCommunity(Community):
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
 
                 # Send an introduction request to this member.
-                mc_community = self.tribler_session.lm.wallets['mc'].get_multichain_community()
+                mc_community = self.wallets['mc'].get_multichain_community()
                 mc_community.add_discovered_candidate(candidate)
                 new_candidate = mc_community.get_candidate(candidate.sock_addr)
                 mc_community.create_introduction_request(new_candidate, False)
@@ -937,7 +934,7 @@ class MarketCommunity(Community):
         assert isinstance(multi_chain_payment, MultiChainPayment), type(multi_chain_payment)
         payload = multi_chain_payment.to_network()
 
-        mc_wallet = self.tribler_session.lm.wallets['mc']
+        mc_wallet = self.wallets['mc']
         if not mc_wallet or not mc_wallet.created:
             raise RuntimeError("No MultiChain credit wallet present")
 
@@ -965,7 +962,7 @@ class MarketCommunity(Community):
             multi_chain_payment = MultiChainPayment.from_network(message.payload)
             transaction = self.transaction_manager.find_by_id(multi_chain_payment.transaction_id)
 
-            mc_wallet = self.tribler_session.lm.wallets['mc']
+            mc_wallet = self.wallets['mc']
             transaction_deferred = mc_wallet.monitor_transaction(transaction.destination_mc_candidate.get_member(),
                                                                  int(multi_chain_payment.transferor_quantity))
             transaction_deferred.addCallback(lambda _: self.received_multichain_payment(multi_chain_payment, transaction))
@@ -979,7 +976,7 @@ class MarketCommunity(Community):
 
     # Bitcoin payment
     def send_bitcoin_payment(self, transaction, price):
-        btc_wallet = self.tribler_session.lm.wallets['btc']
+        btc_wallet = self.wallets['btc']
         if not btc_wallet or not btc_wallet.created:
             raise RuntimeError("No BitCoin wallet present")
 
@@ -1011,8 +1008,7 @@ class MarketCommunity(Community):
             btc_payment = BitcoinPayment.from_network(message.payload)
             transaction = self.transaction_manager.find_by_id(btc_payment.transaction_id)
 
-            btc_wallet = self.tribler_session.lm.wallets['btc']
-            transaction_deferred = btc_wallet.monitor_transaction(str(btc_payment.txid))
+            transaction_deferred = self.wallets['btc'].monitor_transaction(str(btc_payment.txid))
             transaction_deferred.addCallback(lambda _: self.received_bitcoin_payment(btc_payment, transaction))
 
     def received_bitcoin_payment(self, btc_payment, transaction):
@@ -1052,16 +1048,17 @@ class MarketCommunity(Community):
         self.dispersy.store_update_forward([message], True, False, True)
         self.notify_transaction_complete(transaction)
 
-        member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))
-        candidate.associate(member)
-        self.tradechain_community.add_discovered_candidate(candidate)
-        new_candidate = self.tradechain_community.get_candidate(candidate.sock_addr)
-
         def send_tradechain_request(_):
             self.tradechain_community.schedule_block(candidate, 'BTC', 3, 'MC', 4)
 
-        self.tradechain_community.create_introduction_request(new_candidate, False)
-        self.tradechain_community.wait_for_intro_of_candidate(new_candidate).addCallback(send_tradechain_request)
+        if self.tradechain_community:
+            member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))
+            candidate.associate(member)
+            self.tradechain_community.add_discovered_candidate(candidate)
+            new_candidate = self.tradechain_community.get_candidate(candidate.sock_addr)
+
+            self.tradechain_community.create_introduction_request(new_candidate, False)
+            self.tradechain_community.wait_for_intro_of_candidate(new_candidate).addCallback(send_tradechain_request)
 
     def on_end_transaction(self, messages):
         for message in messages:
