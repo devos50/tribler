@@ -107,8 +107,7 @@ class TestMarketBase(TestAsServer):
         market_member = self.generate_member(self.session)
 
         self.market_communities = {}
-        mc_community = self.load_multichain_community_in_session(self.session)
-        self.give_multichain_credits(mc_community, 10)
+        self.load_multichain_community_in_session(self.session)
         market_community = self.load_market_community_in_session(self.session, market_member)
         self.load_btc_wallet_in_market(market_community, 0)
 
@@ -129,15 +128,6 @@ class TestMarketBase(TestAsServer):
         self.config.set_tunnel_community_enabled(False)
         self.config.set_market_community_enabled(False)
 
-    def give_multichain_credits(self, mc_community, amount):
-        block = TestBlock()
-        block.up = amount
-        block.down = 0
-        block.total_up_requester = amount
-        block.total_down_requester = 0
-        block.public_key_requester = mc_community._public_key
-        mc_community.persistence.add_block(block)
-
     def generate_member(self, session):
         dispersy = session.get_dispersy_instance()
         keypair = dispersy.crypto.generate_key(u"curve25519")
@@ -150,6 +140,7 @@ class TestMarketBase(TestAsServer):
         """
         wallets = {'btc': BitcoinWallet(os.path.join(session.get_state_dir(), 'wallet')),
                    'mc': MultichainWallet(session)}
+        wallets['mc'].check_negative_balance = False
 
         dispersy = session.get_dispersy_instance()
 

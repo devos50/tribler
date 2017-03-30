@@ -18,6 +18,7 @@ class MultichainWallet(Wallet):
 
         self.session = session
         self.created = True
+        self.check_negative_balance = True
 
     def get_multichain_community(self):
         for community in self.session.get_dispersy_instance().get_communities():
@@ -35,11 +36,11 @@ class MultichainWallet(Wallet):
         return {'total_up': total[0], 'total_down': total[1], 'net': total[0] - total[1]}
 
     def transfer(self, quantity, candidate):
-        if self.get_balance()['net'] >= quantity:
-            mb_quantity = quantity * 1024 * 1024
-            self.get_multichain_community().schedule_block(candidate, 0, mb_quantity)
-        else:
+        if self.check_negative_balance and self.get_balance()['net'] < quantity:
             raise InsufficientFunds()
+
+        mb_quantity = quantity * 1024 * 1024
+        self.get_multichain_community().schedule_block(candidate, 0, mb_quantity)
 
     def monitor_transaction(self, mc_member, amount):
         """
