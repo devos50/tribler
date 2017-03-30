@@ -21,17 +21,12 @@ class TestMarketSession(TestMarketBase):
         bid_session = yield self.create_session(1)
         test_deferred = Deferred()
 
-        def on_end_transaction(*_):
-            if not on_end_transaction.called:
-                test_deferred.callback(None)
-                on_end_transaction.called = True
-
-        on_end_transaction.called = False
-        self.session.notifier.add_observer(on_end_transaction, NTFY_MARKET_ON_TRANSACTION_COMPLETE, [NTFY_UPDATE])
-        bid_session.notifier.add_observer(on_end_transaction, NTFY_MARKET_ON_TRANSACTION_COMPLETE, [NTFY_UPDATE])
+        def on_signature_response(_):
+            test_deferred.callback(None)
 
         ask_community = self.market_communities[self.session]
         bid_community = self.market_communities[bid_session]
+
         ask_community.add_discovered_candidate(
             Candidate(bid_session.get_dispersy_instance().lan_address, tunnel=False))
         bid_community.add_discovered_candidate(
@@ -40,6 +35,10 @@ class TestMarketSession(TestMarketBase):
         bid_community.create_bid(0.0001, 2, 3600)
         yield self.async_sleep(1)
         ask_community.create_ask(0.0001, 2, 3600)
+
+        ask_community.tradechain_community.wait_for_signature_response().addCallback(on_signature_response)
+        bid_community.tradechain_community.wait_for_signature_response().addCallback(on_signature_response)
+
         yield test_deferred
 
     @blocking_call_on_reactor_thread

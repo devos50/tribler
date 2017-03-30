@@ -1052,8 +1052,16 @@ class MarketCommunity(Community):
         self.dispersy.store_update_forward([message], True, False, True)
         self.notify_transaction_complete(transaction)
 
-        # Request a TradeChain signature
-        self.tradechain_community.schedule_block(candidate, 'BTC', 3, 'MC', 4)
+        member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))
+        candidate.associate(member)
+        self.tradechain_community.add_discovered_candidate(candidate)
+        new_candidate = self.tradechain_community.get_candidate(candidate.sock_addr)
+
+        def send_tradechain_request(_):
+            self.tradechain_community.schedule_block(candidate, 'BTC', 3, 'MC', 4)
+
+        self.tradechain_community.create_introduction_request(new_candidate, False)
+        self.tradechain_community.wait_for_intro_of_candidate(new_candidate).addCallback(send_tradechain_request)
 
     def on_end_transaction(self, messages):
         for message in messages:
