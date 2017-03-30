@@ -38,16 +38,16 @@ class TransactionRepository(object):
 class MemoryTransactionRepository(TransactionRepository):
     """A repository for transactions in the transaction manager stored in memory"""
 
-    def __init__(self, pubkey):
+    def __init__(self, mid):
         """
-        :param pubkey: Hex encoded version of the public key of this node
-        :type pubkey: str
+        :param mid: Hex encoded version of the member id of this node
+        :type mid: str
         """
         super(MemoryTransactionRepository, self).__init__()
 
         self._logger.info("Memory transaction repository used")
 
-        self._pubkey = pubkey
+        self._mid = mid
         self._next_id = 0  # Counter to keep track of the number of messages created by this repository
 
         self._transactions = {}
@@ -110,4 +110,4 @@ class MemoryTransactionRepository(TransactionRepository):
         :rtype: TransactionId
         """
         self._next_id += 1
-        return TransactionId(TraderId(self._pubkey), TransactionNumber(str(self._next_id)))
+        return TransactionId(TraderId(self._mid), TransactionNumber(str(self._next_id)))

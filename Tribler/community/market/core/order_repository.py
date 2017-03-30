@@ -38,21 +38,21 @@ class OrderRepository(object):
 class MemoryOrderRepository(OrderRepository):
     """A repository for orders in the order manager stored in memory"""
 
-    def __init__(self, pubkey):
+    def __init__(self, mid):
         """
-        :param pubkey: Hex encoded version of the public key of this node
-        :type pubkey: str
+        :param mid: Hex encoded version of the member id of this node
+        :type mid: str
         """
         super(MemoryOrderRepository, self).__init__()
 
         self._logger.info("Memory order repository used")
 
         try:
-            int(pubkey, 16)
+            int(mid, 16)
         except ValueError:  # Not a hexadecimal
-            raise ValueError("Encoded public key must be hexadecimal")
+            raise ValueError("Encoded member id must be hexadecimal")
 
-        self._pubkey = pubkey
+        self._mid = mid
         self._next_id = 0  # Counter to keep track of the number of messages created by this repository
 
         self._orders = {}
@@ -111,4 +111,4 @@ class MemoryOrderRepository(OrderRepository):
         :rtype: OrderId
         """
         self._next_id += 1
-        return OrderId(TraderId(self._pubkey), OrderNumber(str(self._next_id)))
+        return OrderId(TraderId(self._mid), OrderNumber(str(self._next_id)))

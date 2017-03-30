@@ -1,4 +1,4 @@
-from base64 import b64decode
+from base64 import b64decode, b64encode
 
 import time
 
@@ -74,20 +74,20 @@ class MarketCommunity(Community):
         super(MarketCommunity, self).initialize()
         self._logger.info("Market community initialized")
 
-        # The public key of this node
-        self.pubkey = self.my_member.public_key.encode("HEX")
-        self.pubkey_register = {}  # TODO: fix memory leak
+        self.mid = self.my_member.mid.encode('hex')
+        self.mid_register = {}  # TODO: fix memory leak
         self.relayed_asks = []
         self.relayed_bids = []
 
-        order_repository = MemoryOrderRepository(self.pubkey)
-        message_repository = MemoryMessageRepository(self.pubkey)
+        order_repository = MemoryOrderRepository(self.mid)
+        message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.tribler_session = tribler_session
+        self.tradechain_community = self.tribler_session.lm.tradechain_community
 
-        transaction_repository = MemoryTransactionRepository(self.pubkey)
+        transaction_repository = MemoryTransactionRepository(self.mid)
         self.transaction_manager = TransactionManager(transaction_repository)
 
         self.history = {}  # List for received messages TODO: fix memory leak
@@ -313,7 +313,7 @@ class MarketCommunity(Community):
         :rtype: tuple
         """
         assert isinstance(trader_id, TraderId), type(trader_id)
-        return self.pubkey_register.get(trader_id)
+        return self.mid_register.get(trader_id)
 
     def update_ip(self, trader_id, ip):
         """
@@ -329,7 +329,7 @@ class MarketCommunity(Community):
         assert isinstance(ip[0], str)
         assert isinstance(ip[1], int)
 
-        self.pubkey_register[trader_id] = ip
+        self.mid_register[trader_id] = ip
 
     def on_ask_timeout(self, ask):
         if self.tribler_session:
@@ -625,7 +625,7 @@ class MarketCommunity(Community):
             self.update_ip(proposed_trade.message_id.trader_id,
                            (message.payload.address.ip, message.payload.address.port))
 
-            if str(proposed_trade.recipient_order_id.trader_id) == str(self.pubkey):  # The message is for this node
+            if str(proposed_trade.recipient_order_id.trader_id) == str(self.mid):  # The message is for this node
                 order = self.order_manager.order_repository.find_by_id(proposed_trade.recipient_order_id)
 
                 if order and order.is_valid() and order.available_quantity > Quantity(0):  # Order is valid
@@ -652,7 +652,7 @@ class MarketCommunity(Community):
                     self.send_declined_trade(declined_trade)
             else:
                 self._logger.warning("Received proposed trade message that was not for this node "
-                                     "(my id: %s, message recipient id: %s", str(self.pubkey),
+                                     "(my id: %s, message recipient id: %s", str(self.mid),
                                      str(proposed_trade.recipient_order_id.trader_id))
 
     # Accepted trade
@@ -711,7 +711,7 @@ class MarketCommunity(Community):
         for message in messages:
             declined_trade = DeclinedTrade.from_network(message.payload)
 
-            if str(declined_trade.recipient_order_id.trader_id) == str(self.pubkey):  # The message is for this node
+            if str(declined_trade.recipient_order_id.trader_id) == str(self.mid):  # The message is for this node
                 order = self.order_manager.order_repository.find_by_id(declined_trade.recipient_order_id)
 
                 if order:
@@ -755,7 +755,7 @@ class MarketCommunity(Community):
         for message in messages:
             counter_trade = CounterTrade.from_network(message.payload)
 
-            if str(counter_trade.recipient_order_id.trader_id) == str(self.pubkey):  # The message is for this node
+            if str(counter_trade.recipient_order_id.trader_id) == str(self.mid):  # The message is for this node
                 order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
 
                 if order:
@@ -1051,6 +1051,9 @@ class MarketCommunity(Community):
 
         self.dispersy.store_update_forward([message], True, False, True)
         self.notify_transaction_complete(transaction)
+
+        # Request a TradeChain signature
+        self.tradechain_community.schedule_block(candidate, 'BTC', 3, 'MC', 4)
 
     def on_end_transaction(self, messages):
         for message in messages:
