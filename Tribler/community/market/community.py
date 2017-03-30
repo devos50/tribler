@@ -92,6 +92,7 @@ class MarketCommunity(Community):
         self.transaction_manager = TransactionManager(transaction_repository)
 
         self.history = {}  # List for received messages TODO: fix memory leak
+        self.use_local_address = False
 
     def initiate_meta_messages(self):
         return super(MarketCommunity, self).initiate_meta_messages() + [
@@ -269,6 +270,13 @@ class MarketCommunity(Community):
         self.order_book.cancel_all_pending_tasks()
         yield super(MarketCommunity, self).unload_community()
 
+    def get_dispersy_address(self):
+        """
+        Returns the address of the Dispersy instance. This method is here to make the experiments on the DAS5 succeed;
+        direct messaging is not possible there with a wan address so we are using the local address instead.
+        """
+        return self.dispersy.lan_address if self.use_local_address else self.dispersy.wan_address
+
     def get_bitcoin_address(self):
         """
         Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
@@ -393,7 +401,7 @@ class MarketCommunity(Community):
         payload = ask.to_network()
 
         # Add ttl and the local wan address
-        payload += (Ttl.default(), self.dispersy.wan_address[0], self.dispersy.wan_address[1])
+        payload += (Ttl.default(),) + self.get_dispersy_address()
 
         meta = self.get_meta_message(u"ask")
         message = meta.impl(
@@ -494,7 +502,7 @@ class MarketCommunity(Community):
         payload = bid.to_network()
 
         # Add ttl and the local wan address
-        payload += (Ttl.default(), self.dispersy.wan_address[0], self.dispersy.wan_address[1])
+        payload += (Ttl.default(),) + self.get_dispersy_address()
 
         meta = self.get_meta_message(u"bid")
         message = meta.impl(
@@ -590,7 +598,7 @@ class MarketCommunity(Community):
         destination, payload = proposed_trade.to_network()
 
         # Add the local address to the payload
-        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1])
+        payload += self.get_dispersy_address()
 
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
@@ -658,7 +666,7 @@ class MarketCommunity(Community):
         destination, payload = accepted_trade.to_network()
 
         # Add ttl
-        payload += (Ttl.default(), self.dispersy.wan_address[0], self.dispersy.wan_address[1])
+        payload += (Ttl.default(),) + self.get_dispersy_address()
 
         meta = self.get_meta_message(u"accepted-trade")
         message = meta.impl(
@@ -729,7 +737,7 @@ class MarketCommunity(Community):
         destination, payload = counter_trade.to_network()
 
         # Add the local address to the payload
-        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1])
+        payload += self.get_dispersy_address()
 
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(destination), False)
