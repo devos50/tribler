@@ -162,15 +162,15 @@ class MarketConversion(BinaryConversion):
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.order_number),
             str(payload.recipient_trader_id), str(payload.recipient_order_number), float(payload.price),
-            int(payload.quantity), float(payload.timestamp), str(payload.address.ip), int(payload.address.port),
-            int(payload.ttl)
+            int(payload.quantity), float(payload.timestamp), int(payload.ttl),
+            str(payload.address.ip), int(payload.address.port)
         ))
         return packet,
 
     def _decode_accepted_trade(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, OrderNumber, TraderId, OrderNumber, Price, Quantity,
-                                     Timestamp, str, int, Ttl])
+                                     Timestamp, Ttl, str, int])
 
     def _encode_declined_trade(self, message):
         payload = message.payload

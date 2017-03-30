@@ -658,7 +658,7 @@ class MarketCommunity(Community):
         destination, payload = accepted_trade.to_network()
 
         # Add ttl
-        payload += (self.dispersy.wan_address[0], self.dispersy.wan_address[1], Ttl.default())
+        payload += (Ttl.default(), self.dispersy.wan_address[0], self.dispersy.wan_address[1])
 
         meta = self.get_meta_message(u"accepted-trade")
         message = meta.impl(

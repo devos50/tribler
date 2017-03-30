@@ -159,7 +159,7 @@ class TradePayload(MessagePayload):
 class AcceptedTradePayload(TradePayload):
     class Implementation(TradePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, recipient_trader_id, recipient_order_number,
-                     price, quantity, timestamp, ip, port, ttl):
+                     price, quantity, timestamp, ttl, ip, port):
             assert isinstance(ttl, Ttl), type(ttl)
             super(AcceptedTradePayload.Implementation, self).__init__(meta, trader_id, message_number, order_number,
                                                                       recipient_trader_id, recipient_order_number,
