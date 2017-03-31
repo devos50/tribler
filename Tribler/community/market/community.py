@@ -72,7 +72,6 @@ class MarketCommunity(Community):
 
     def initialize(self, tribler_session=None, tradechain_community=None, wallets={}):
         super(MarketCommunity, self).initialize()
-        self._logger.info("Market community initialized")
 
         self.mid = self.my_member.mid.encode('hex')
         self.mid_register = {}  # TODO: fix memory leak
@@ -93,6 +92,8 @@ class MarketCommunity(Community):
 
         self.history = {}  # List for received messages TODO: fix memory leak
         self.use_local_address = False
+
+        self._logger.info("Market community initialized with mid %s" % self.mid)
 
     def initiate_meta_messages(self):
         return super(MarketCommunity, self).initiate_meta_messages() + [
@@ -336,6 +337,7 @@ class MarketCommunity(Community):
         assert isinstance(ip[0], str)
         assert isinstance(ip[1], int)
 
+        self._logger.debug("Updating ip of trader %s to (%s, %s)", trader_id, ip[0], ip[1])
         self.mid_register[trader_id] = ip
 
     def on_ask_timeout(self, ask):
@@ -879,6 +881,9 @@ class MarketCommunity(Community):
         # Lookup the remote address of the peer with the pubkey
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
+        self._logger.debug("Sending wallet info to trader %s (incoming address: %s, outgoing address: %s",
+                           transaction.partner_trader_id, incoming_address, outgoing_address)
+
         message_id = self.order_book.message_repository.next_identity()
 
         meta = self.get_meta_message(u"wallet-info")
@@ -931,6 +936,7 @@ class MarketCommunity(Community):
                     self.send_multi_chain_payment(transaction, multi_chain_payment)
 
                 # Send an introduction request to this member.
+                self._logger.info("Sending introduction request in multichain to candidate %s", candidate)
                 mc_community = self.wallets['mc'].mc_community
                 mc_community.add_discovered_candidate(candidate)
                 new_candidate = mc_community.get_candidate(candidate.sock_addr)
