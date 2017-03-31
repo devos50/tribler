@@ -922,7 +922,7 @@ class MarketCommunity(Community):
 
                 self.send_wallet_info(transaction, self.get_multichain_identity(), self.get_bitcoin_address())
             else:
-                candidate = Candidate(self.lookup_ip(transaction.transaction_id.trader_id), False)
+                candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
                 pub_key = b64decode(message.payload.incoming_address)
                 member = self.dispersy.get_member(public_key=pub_key)
                 candidate.associate(member)
