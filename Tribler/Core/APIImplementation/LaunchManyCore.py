@@ -227,7 +227,7 @@ class TriblerLaunchMany(TaskManager):
                 mc_community = self.dispersy.define_auto_load(MultiChainCommunity,
                                                               dispersy_member,
                                                               load=True,
-                                                              kargs=multichain_kwargs)
+                                                              kargs=multichain_kwargs)[0]
 
             else:
                 keypair = self.dispersy.crypto.generate_key(u"curve25519")
@@ -261,8 +261,8 @@ class TriblerLaunchMany(TaskManager):
                                                                        kargs=default_kwargs)
             market_kwargs = {'tribler_session': self.session, 'wallets': wallets,
                              'tradechain_community': self.tradechain_community}
-            self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member,
-                                           load=True, kargs=market_kwargs)
+            self.market_community = self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member,
+                                                                   load=True, kargs=market_kwargs)[0]
 
         self.session.set_anon_proxy_settings(2, ("127.0.0.1",
                                                  self.session.get_tunnel_community_socks5_listen_ports()))

@@ -15,8 +15,8 @@ class WalletsEndpoint(resource.Resource):
 
     def render_GET(self, request):
         wallets = {}
-        for wallet_id in self.session.lm.wallets.keys():
-            wallet = self.session.lm.wallets[wallet_id]
+        for wallet_id in self.session.lm.market_community.wallets.keys():
+            wallet = self.session.lm.market_community.wallets[wallet_id]
             wallets[wallet_id] = {'created': wallet.created, 'balance': wallet.get_balance(),
                                   'address': wallet.get_address()}
         return json.dumps({"wallets": wallets})
@@ -39,7 +39,7 @@ class WalletEndpoint(resource.Resource):
             self.putChild(path, child_cls(self.session, self.identifier))
 
     def render_PUT(self, request):
-        if self.session.lm.wallets[self.identifier].created:
+        if self.session.lm.market_community.wallets[self.identifier].created:
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": "this wallet already exists"})
 
@@ -49,7 +49,7 @@ class WalletEndpoint(resource.Resource):
             password = ''
             if parameters['password'] and len(parameters['password']) > 0:
                 password = parameters['password'][0]
-                self.session.lm.wallets[self.identifier].create_wallet(password=password)
+                self.session.lm.market_community.wallets[self.identifier].create_wallet(password=password)
         else:
             # We do not support creation of other wallets besides BTC right now
             pass
@@ -68,7 +68,7 @@ class WalletBalanceEndpoint(resource.Resource):
         self.identifier = identifier
 
     def render_GET(self, request):
-        return json.dumps({"balance": self.session.lm.wallets[self.identifier].get_balance()})
+        return json.dumps({"balance": self.session.lm.market_community.wallets[self.identifier].get_balance()})
 
 
 class WalletTransactionsEndpoint(resource.Resource):
@@ -82,4 +82,4 @@ class WalletTransactionsEndpoint(resource.Resource):
         self.identifier = identifier
 
     def render_GET(self, request):
-        return json.dumps({"transactions": self.session.lm.wallets[self.identifier].get_transactions()})
+        return json.dumps({"transactions": self.session.lm.market_community.wallets[self.identifier].get_transactions()})
