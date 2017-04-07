@@ -21,8 +21,13 @@ class TestMarketSession(TestMarketBase):
         bid_session = yield self.create_session(1)
         test_deferred = Deferred()
 
-        def on_signature_response(_):
-            test_deferred.callback(None)
+        def on_received_half_block(_):
+            on_received_half_block.num_called += 1
+
+            if on_received_half_block.num_called == 2:  # We received a block in both sessions
+                test_deferred.callback(None)
+
+        on_received_half_block.num_called = 0
 
         ask_community = self.market_communities[self.session]
         bid_community = self.market_communities[bid_session]
@@ -36,8 +41,8 @@ class TestMarketSession(TestMarketBase):
         yield self.async_sleep(1)
         ask_community.create_ask(0.0001, 2, 3600)
 
-        ask_community.tradechain_community.wait_for_signature_response().addCallback(on_signature_response)
-        bid_community.tradechain_community.wait_for_signature_response().addCallback(on_signature_response)
+        ask_community.tradechain_community.wait_for_signature_response().addCallback(on_received_half_block)
+        bid_community.tradechain_community.wait_for_signature_response().addCallback(on_received_half_block)
 
         yield test_deferred
 

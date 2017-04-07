@@ -1,28 +1,31 @@
 """
-File containing the TradeChain Community.
+The TradeChain Community is the first step in an incremental approach in building a new reputation system.
+This reputation system builds a tamper proof interaction history contained in a chain data-structure.
+Every node has a chain and these chains intertwine by blocks shared by chains.
 """
 import logging
 import base64
 from twisted.internet.defer import inlineCallbacks, Deferred
 
+from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
-from Tribler.community.tradechain.conversion import split_function, TradeChainConversion, GENESIS_ID
-from Tribler.community.tradechain.database import TradeChainDB, DatabaseBlock
-from Tribler.community.tradechain.payload import SignaturePayload, CrawlRequestPayload, CrawlResponsePayload, \
-    CrawlResumePayload
-from Tribler.dispersy.authentication import DoubleMemberAuthentication, MemberAuthentication
+from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.resolution import PublicResolution
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.destination import CandidateDestination
 from Tribler.dispersy.community import Community
 from Tribler.dispersy.message import Message, DelayPacketByMissingMember
 from Tribler.dispersy.conversion import DefaultConversion
-from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
-SIGNATURE = u"signature"
-CRAWL_REQUEST = u"crawl_request"
-CRAWL_RESPONSE = u"crawl_response"
-CRAWL_RESUME = u"crawl_resume"
+from Tribler.dispersy.util import blocking_call_on_reactor_thread
+from Tribler.community.tradechain.block import TradeChainBlock, ValidationResult, GENESIS_SEQ, UNKNOWN_SEQ
+from Tribler.community.tradechain.payload import HalfBlockPayload, CrawlRequestPayload
+from Tribler.community.tradechain.database import TradeChainDB
+from Tribler.community.tradechain.conversion import TradeChainConversion
+
+HALF_BLOCK = u"half_block"
+CRAWL = u"crawl"
+MIN_TRANSACTION_SIZE = 1024*1024
 
 
 class TradeChainCommunity(Community):
@@ -34,17 +37,12 @@ class TradeChainCommunity(Community):
         super(TradeChainCommunity, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.notifier = None
-        self._private_key = self.my_member.private_key
-        self._public_key = self.my_member.public_key
-        self.persistence = TradeChainDB(self.dispersy, self.dispersy.working_directory)
-        self.logger.debug("The tradechain community started with Public Key: %s", base64.encodestring(self._public_key))
+        self.persistence = TradeChainDB(self.dispersy.working_directory)
 
         self.expected_intro_responses = {}
-        self.expected_sig_requests = {}
 
-    def initialize(self, tribler_session=None):
-        super(TradeChainCommunity, self).initialize()
+        self.logger.debug("The tradechain community started with Public Key: %s",
+                          self.my_member.public_key.encode("hex"))
 
     @classmethod
     def get_master_members(cls, dispersy):
@@ -52,9 +50,10 @@ class TradeChainCommunity(Community):
                      "83ee306fedb2d36c44e766afecc62732f45e153cf419bd4ab54744a692b5d459cbd12b5cc1a90b58f87a8c3d8d57" \
                      "0c9c0d6094a506f5432b4c8b640d2f2d72fef14f41781924248d9ce91a616741571424b73a430ed2b416bcdb69cd" \
                      "d4766b459ef804c43aa6cbfdc1e1a17411a3d9fd1e2774ee1b744e26cf2dee87"
-        master_key_hex = master_key.decode("HEX")
-        master = dispersy.get_member(public_key=master_key_hex)
-        return [master]
+        return [dispersy.get_member(public_key=master_key.decode("HEX"))]
+
+    def initialize(self, tribler_session=None):
+        super(TradeChainCommunity, self).initialize()
 
     def initiate_meta_messages(self):
         """
@@ -62,42 +61,37 @@ class TradeChainCommunity(Community):
         :return: list of meta messages.
         """
         return super(TradeChainCommunity, self).initiate_meta_messages() + [
-            Message(self, SIGNATURE,
-                    DoubleMemberAuthentication(
-                        allow_signature_func=self.allow_signature_request, split_payload_func=split_function),
+            Message(self, HALF_BLOCK,
+                    MemberAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
                     CandidateDestination(),
-                    SignaturePayload(),
+                    HalfBlockPayload(),
                     self._generic_timeline_check,
-                    self.received_signature_response),
-            Message(self, CRAWL_REQUEST,
+                    self.received_half_block),
+            Message(self, CRAWL,
                     MemberAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
                     CandidateDestination(),
                     CrawlRequestPayload(),
                     self._generic_timeline_check,
-                    self.received_crawl_request),
-            Message(self, CRAWL_RESPONSE,
-                    MemberAuthentication(),
-                    PublicResolution(),
-                    DirectDistribution(),
-                    CandidateDestination(),
-                    CrawlResponsePayload(),
-                    self._generic_timeline_check,
-                    self.received_crawl_response),
-            Message(self, CRAWL_RESUME,
-                    MemberAuthentication(),
-                    PublicResolution(),
-                    DirectDistribution(),
-                    CandidateDestination(),
-                    CrawlResumePayload(),
-                    self._generic_timeline_check,
-                    self.received_crawl_resumption)]
+                    self.received_crawl_request)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), TradeChainConversion(self)]
+
+    def send_block(self, candidate, block):
+        self.logger.debug("Sending block to %s (%s)", candidate.get_member().public_key.encode("hex")[-8:], block)
+        message = self.get_meta_message(HALF_BLOCK).impl(
+            authentication=(self.my_member,),
+            distribution=(self.claim_global_time(),),
+            destination=(candidate,),
+            payload=(block,))
+        try:
+            self.dispersy.store_update_forward([message], False, False, True)
+        except DelayPacketByMissingMember:
+            self.logger.warn("Missing member in TradeChain community to send signature request to")
 
     def on_introduction_response(self, messages):
         super(TradeChainCommunity, self).on_introduction_response(messages)
@@ -114,18 +108,10 @@ class TradeChainCommunity(Community):
         self.expected_intro_responses[candidate.sock_addr] = response_deferred
         return response_deferred
 
-    def wait_for_signature_request_of_member(self, member, up, down):
+    def sign_block(self, candidate, asset1_type=None, asset1_amount=None,
+                   asset2_type=None, asset2_amount=None, linked=None):
         """
-        Returns a Deferred that fires when we receive a signature from a given member with some amount to sign.
-        Used in the market community so we can monitor transactions.
-        """
-        response_deferred = Deferred()
-        self.expected_sig_requests[member.public_key] = response_deferred
-        return response_deferred
-
-    def schedule_block(self, candidate, asset1_type, asset1_amount, asset2_type, asset2_amount):
-        """
-        Schedule a block for the current outstanding amounts
+        Create, sign, persist and send a block signed message
         :param candidate: The peer with whom you have interacted, as a dispersy candidate
         :param asset1_type: The type of asset 1 (string)
         :param asset1_amount: The amount of asset 2 (string)
@@ -134,271 +120,138 @@ class TradeChainCommunity(Community):
         """
         asset_type_map = {'BTC': 0, 'MC': 1}
 
-        self.logger.info("TRADECHAIN: Schedule Block called. Candidate: %s" % candidate)
-        self.add_discovered_candidate(candidate)
-        if candidate and candidate.get_member():
-            # Try to send the request
-            try:
-                self.publish_signature_request_message(candidate, asset_type_map[asset1_type], asset1_amount,
-                                                       asset_type_map[asset2_type], asset2_amount)
-            except DelayPacketByMissingMember:
-                self.logger.warn("Missing member in TradeChain community to send signature request to")
+        # NOTE to the future: This method reads from the database, increments and then writes back. If in some future
+        # this method is allowed to execute in parallel, be sure to lock from before .create upto after .add_block
+        assert asset1_type is None and asset1_amount is None and asset2_type is None and asset2_amount is None \
+               and linked is not None or asset1_type is not None and asset1_amount is not None \
+               and asset2_type is not None and asset2_amount is not None and linked is None, \
+            "Either provide a linked block or asset types/amounts, not both"
+        assert linked is None or linked.link_public_key == self.my_member.public_key, \
+            "Cannot counter sign block not addressed to me"
+        assert linked is None or linked.link_sequence_number == UNKNOWN_SEQ, \
+            "Cannot counter sign block that is not a request"
+
+        if candidate.get_member():
+            if linked is None:
+                block = TradeChainBlock.create(self.persistence, self.my_member.public_key)
+                block.asset1_type = asset_type_map[asset1_type]
+                block.asset1_amount = asset1_amount
+                block.asset2_type = asset_type_map[asset2_type]
+                block.asset2_amount = asset2_amount
+                block.total_btc += 5  # TODO(Martijn): hard-coded for now
+                block.total_down += 5  # TODO(Martijn): hard-coded for now
+                block.link_public_key = candidate.get_member().public_key
+            else:
+                block = TradeChainBlock.create(self.persistence, self.my_member.public_key, linked)
+            block.sign(self.my_member.private_key)
+            validation = block.validate(self.persistence)
+            self.logger.info("Signed block to %s (%s) validation result %s",
+                             candidate.get_member().public_key.encode("hex")[-8:], block, validation)
+            if validation[0] != ValidationResult.partial_next and validation[0] != ValidationResult.valid:
+                self.logger.error("Signed block did not validate?!")
+            else:
+                self.persistence.add_block(block)
+                self.send_block(candidate, block)
         else:
-            self.logger.warn(
-                "No valid candidate found for: %s to request block from.", candidate)
+            self.logger.warn("Candidate %s has no associated member?! Unable to sign block.", candidate)
 
-    def publish_signature_request_message(self, candidate, asset1_type, asset1_amount, asset2_type, asset2_amount):
+    def received_half_block(self, messages):
         """
-        Creates and sends out a signed signature_request message
-        Returns true upon success
-        :param candidate: The candidate that the signature request will be sent to.
-        :param asset1_type: The type of asset 1 (string)
-        :param asset1_amount: The amount of asset 2 (string)
-        :param asset2_type: The type of asset 2 (string)
-        :param asset2_amount: The amount of asset 2 (string)
-        return (bool) if request is sent.
+        We've received a half block, either because we sent a SIGNED message to some one or we are crawling
+        :param messages The half block messages
         """
-        message = self.create_signature_request_message(candidate, asset1_type, asset1_amount,
-                                                        asset2_type, asset2_amount)
-        self.create_signature_request(candidate, message, self.allow_signature_response)
-        self.persist_signature_request(message)
-        return True
-
-    def create_signature_request_message(self, candidate, asset1_type, asset1_amount, asset2_type, asset2_amount):
-        """
-        Create a signature request message using the current time stamp.
-        :param candidate: The candidate that the signature request will be sent to.
-        :param asset1_type: The type of asset 1 (string)
-        :param asset1_amount: The amount of asset 2 (string)
-        :param asset2_type: The type of asset 2 (string)
-        :param asset2_amount: The amount of asset 2 (string)
-        :return: Signature_request message ready for distribution.
-        """
-        # Instantiate the data
-        total_btc_requester, total_mc_requester = (5, 5)  # TODO(Martijn): always hardcoded for now!
-        # Instantiate the personal information
-        sequence_number_requester = self._get_next_sequence_number()
-        previous_hash_requester = self._get_latest_hash()
-
-        payload = (asset1_type, asset1_amount, asset2_type, asset2_amount, total_btc_requester, total_mc_requester,
-                   sequence_number_requester, previous_hash_requester)
-        meta = self.get_meta_message(SIGNATURE)
-
-        message = meta.impl(authentication=([self.my_member, candidate.get_member()],),
-                            distribution=(self.claim_global_time(),),
-                            payload=payload)
-        return message
-
-    def allow_signature_request(self, message):
-        """
-        We've received a signature request message, we must either:
-            a. Create and sign the response part of the message, send it back, and persist the block.
-            b. Drop the message. (Future work: notify the sender of dropping)
-            :param message The message containing the received signature request.
-        """
-        #self.logger.info("Received signature request for: [Up = " + str(message.payload.up) + "MB | Down = " +
-        #                 str(message.payload.down) + " MB]")
-        # TODO: This code always signs a request. Checks and rejects should be inserted here!
-        # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
-        payload = message.payload
-
-        # The up and down values are reversed for the responder.
-        total_btc_responder, total_mc_responder = (5, 5)  # TODO(Martijn): always hardcoded for now!
-        sequence_number_responder = self._get_next_sequence_number()
-        previous_hash_responder = self._get_latest_hash()
-
-        payload = (payload.asset1_type, payload.asset1_amount,
-                   payload.asset2_type, payload.asset2_amount,
-                   payload.total_btc_requester, payload.total_mc_requester,
-                   payload.sequence_number_requester, payload.previous_hash_requester,
-                   total_btc_responder, total_mc_responder,
-                   sequence_number_responder, previous_hash_responder)
-
-        meta = self.get_meta_message(SIGNATURE)
-
-        message = meta.impl(authentication=(message.authentication.members, message.authentication.signatures),
-                            distribution=(message.distribution.global_time,),
-                            payload=payload)
-        self.persist_signature_response(message)
-        self.logger.info("Sending signature response.")
-
-        request_member = message.authentication.signed_members[0][1].public_key
-        if request_member in self.expected_sig_requests:
-            self.expected_sig_requests[request_member].callback(None)
-            del self.expected_sig_requests[request_member]
-
-        return message
-
-    def allow_signature_response(self, request, response, modified):
-        """
-        We've received a signature response message after sending a request, we must return either:
-            a. True, if we accept this message
-            b. False, if not (because of inconsistencies in the payload)
-            :param request The original message as send by this node
-            :param response The response message received
-            :param modified (bool) True if the message was modified
-        """
-        if not response:
-            self.logger.info("Timeout received for signature request.")
-            return False
-        else:
-            # TODO: Check whether we are expecting a response
-            self.logger.info("Signature response received. Modified: %s", modified)
-
-            return (request.payload.sequence_number_requester == response.payload.sequence_number_requester and
-                    request.payload.previous_hash_requester == response.payload.previous_hash_requester and modified)
-
-    def received_signature_response(self, messages):
-        """
-        We've received a valid signature response and must process this message.
-        :param messages The received, and validated signature response messages
-        """
-        self.logger.info("Valid %s signature response(s) received.", len(messages))
+        self.logger.debug("Received %d half block messages.", len(messages))
         for message in messages:
-            self.update_signature_response(message)
+            blk = message.payload.block
+            validation = blk.validate(self.persistence)
+            self.logger.debug("Block validation result %s, %s, (%s)", validation[0], validation[1], blk)
+            if validation[0] == ValidationResult.invalid:
+                continue
+            elif not self.persistence.contains(blk):
+                self.persistence.add_block(blk)
+            else:
+                self.logger.debug("Received already known block (%s)", blk)
 
-    def persist_signature_response(self, message):
-        """
-        Persist the signature response message, when this node has not yet persisted the corresponding request block.
-        A hash will be created from the message and this will be used as an unique identifier.
-        :param message:
-        """
-        block = DatabaseBlock.from_signature_response_message(message)
-        self.logger.info("Persisting sr: %s", base64.encodestring(block.hash_requester).strip())
-        self.persistence.add_block(block)
+            # Is this a request, addressed to us, and have we not signed it already?
+            if blk.link_sequence_number != UNKNOWN_SEQ or \
+                    blk.link_public_key != self.my_member.public_key or \
+                    self.persistence.get_linked(blk) is not None:
+                continue
 
-    def update_signature_response(self, message):
-        """
-        Update the signature response message, when this node has already persisted the corresponding request block.
-        A hash will be created from the message and this will be used as an unique identifier.
-        :param message:
-        """
-        block = DatabaseBlock.from_signature_response_message(message)
-        self.logger.info("Persisting sr: %s", base64.encodestring(block.hash_requester).strip())
-        self.persistence.update_block_with_responder(block)
+            self.logger.info("Received request block addressed to us (%s)", blk)
 
-    def persist_signature_request(self, message):
-        """
-        Persist the signature request message as a block.
-        The block will be updated when a response is received.
-        :param message:
-        """
-        block = DatabaseBlock.from_signature_request_message(message)
-        self.logger.info("Persisting sr: %s", base64.encodestring(block.hash_requester).strip())
-        self.persistence.add_block(block)
+            # TODO(Martijn): only sign if we have done this transaction in the market!
+
+            # It is important that the request matches up with its previous block, gaps cannot be tolerated at
+            # this point. We already dropped invalids, so here we delay this message if the result is partial,
+            # partial_previous or no-info. We send a crawl request to the requester to (hopefully) close the gap
+            if validation[0] == ValidationResult.partial_previous or validation[0] == ValidationResult.partial or \
+                    validation[0] == ValidationResult.no_info:
+                # Note that this code does not cover the scenario where we obtain this block indirectly.
+
+                # Are we already waiting for this crawl to happen?
+                # For example: it's taking longer than 5 secs or the block message reached us twice via different paths
+                if self.is_pending_task_active("crawl_%s" % blk.hash):
+                    continue
+
+                self.send_crawl_request(message.candidate, max(GENESIS_SEQ, blk.sequence_number - 5))
+
+                # Make sure we get called again after a while. Note that the cleanup task on pend will prevent
+                # us from waiting on the peer forever,
+                self.register_task("crawl_%s" % blk.hash, reactor.callLater(5.0, self.received_half_block, [message]))
+            else:
+                self.sign_block(message.candidate, None, None, None, None, blk)
 
     def send_crawl_request(self, candidate, sequence_number=None):
+        sq = sequence_number
         if sequence_number is None:
-            sequence_number = self.persistence.get_latest_sequence_number(candidate.get_member().public_key)
-        self.logger.info("Crawler: Requesting crawl from node %s, from sequence number %d",
-                         base64.encodestring(candidate.get_member().mid).strip(), sequence_number)
-        meta = self.get_meta_message(CRAWL_REQUEST)
-        message = meta.impl(authentication=(self.my_member,),
-                            distribution=(self.claim_global_time(),),
-                            destination=(candidate,),
-                            payload=(sequence_number,))
+            blk = self.persistence.get_latest(candidate.get_member().public_key)
+            sq = blk.sequence_number if blk else GENESIS_SEQ
+        sq = max(GENESIS_SEQ, sq)
+        self.logger.info("Requesting crawl of node %s:%d", candidate.get_member().public_key.encode("hex")[-8:], sq)
+        message = self.get_meta_message(CRAWL).impl(
+            authentication=(self.my_member,),
+            distribution=(self.claim_global_time(),),
+            destination=(candidate,),
+            payload=(sq,))
         self.dispersy.store_update_forward([message], False, False, True)
 
     def received_crawl_request(self, messages):
+        self.logger.debug("Received %d crawl messages.", len(messages))
         for message in messages:
-            self.logger.info("Crawler: Received crawl request from node %s, from sequence number %d",
-                             base64.encodestring(message.candidate.get_member().mid).strip(),
-                              message.payload.requested_sequence_number)
-            self.crawl_requested(message.candidate, message.payload.requested_sequence_number)
-
-    def crawl_requested(self, candidate, sequence_number):
-        blocks = self.persistence.get_blocks_since(self._public_key, sequence_number)
-        if len(blocks) > 0:
-            self.logger.debug("Crawler: Sending %d blocks", len(blocks))
-            messages = [self.get_meta_message(CRAWL_RESPONSE)
-                            .impl(authentication=(self.my_member,),
-                                  distribution=(self.claim_global_time(),),
-                                  destination=(candidate,),
-                                  payload=block.to_payload()) for block in blocks]
-            self.dispersy.store_update_forward(messages, False, False, True)
-            if len(blocks) > 1:
-                # we sent more than 1 block. Send a resumption token so the other side knows it should continue crawling
-                # last_block = blocks[-1]
-                # resumption_number = last_block.sequence_number_requster if
-                # last_block.mid_requester == self._mid else last_block.sequence_number_responder
-                message = self.get_meta_message(CRAWL_RESUME).impl(authentication=(self.my_member,),
-                                                                   distribution=(self.claim_global_time(),),
-                                                                   destination=(candidate,),
-                                                                   # payload=(resumption_number))
-                                                                   payload=())
-                self.dispersy.store_update_forward([message], False, False, True)
-        else:
-            # This is slightly worrying since the last block should always be returned.
-            # Or rather, the other side is requesting blocks starting from a point in the future.
-            self.logger.info("Crawler: No blocks")
-
-    def received_crawl_response(self, messages):
-        self.logger.debug("Crawler: Valid %d block response(s) received.", len(messages))
-        for message in messages:
-            requester = self.dispersy.get_member(public_key=message.payload.public_key_requester)
-            responder = self.dispersy.get_member(public_key=message.payload.public_key_responder)
-            block = DatabaseBlock.from_block_response_message(message, requester, responder)
-            # Create the hash of the message
-            if not self.persistence.contains(block.hash_requester):
-                self.logger.info("Crawler: Persisting sr: %s from ip (%s:%d)",
-                                 base64.encodestring(block.hash_requester).strip(),
-                                 message.candidate.sock_addr[0],
-                                 message.candidate.sock_addr[1])
-                self.persistence.add_block(block)
-            else:
-                self.logger.debug("Crawler: Received already known block")
-
-    def received_crawl_resumption(self, messages):
-        self.logger.info("Crawler: Valid %s crawl resumptions received.", len(messages))
-        for message in messages:
-            self.send_crawl_request(message.candidate)
+            self.logger.info("Received crawl request from node %s for sequence number %d",
+                             message.candidate.get_member().public_key.encode("hex")[-8:],
+                             message.payload.requested_sequence_number)
+            blocks = self.persistence.crawl(self.my_member.public_key, message.payload.requested_sequence_number)
+            count = len(blocks)
+            for blk in blocks:
+                self.send_block(message.candidate, blk)
+            self.logger.info("Sent %d blocks", count)
 
     @blocking_call_on_reactor_thread
-    def get_statistics(self):
+    def get_statistics(self, public_key=None):
         """
         Returns a dictionary with some statistics regarding the local tradechain database
         :returns a dictionary with statistics
         """
+        if public_key is None:
+            public_key = self.my_member.public_key
+        latest_block = self.persistence.get_latest(public_key)
         statistics = dict()
-        statistics["self_id"] = base64.encodestring(self._public_key).strip()
-        statistics["self_total_blocks"] = self.persistence.get_latest_sequence_number(self._public_key)
-        (statistics["self_total_up_mb"],
-         statistics["self_total_down_mb"]) = self.persistence.get_total(self._public_key)
-        (statistics["self_peers_helped"],
-         statistics["self_peers_helped_you"]) = self.persistence.get_num_unique_interactors(self._public_key)
-        latest_block = self.persistence.get_latest_block(self._public_key)
+        statistics["id"] = public_key.encode("hex")
+        interacts = self.persistence.get_num_unique_interactors(public_key)
+        statistics["peers_that_pk_helped"] = interacts[0] if interacts[0] is not None else 0
+        statistics["peers_that_helped_pk"] = interacts[1] if interacts[1] is not None else 0
         if latest_block:
-            statistics["latest_block_insert_time"] = str(latest_block.insert_time)
-            statistics["latest_block_id"] = base64.encodestring(latest_block.hash_requester).strip()
-            statistics["latest_block_requester_id"] = base64.encodestring(latest_block.public_key_requester).strip()
-            statistics["latest_block_responder_id"] = base64.encodestring(latest_block.public_key_responder).strip()
-            statistics["latest_block_up_mb"] = str(latest_block.up)
-            statistics["latest_block_down_mb"] = str(latest_block.down)
+            statistics["total_blocks"] = latest_block.sequence_number
+            statistics["total_up"] = latest_block.total_up
+            statistics["total_down"] = latest_block.total_down
+            statistics["latest_block"] = dict(latest_block)
         else:
-            statistics["latest_block_insert_time"] = ""
-            statistics["latest_block_id"] = ""
-            statistics["latest_block_requester_id"] = ""
-            statistics["latest_block_responder_id"] = ""
-            statistics["latest_block_up_mb"] = ""
-            statistics["latest_block_down_mb"] = ""
+            statistics["total_blocks"] = 0
+            statistics["total_up"] = 0
+            statistics["total_down"] = 0
         return statistics
-
-    def _get_next_total(self, up, down):
-        """
-        Returns the next total numbers of up and down incremented with the current interaction up and down metric.
-        :param up: Up metric for the interaction.
-        :param down: Down metric for the interaction.
-        :return: (total_up (int), total_down (int)
-        """
-        total_up, total_down = self.persistence.get_total(self._public_key)
-        return total_up + up, total_down + down
-
-    def _get_next_sequence_number(self):
-        return self.persistence.get_latest_sequence_number(self._public_key) + 1
-
-    def _get_latest_hash(self):
-        previous_hash = self.persistence.get_latest_hash(self._public_key)
-        return previous_hash if previous_hash else GENESIS_ID
 
     @inlineCallbacks
     def unload_community(self):

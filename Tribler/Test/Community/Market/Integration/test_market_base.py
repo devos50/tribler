@@ -70,8 +70,8 @@ class TradeChainCommunityTests(TradeChainCommunity):
         master = dispersy.get_member(public_key=master_key_hex)
         return [master]
 
-    def on_signature_response(self, messages):
-        super(TradeChainCommunityTests, self).on_signature_response(messages)
+    def received_half_block(self, messages):
+        super(TradeChainCommunityTests, self).received_half_block(messages)
 
         self.expected_sig_response.callback(None)
         self.expected_sig_response = None

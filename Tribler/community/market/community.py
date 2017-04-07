@@ -1063,7 +1063,7 @@ class MarketCommunity(Community):
         self.notify_transaction_complete(transaction)
 
         def send_tradechain_request(_):
-            self.tradechain_community.schedule_block(candidate, 'BTC', 3, 'MC', 4)
+            self.tradechain_community.sign_block(candidate, 'BTC', 3, 'MC', 4)
 
         if self.tradechain_community:
             member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))
