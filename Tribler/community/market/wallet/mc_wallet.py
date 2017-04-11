@@ -16,7 +16,7 @@ class MultichainWallet(Wallet):
         self.check_negative_balance = True
 
     def get_identifier(self):
-        return 'mc'
+        return 'MC'
 
     def create_wallet(self, *args, **kwargs):
         pass

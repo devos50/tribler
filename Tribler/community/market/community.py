@@ -274,20 +274,20 @@ class MarketCommunity(Community):
         """
         Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
         """
-        if 'btc' not in self.wallets or not self.wallets['btc'].created:
+        if 'BTC' not in self.wallets or not self.wallets['BTC'].created:
             raise RuntimeError("No Bitcoin wallet available")
 
-        return self.wallets['btc'].get_address()
+        return self.wallets['BTC'].get_address()
 
     def get_multichain_identity(self):
         """
         Get your identitiy (public key) in the multichain community. This is sent to the receiver of the multichain
         credits so he can wait for the transaction to be completed.
         """
-        if 'mc' not in self.wallets or not self.wallets['mc'].created:
+        if 'MC' not in self.wallets or not self.wallets['MC'].created:
             raise RuntimeError("No Multichain wallet available")
 
-        return self.wallets['mc'].get_address()
+        return self.wallets['MC'].get_address()
 
     def check_history(self, message):
         """
@@ -341,26 +341,35 @@ class MarketCommunity(Community):
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID_TIMEOUT, NTFY_UPDATE, None, bid)
 
     # Ask
-    def create_ask(self, price, quantity, timeout):
+    def create_ask(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
         """
         Create an ask order (sell order)
 
         :param price: The price for the order in btc
+        :param price_wallet_id: The type of the price (i.e. eur, btc)
         :param quantity: The quantity of the order
+        :param price_wallet_id: The type of the price (i.e. eur, btc)
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
+        :type price_wallet_id: str
         :type quantity: float
+        :type quantity_wallet_id: str
         :type timeout: float
         :return: The created order
         :rtype: Order
         """
+        if price_wallet_id == quantity_wallet_id:
+            raise RuntimeError("You cannot trade between the same wallet")
 
         # TODO(Martijn): balance check?
-        if not self.wallets['btc'].created or not self.wallets['mc'].created:
-            raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
+        if price_wallet_id not in self.wallets or not self.wallets[price_wallet_id].created:
+            raise RuntimeError("Please create a %s wallet first" % price_wallet_id)
+
+        if quantity_wallet_id not in self.wallets or not self.wallets[quantity_wallet_id].created:
+            raise RuntimeError("Please create a %s wallet first" % quantity_wallet_id)
 
         # Convert values to value objects
-        price = Price(price)
+        price = Price(price, price_wallet_id)
         quantity = Quantity(quantity)
         timeout = Timeout(timeout)
 
@@ -442,26 +451,35 @@ class MarketCommunity(Community):
                     self.dispersy.store_update_forward([message], True, True, True)
 
     # Bid
-    def create_bid(self, price, quantity, timeout):
+    def create_bid(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
         """
-        Create a bid order (buy order)
+        Create an ask order (sell order)
 
         :param price: The price for the order in btc
+        :param price_wallet_id: The type of the price (i.e. eur, btc)
         :param quantity: The quantity of the order
+        :param price_wallet_id: The type of the price (i.e. eur, btc)
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
+        :type price_wallet_id: str
         :type quantity: float
+        :type quantity_wallet_id: str
         :type timeout: float
         :return: The created order
         :rtype: Order
         """
+        if price_wallet_id == quantity_wallet_id:
+            raise RuntimeError("You cannot trade between the same wallet")
 
         # TODO(Martijn): balance check?
-        if not self.wallets['btc'].created or not self.wallets['mc'].created:
-            raise RuntimeError("Before trading you should create a Bitcoin and Tribler wallet")
+        if price_wallet_id not in self.wallets or not self.wallets[price_wallet_id].created:
+            raise RuntimeError("Please create a %s wallet first" % price_wallet_id)
+
+        if quantity_wallet_id not in self.wallets or not self.wallets[quantity_wallet_id].created:
+            raise RuntimeError("Please create a %s wallet first" % quantity_wallet_id)
 
         # Convert values to value objects
-        price = Price(price)
+        price = Price(price, price_wallet_id)
         quantity = Quantity(quantity)
         timeout = Timeout(timeout)
 
@@ -893,7 +911,7 @@ class MarketCommunity(Community):
 
                 # Send an introduction request to this member.
                 self._logger.info("Sending introduction request in multichain to candidate %s", candidate)
-                mc_community = self.wallets['mc'].mc_community
+                mc_community = self.wallets['MC'].mc_community
                 mc_community.add_discovered_candidate(candidate)
                 new_candidate = mc_community.get_candidate(candidate.sock_addr)
                 mc_community.create_introduction_request(new_candidate, False)
@@ -904,7 +922,7 @@ class MarketCommunity(Community):
         assert isinstance(multi_chain_payment, MultiChainPayment), type(multi_chain_payment)
         payload = multi_chain_payment.to_network()
 
-        mc_wallet = self.wallets['mc']
+        mc_wallet = self.wallets['MC']
         if not mc_wallet or not mc_wallet.created:
             raise RuntimeError("No MultiChain credit wallet present")
 
@@ -932,7 +950,7 @@ class MarketCommunity(Community):
             multi_chain_payment = MultiChainPayment.from_network(message.payload)
             transaction = self.transaction_manager.find_by_id(multi_chain_payment.transaction_id)
 
-            mc_wallet = self.wallets['mc']
+            mc_wallet = self.wallets['MC']
             transaction_deferred = mc_wallet.monitor_transaction(transaction.destination_mc_candidate.get_member(),
                                                                  int(multi_chain_payment.transferor_quantity))
             transaction_deferred.addCallback(lambda _: self.received_multichain_payment(multi_chain_payment, transaction))
@@ -946,7 +964,7 @@ class MarketCommunity(Community):
 
     # Bitcoin payment
     def send_bitcoin_payment(self, transaction, price):
-        btc_wallet = self.wallets['btc']
+        btc_wallet = self.wallets['BTC']
         if not btc_wallet or not btc_wallet.created:
             raise RuntimeError("No BitCoin wallet present")
 
@@ -978,7 +996,7 @@ class MarketCommunity(Community):
             btc_payment = BitcoinPayment.from_network(message.payload)
             transaction = self.transaction_manager.find_by_id(btc_payment.transaction_id)
 
-            transaction_deferred = self.wallets['btc'].monitor_transaction(str(btc_payment.txid))
+            transaction_deferred = self.wallets['BTC'].monitor_transaction(str(btc_payment.txid))
             transaction_deferred.addCallback(lambda _: self.received_bitcoin_payment(btc_payment, transaction))
 
     def received_bitcoin_payment(self, btc_payment, transaction):

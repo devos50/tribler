@@ -90,7 +90,7 @@ class BitcoinWallet(Wallet):
             server.daemon(options)
 
     def get_identifier(self):
-        return 'btc'
+        return 'BTC'
 
     def create_wallet(self, password=''):
         """

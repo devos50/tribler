@@ -34,6 +34,7 @@ class IncrementalManager(object):
             else:
                 transfer_quantity = min_quantity_per_trade
             remaining_quantity -= transfer_quantity
-            incremental_payments.append((Quantity(transfer_quantity), Price(float(price) * transfer_quantity)))
+            incremental_payments.append((Quantity(transfer_quantity),
+                                         Price(float(price) * transfer_quantity, price.wallet_id)))
 
         return incremental_payments
