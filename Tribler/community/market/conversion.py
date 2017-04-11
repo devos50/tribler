@@ -39,15 +39,13 @@ class MarketConversion(BinaryConversion):
                                  self._encode_proposed_trade, self._decode_proposed_trade)
         self.define_meta_message(chr(8), community.get_meta_message(u"start-transaction"),
                                  self._encode_start_transaction, self._decode_start_transaction)
-        self.define_meta_message(chr(9), community.get_meta_message(u"continue-transaction"),
-                                 self._encode_transaction, self._decode_transaction)
-        self.define_meta_message(chr(10), community.get_meta_message(u"wallet-info"),
+        self.define_meta_message(chr(9), community.get_meta_message(u"wallet-info"),
                                  self._encode_wallet_info, self._decode_wallet_info)
-        self.define_meta_message(chr(11), community.get_meta_message(u"multi-chain-payment"),
+        self.define_meta_message(chr(10), community.get_meta_message(u"multi-chain-payment"),
                                  self._encode_multi_chain_payment, self._decode_multi_chain_payment)
-        self.define_meta_message(chr(12), community.get_meta_message(u"bitcoin-payment"),
+        self.define_meta_message(chr(11), community.get_meta_message(u"bitcoin-payment"),
                                  self._encode_bitcoin_payment, self._decode_bitcoin_payment)
-        self.define_meta_message(chr(13), community.get_meta_message(u"end-transaction"),
+        self.define_meta_message(chr(12), community.get_meta_message(u"end-transaction"),
                                  self._encode_transaction, self._decode_transaction)
 
     def _encode_introduction_request(self, message):

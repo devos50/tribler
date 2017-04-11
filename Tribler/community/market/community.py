@@ -161,14 +161,6 @@ class MarketCommunity(Community):
                     StartTransactionPayload(),
                     self.check_message,
                     self.on_start_transaction),
-            Message(self, u"continue-transaction",
-                    MemberAuthentication(),
-                    PublicResolution(),
-                    DirectDistribution(),
-                    CandidateDestination(),
-                    TransactionPayload(),
-                    self.check_message,
-                    self.on_continue_transaction),
             Message(self, u"wallet-info",
                     MemberAuthentication(),
                     PublicResolution(),
@@ -837,42 +829,6 @@ class MarketCommunity(Community):
                 except TickWasNotReserved:  # Something went wrong
                     pass
 
-                if order.is_ask():  # Send wallet info to the other party
-                    self.send_wallet_info(transaction, self.get_bitcoin_address(), self.get_multichain_identity())
-                else:  # Send continue transaction
-                    self.send_continue_transaction(transaction)
-
-    # Continue transaction
-    def send_continue_transaction(self, transaction):
-        assert isinstance(transaction, Transaction), type(transaction)
-
-        # Lookup the remote address of the peer with the pubkey
-        candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
-
-        message_id = self.order_book.message_repository.next_identity()
-
-        meta = self.get_meta_message(u"continue-transaction")
-        message = meta.impl(
-            authentication=(self.my_member,),
-            distribution=(self.claim_global_time(),),
-            destination=(candidate,),
-            payload=(
-                message_id.trader_id,
-                message_id.message_number,
-                transaction.transaction_id.trader_id,
-                transaction.transaction_id.transaction_number,
-                Timestamp.now(),
-            )
-        )
-
-        self.dispersy.store_update_forward([message], True, False, True)
-
-    def on_continue_transaction(self, messages):
-        for message in messages:
-            transaction = self.transaction_manager.find_by_id(
-                TransactionId(message.payload.transaction_trader_id, message.payload.transaction_number))
-
-            if transaction:  # Send wallet info to the other party
                 self.send_wallet_info(transaction, self.get_bitcoin_address(), self.get_multichain_identity())
 
     def send_wallet_info(self, transaction, incoming_address, outgoing_address):
