@@ -117,7 +117,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.order_number), float(payload.price),
-            int(payload.quantity), float(payload.timeout), float(payload.timestamp), int(payload.ttl),
+            float(payload.quantity), float(payload.timeout), float(payload.timestamp), int(payload.ttl),
             str(payload.address.ip), int(payload.address.port)
         ))
         return packet,
@@ -131,7 +131,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.order_number), float(payload.price),
-            int(payload.quantity), float(payload.timeout), float(payload.timestamp), int(payload.ttl),
+            float(payload.quantity), float(payload.timeout), float(payload.timestamp), int(payload.ttl),
             str(payload.address.ip), int(payload.address.port), bool(payload.is_ask)
         ))
         return packet,
@@ -146,7 +146,7 @@ class MarketConversion(BinaryConversion):
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.order_number),
             str(payload.recipient_trader_id), str(payload.recipient_order_number), float(payload.price),
-            int(payload.quantity), float(payload.timestamp), str(payload.address.ip), int(payload.address.port)
+            float(payload.quantity), float(payload.timestamp), str(payload.address.ip), int(payload.address.port)
         ))
         return packet,
 
@@ -160,7 +160,7 @@ class MarketConversion(BinaryConversion):
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.order_number),
             str(payload.recipient_trader_id), str(payload.recipient_order_number), float(payload.price),
-            int(payload.quantity), float(payload.timestamp), int(payload.ttl),
+            float(payload.quantity), float(payload.timestamp), int(payload.ttl),
             str(payload.address.ip), int(payload.address.port)
         ))
         return packet,
@@ -188,7 +188,7 @@ class MarketConversion(BinaryConversion):
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
             str(payload.transaction_number), str(payload.order_trader_id), str(payload.order_number),
             str(payload.recipient_trader_id), str(payload.recipient_order_number),
-            float(payload.price), int(payload.quantity), float(payload.timestamp)
+            float(payload.price), float(payload.quantity), float(payload.timestamp)
         ))
         return packet,
 
@@ -226,7 +226,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), int(payload.transferor_quantity),
+            str(payload.transaction_number), float(payload.transferor_quantity),
             float(payload.transferee_price), float(payload.timestamp)
         ))
         return packet,

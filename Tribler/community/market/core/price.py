@@ -21,7 +21,7 @@ class Price(object):
         self._price = price
 
     def __int__(self):
-        return self._price
+        return int(self._price)
 
     def __float__(self):
         return float(self._price)

@@ -5,11 +5,11 @@ import time
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 
-from Tribler.Core.Modules.wallet.wallet import InsufficientFunds
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE, \
     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
+from Tribler.community.market.wallet.wallet import InsufficientFunds
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.candidate import Candidate, WalkCandidate
@@ -346,10 +346,10 @@ class MarketCommunity(Community):
         Create an ask order (sell order)
 
         :param price: The price for the order in btc
-        :param quantity: The quantity of the order in MB (10^6)
+        :param quantity: The quantity of the order
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
-        :type quantity: int
+        :type quantity: float
         :type timeout: float
         :return: The created order
         :rtype: Order
@@ -447,10 +447,10 @@ class MarketCommunity(Community):
         Create a bid order (buy order)
 
         :param price: The price for the order in btc
-        :param quantity: The quantity of the order in MB (10^6)
+        :param quantity: The quantity of the order
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
-        :type quantity: int
+        :type quantity: float
         :type timeout: float
         :return: The created order
         :rtype: Order

@@ -3,14 +3,14 @@ class Quantity(object):
 
     def __init__(self, quantity):
         """
-        :param quantity: Integer representation of a quantity that is positive or zero
-        :type quantity: int
+        :param quantity: float representation of a quantity that is positive or zero
+        :type quantity: float
         :raises ValueError: Thrown when one of the arguments are invalid
         """
         super(Quantity, self).__init__()
 
-        if not isinstance(quantity, int):
-            raise ValueError("Quantity must be an int")
+        if not isinstance(quantity, (int, float)):
+            raise ValueError("Quantity must be an int or a float")
 
         if quantity < 0:
             raise ValueError("Quantity must be positive or zero")
@@ -18,10 +18,13 @@ class Quantity(object):
         self._quantity = quantity
 
     def __int__(self):
-        return self._quantity
+        return int(self._quantity)
+
+    def __float__(self):
+        return float(self._quantity)
 
     def __str__(self):
-        return "%d" % self._quantity
+        return "%f" % self._quantity
 
     def __add__(self, other):
         if isinstance(other, Quantity):

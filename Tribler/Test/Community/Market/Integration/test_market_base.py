@@ -7,12 +7,12 @@ from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 
 import Tribler
-from Tribler.Core.Modules.wallet.btc_wallet import BitcoinWallet
-from Tribler.Core.Modules.wallet.mc_wallet import MultichainWallet
 from Tribler.Test.Community.Multichain.test_multichain_utilities import TestBlock
 from Tribler.Test.common import TESTS_DATA_DIR
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.community.market.community import MarketCommunity
+from Tribler.community.market.wallet.btc_wallet import BitcoinWallet
+from Tribler.community.market.wallet.mc_wallet import MultichainWallet
 from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.community.tradechain.community import TradeChainCommunity
 from Tribler.dispersy.crypto import ECCrypto
