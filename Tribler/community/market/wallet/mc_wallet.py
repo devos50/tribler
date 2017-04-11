@@ -1,11 +1,6 @@
 from base64 import b64encode
 
-from twisted.internet import reactor
-from twisted.internet.defer import Deferred
-from twisted.internet.task import deferLater
-
-from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
-from Tribler.community.multichain.community import MultiChainCommunity
+from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
 
 
 class MultichainWallet(Wallet):

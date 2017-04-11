@@ -1,23 +1,17 @@
-import os
-
-import sys
-
 import logging
-
-import datetime
+import os
+import sys
 from threading import Thread
 
 import keyring
-from jsonrpclib import ProtocolError
-from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.task import LoopingCall
 
 import Tribler
 
-from Tribler.Core.Modules.wallet.wallet import Wallet, InsufficientFunds
-
 # Make sure we can find the electrum wallet
+from Tribler.community.market.wallet.wallet import InsufficientFunds, Wallet
+
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(Tribler.__file__)), '..', 'electrum'))
 
 import imp

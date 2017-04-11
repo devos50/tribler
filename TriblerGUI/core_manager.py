@@ -5,6 +5,7 @@ import keyring
 from twisted.internet.error import ReactorAlreadyInstalledError
 
 # We always use a selectreactor
+from Tribler.community.market.wallet.btc_wallet import BitcoinWallet
 from TriblerGUI.defs import API_PORT
 
 try:
@@ -20,7 +21,6 @@ from PyQt5.QtCore import QTimer, pyqtSignal, QObject
 from PyQt5.QtWidgets import QApplication
 import signal
 from Tribler.Core.Modules.process_checker import ProcessChecker
-from Tribler.Core.Modules.wallet.btc_wallet import BitcoinWallet
 from Tribler.Core.Session import Session
 from Tribler.Core.SessionConfig import SessionStartupConfig
 
