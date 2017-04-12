@@ -19,6 +19,8 @@ class IncrementalManager(object):
         :rtype: List[(Quantity, Price)]
         """
 
+        #TODO(Martijn): this should be fixed - quantity is converted to an integer!
+
         if int(total_quantity) < IncrementalManager.MIN_QUANTITY * IncrementalManager.MAX_TRANSACTIONS:
             num_transactions = int(total_quantity)
             min_quantity_per_trade = IncrementalManager.MIN_QUANTITY
@@ -34,7 +36,7 @@ class IncrementalManager(object):
             else:
                 transfer_quantity = min_quantity_per_trade
             remaining_quantity -= transfer_quantity
-            incremental_payments.append((Quantity(transfer_quantity),
+            incremental_payments.append((Quantity(transfer_quantity, total_quantity.wallet_id),
                                          Price(float(price) * transfer_quantity, price.wallet_id)))
 
         return incremental_payments

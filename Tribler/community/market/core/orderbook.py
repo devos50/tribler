@@ -129,22 +129,22 @@ class OrderBook(TaskManager):
         if self.bid_exists(order_id):
             tick = self.get_bid(order_id)
             tick.quantity -= quantity
-            if tick.quantity == Quantity(0):
+            if tick.quantity == Quantity(0, quantity.wallet_id):
                 self.remove_tick(tick.order_id)
         if self.ask_exists(order_id):
             tick = self.get_ask(order_id)
             tick.quantity -= quantity
-            if tick.quantity == Quantity(0):
+            if tick.quantity == Quantity(0, quantity.wallet_id):
                 self.remove_tick(tick.order_id)
         if self.bid_exists(recipient_order_id):
             tick = self.get_bid(recipient_order_id)
             tick.quantity -= quantity
-            if tick.quantity == Quantity(0):
+            if tick.quantity == Quantity(0, quantity.wallet_id):
                 self.remove_tick(tick.order_id)
         if self.ask_exists(recipient_order_id):
             tick = self.get_ask(recipient_order_id)
             tick.quantity -= quantity
-            if tick.quantity == Quantity(0):
+            if tick.quantity == Quantity(0, quantity.wallet_id):
                 self.remove_tick(tick.order_id)
 
     def insert_trade(self, trade):

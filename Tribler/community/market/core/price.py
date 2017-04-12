@@ -19,6 +19,9 @@ class Price(object):
         if not isinstance(price, (int, float)):
             raise ValueError("Price must be an int or a float")
 
+        if not isinstance(wallet_id, str):
+            raise ValueError("Wallet id must be a string")
+
         if price < 0:
             raise ValueError("Price must be positive or zero")
 
@@ -46,7 +49,7 @@ class Price(object):
         return float(self._price)
 
     def __str__(self):
-        return "%f" % self._price
+        return "%f %s" % (self._price, self.wallet_id)
 
     def __add__(self, other):
         if isinstance(other, Price) and self.wallet_id == other.wallet_id:

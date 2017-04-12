@@ -5,12 +5,13 @@ from tickentry import TickEntry
 class PriceLevel(object):
     """Class to represents a list of ticks at a specific price level"""
 
-    def __init__(self):
+    def __init__(self, quantity_wallet_id):
         self._head_tick = None  # First tick of the double linked list
         self._tail_tick = None  # Last tick of the double linked list
         self._length = 0  # The number of ticks in the price level
-        self._depth = Quantity(0)  # Total amount of quantity contained in this price level
+        self._depth = Quantity(0, quantity_wallet_id)  # Total amount of quantity contained in this price level
         self._last = None  # The current tick of the iterator
+        self._quantity_wallet_id = quantity_wallet_id  # The quantity wallet ID of the price level
 
     @property
     def first_tick(self):

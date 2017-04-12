@@ -53,7 +53,7 @@ class PriceTimeStrategy(MatchingStrategy):
         else:
             quantity_to_trade, proposed_trades = self._match_bid(order)
 
-        if quantity_to_trade > Quantity(0):
+        if quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
             self._logger.debug("Quantity not matched: %i", int(quantity_to_trade))
 
         return proposed_trades
@@ -62,7 +62,7 @@ class PriceTimeStrategy(MatchingStrategy):
         proposed_trades = []
         quantity_to_trade = order.available_quantity
 
-        if order.price <= self.order_book.bid_price and quantity_to_trade > Quantity(0):
+        if order.price <= self.order_book.bid_price and quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
             # Scan the price levels in the order book
             quantity_to_trade, proposed_trades = self._search_for_quantity_in_order_book(
                 self.order_book.bid_price,
@@ -75,7 +75,7 @@ class PriceTimeStrategy(MatchingStrategy):
         proposed_trades = []
         quantity_to_trade = order.available_quantity
 
-        if order.price >= self.order_book.ask_price and quantity_to_trade > Quantity(0):
+        if order.price >= self.order_book.ask_price and quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
             # Scan the price levels in the order book
             quantity_to_trade, proposed_trades = self._search_for_quantity_in_order_book(
                 self.order_book.ask_price,
@@ -186,7 +186,7 @@ class PriceTimeStrategy(MatchingStrategy):
         if tick_entry is None:  # Last tick
             return quantity_to_trade, []
 
-        if tick_entry.quantity <= Quantity(0):
+        if tick_entry.quantity <= Quantity(0, tick_entry.quantity.wallet_id):
             return quantity_to_trade, []
 
         # Check if order and tick entry have the same trader id / origin
@@ -215,11 +215,11 @@ class PriceTimeStrategy(MatchingStrategy):
         return quantity_to_trade, proposed_trades
 
     def _search_for_quantity_in_price_level_total(self, tick_entry, quantity_to_trade, order):
-        if tick_entry.quantity <= Quantity(0):
+        if tick_entry.quantity <= Quantity(0, quantity_to_trade.wallet_id):
             return quantity_to_trade, []
 
         trading_quantity = quantity_to_trade
-        quantity_to_trade = Quantity(0)
+        quantity_to_trade = Quantity(0, quantity_to_trade.wallet_id)
 
         self._logger.debug("Match with the id (%s) was found for order (%s). Price: %i, Quantity: %i)",
                            str(tick_entry.order_id), str(order.order_id),

@@ -132,8 +132,8 @@ class Order(object):
         self._order_id = order_id
         self._price = price
         self._quantity = quantity
-        self._reserved_quantity = Quantity(0)
-        self._traded_quantity = Quantity(0)
+        self._reserved_quantity = Quantity(0, quantity.wallet_id)
+        self._traded_quantity = Quantity(0, quantity.wallet_id)
         self._timeout = timeout
         self._timestamp = timestamp
         self._completed_timestamp = None
@@ -249,7 +249,7 @@ class Order(object):
                                    quantity, str(order_id), str(self.order_id), self.total_quantity, self.traded_quantity)
                 self._reserved_quantity += quantity
                 self._reserved_ticks[order_id] = quantity
-                assert self.available_quantity >= Quantity(0)
+                assert self.available_quantity >= Quantity(0, self.available_quantity.wallet_id)
             return True
         else:
             return False
@@ -265,7 +265,7 @@ class Order(object):
                                str(order_id), str(self.order_id), self.total_quantity, self.traded_quantity)
             if self._reserved_quantity >= self._reserved_ticks[order_id]:
                 self._reserved_quantity -= self._reserved_ticks[order_id]
-                assert self.available_quantity >= Quantity(0)
+                assert self.available_quantity >= Quantity(0, self._quantity.wallet_id)
                 del self._reserved_ticks[order_id]
         else:
             raise TickWasNotReserved()
@@ -288,7 +288,7 @@ class Order(object):
             self.release_quantity_for_tick(other_order_id)
         except TickWasNotReserved:
             pass
-        assert self.available_quantity >= Quantity(0)
+        assert self.available_quantity >= Quantity(0, quantity.wallet_id)
 
         if self.is_complete():
             self._completed_timestamp = Timestamp.now()

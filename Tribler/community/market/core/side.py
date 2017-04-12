@@ -14,7 +14,6 @@ class Side(object):
         self._price_level_list = PriceLevelList()  # Sorted list containing dictionary with price levels: Price -> PriceLevel
         self._price_map = {}  # Map: Price -> PriceLevel
         self._tick_map = {}  # Map: MessageId -> TickEntry
-        self._volume = Quantity(0)  # Total number of quantity contained in all the price levels
         self._depth = 0  # Total amount of price levels
 
     def __len__(self):
@@ -45,16 +44,18 @@ class Side(object):
         assert isinstance(order_id, OrderId), type(order_id)
         return self._tick_map[order_id]
 
-    def _create_price_level(self, price):
+    def _create_price_level(self, price, quantity_wallet_id):
         """
         :param price: The price to create the level for
+        :param quantity_wallet_id: the id of the quantities stored in this price level
         :type price: Price
+        :type quantity_wallet_id: str
         """
         assert isinstance(price, Price), type(price)
 
         self._depth += 1
 
-        price_level = PriceLevel()
+        price_level = PriceLevel(quantity_wallet_id)
         self._price_level_list.insert(price, price_level)
         self._price_map[price] = price_level
 
@@ -98,11 +99,10 @@ class Side(object):
         assert isinstance(tick, Tick), type(tick)
 
         if not self._price_level_exists(tick.price):  # First tick for that price
-            self._create_price_level(tick.price)
+            self._create_price_level(tick.price, tick.quantity.wallet_id)
         tick_entry = TickEntry(tick, self._price_map[tick.price])
         self.get_price_level(tick.price).append_tick(tick_entry)
         self._tick_map[tick.order_id] = tick_entry
-        self._volume += tick.quantity
 
     def remove_tick(self, order_id):
         """
@@ -112,7 +112,6 @@ class Side(object):
         assert isinstance(order_id, OrderId), type(order_id)
 
         tick = self.get_tick(order_id)
-        self._volume -= tick.quantity
         tick.price_level().remove_tick(tick)
         if len(tick.price_level()) == 0:  # Last tick for that price
             self._remove_price_level(tick.price)
