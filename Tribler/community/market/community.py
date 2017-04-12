@@ -270,24 +270,15 @@ class MarketCommunity(Community):
         """
         return self.dispersy.lan_address if self.use_local_address else self.dispersy.wan_address
 
-    def get_bitcoin_address(self):
+    def get_wallet_address(self, wallet_id):
         """
-        Get the bitcoin address of your BTC wallet. Raise a RuntimeError if it's not available.
+        Returns the address of the wallet with a specific identifier. Raises a ValueError if that wallet is not
+        available.
         """
-        if 'BTC' not in self.wallets or not self.wallets['BTC'].created:
-            raise RuntimeError("No Bitcoin wallet available")
+        if wallet_id not in self.wallets or not self.wallets[wallet_id].created:
+            raise ValueError("Wallet %s not available" % wallet_id)
 
-        return self.wallets['BTC'].get_address()
-
-    def get_multichain_identity(self):
-        """
-        Get your identitiy (public key) in the multichain community. This is sent to the receiver of the multichain
-        credits so he can wait for the transaction to be completed.
-        """
-        if 'MC' not in self.wallets or not self.wallets['MC'].created:
-            raise RuntimeError("No Multichain wallet available")
-
-        return self.wallets['MC'].get_address()
+        return self.wallets[wallet_id].get_address()
 
     def check_history(self, message):
         """
@@ -847,7 +838,8 @@ class MarketCommunity(Community):
                 except TickWasNotReserved:  # Something went wrong
                     pass
 
-                self.send_wallet_info(transaction, self.get_bitcoin_address(), self.get_multichain_identity())
+                self.send_wallet_info(transaction, self.get_wallet_address('BTC'),
+                                      self.get_wallet_address('MC'))
 
     def send_wallet_info(self, transaction, incoming_address, outgoing_address):
         assert isinstance(transaction, Transaction), type(transaction)
@@ -894,7 +886,7 @@ class MarketCommunity(Community):
                 transaction.destination_mc_candidate = candidate
                 transaction.destination_btc_address = message.payload.incoming_address
 
-                self.send_wallet_info(transaction, self.get_multichain_identity(), self.get_bitcoin_address())
+                self.send_wallet_info(transaction, self.get_wallet_address('MC'), self.get_wallet_address('BTC'))
             else:
                 candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
                 pub_key = b64decode(message.payload.incoming_address)
@@ -904,18 +896,9 @@ class MarketCommunity(Community):
                 transaction.destination_mc_candidate = candidate
                 transaction.destination_btc_address = message.payload.outgoing_address
 
-                def send_mc_payment(_):
-                    message_id = self.order_book.message_repository.next_identity()
-                    multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
-                    self.send_multi_chain_payment(transaction, multi_chain_payment)
-
-                # Send an introduction request to this member.
-                self._logger.info("Sending introduction request in multichain to candidate %s", candidate)
-                mc_community = self.wallets['MC'].mc_community
-                mc_community.add_discovered_candidate(candidate)
-                new_candidate = mc_community.get_candidate(candidate.sock_addr)
-                mc_community.create_introduction_request(new_candidate, False)
-                mc_community.wait_for_intro_of_candidate(new_candidate).addCallback(send_mc_payment)
+                message_id = self.order_book.message_repository.next_identity()
+                multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
+                self.send_multi_chain_payment(transaction, multi_chain_payment)
 
     # Multi chain payment
     def send_multi_chain_payment(self, transaction, multi_chain_payment):

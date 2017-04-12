@@ -1,10 +1,9 @@
-import logging
 import os
 import sys
 from threading import Thread
 
 import keyring
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed, fail
 from twisted.internet.task import LoopingCall
 
 import Tribler
@@ -35,7 +34,6 @@ class BitcoinWallet(Wallet):
 
         self.wallet_dir = wallet_dir
         self.wallet_file = 'btc_wallet'
-        self._logger = logging.getLogger(self.__class__.__name__)
         self.min_confirmations = 0
         self.created = False
         self.daemon = None
@@ -163,9 +161,9 @@ class BitcoinWallet(Wallet):
             result = server.run_cmdline(options)
 
             # TODO(Martijn): check whether the broadcast has been successful
-            return str(result[1])
+            return succeed(str(result[1]))
         else:
-            raise InsufficientFunds()
+            return fail(InsufficientFunds())
 
     def monitor_transaction(self, txid):
         """
