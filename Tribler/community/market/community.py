@@ -1,14 +1,11 @@
-from base64 import b64decode, b64encode
-
 import time
 
-from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE, \
     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT
 from Tribler.Core.simpledefs import NTFY_UPDATE
-from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
+from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.wallet.wallet import InsufficientFunds
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.bloomfilter import BloomFilter
@@ -279,6 +276,17 @@ class MarketCommunity(Community):
             raise ValueError("Wallet %s not available" % wallet_id)
 
         return self.wallets[wallet_id].get_address()
+
+    def get_order_addresses(self, order):
+        """
+        Return a tuple of incoming and outgoing payment address of an order.
+        """
+        if order.is_ask():
+            return self.wallets[order.price.wallet_id].get_address(),\
+                   self.wallets[order.total_quantity.wallet_id].get_address()
+        else:
+            return self.wallets[order.total_quantity.wallet_id].get_address(),\
+                   self.wallets[order.price.wallet_id].get_address()
 
     def check_history(self, message):
         """
@@ -828,18 +836,19 @@ class MarketCommunity(Community):
         for message in messages:
             start_transaction = StartTransaction.from_network(message.payload)
 
+            # The receipient_order_id in the start_transaction message is our own order
             order = self.order_manager.order_repository.find_by_id(start_transaction.recipient_order_id)
 
             if order:
-                transaction = self.transaction_manager.create_from_start_transaction(start_transaction, order.timeout)
+                transaction = self.transaction_manager.create_from_start_transaction(start_transaction, order)
 
                 try:
                     order.add_trade(start_transaction.order_id, start_transaction.quantity)
                 except TickWasNotReserved:  # Something went wrong
                     pass
 
-                self.send_wallet_info(transaction, self.get_wallet_address('BTC'),
-                                      self.get_wallet_address('MC'))
+                incoming_address, outgoing_address = self.get_order_addresses(order)
+                self.send_wallet_info(transaction, incoming_address, outgoing_address)
 
     def send_wallet_info(self, transaction, incoming_address, outgoing_address):
         assert isinstance(transaction, Transaction), type(transaction)
@@ -877,25 +886,14 @@ class MarketCommunity(Community):
                 TransactionId(message.payload.transaction_trader_id, message.payload.transaction_number))
             transaction.received_wallet_info = True
 
+            transaction.partner_outgoing_address = message.payload.outgoing_address
+            transaction.partner_incoming_address = message.payload.incoming_address
+
             if not transaction.sent_wallet_info:
-                candidate = Candidate(self.lookup_ip(transaction.transaction_id.trader_id), False)
-                pub_key = b64decode(message.payload.outgoing_address)
-                member = self.dispersy.get_member(public_key=pub_key)
-                candidate.associate(member)
-
-                transaction.destination_mc_candidate = candidate
-                transaction.destination_btc_address = message.payload.incoming_address
-
-                self.send_wallet_info(transaction, self.get_wallet_address('MC'), self.get_wallet_address('BTC'))
+                order = self.order_manager.order_repository.find_by_id(transaction.order_id)
+                incoming_address, outgoing_address = self.get_order_addresses(order)
+                self.send_wallet_info(transaction, incoming_address, outgoing_address)
             else:
-                candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
-                pub_key = b64decode(message.payload.incoming_address)
-                member = self.dispersy.get_member(public_key=pub_key)
-                candidate.associate(member)
-
-                transaction.destination_mc_candidate = candidate
-                transaction.destination_btc_address = message.payload.outgoing_address
-
                 message_id = self.order_book.message_repository.next_identity()
                 multi_chain_payment = self.transaction_manager.create_multi_chain_payment(message_id, transaction)
                 self.send_multi_chain_payment(transaction, multi_chain_payment)
@@ -923,7 +921,10 @@ class MarketCommunity(Community):
 
             self.dispersy.store_update_forward([message], True, False, True)
 
-            mc_wallet.transfer(int(multi_chain_payment.transferor_quantity), transaction.destination_mc_candidate)
+            member = self.dispersy.get_member(public_key=transaction.partner_incoming_address)
+            candidate.associate(member)
+
+            mc_wallet.transfer(int(multi_chain_payment.transferor_quantity), candidate)
         except InsufficientFunds:  # Not enough funds
             self._logger.warning("Not enough multichain credits for this transaction (have %s, need %s)!",
                                  mc_wallet.get_balance()['net'], multi_chain_payment.transferor_quantity)
@@ -934,7 +935,7 @@ class MarketCommunity(Community):
             transaction = self.transaction_manager.find_by_id(multi_chain_payment.transaction_id)
 
             mc_wallet = self.wallets['MC']
-            transaction_deferred = mc_wallet.monitor_transaction(transaction.destination_mc_candidate.get_member(),
+            transaction_deferred = mc_wallet.monitor_transaction(transaction.partner_outgoing_address,
                                                                  int(multi_chain_payment.transferor_quantity))
             transaction_deferred.addCallback(lambda _: self.received_multichain_payment(multi_chain_payment, transaction))
 
@@ -955,7 +956,7 @@ class MarketCommunity(Community):
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
 
         try:
-            txid = BitcoinTransactionId(btc_wallet.transfer(float(price), transaction.destination_btc_address))
+            txid = PaymentId(btc_wallet.transfer(float(price), transaction.partner_incoming_address))
 
             message_id = self.order_book.message_repository.next_identity()
             bitcoin_payment = self.transaction_manager.create_bitcoin_payment(message_id, transaction, price, txid)

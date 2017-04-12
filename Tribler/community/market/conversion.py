@@ -3,7 +3,7 @@ from struct import pack, unpack_from
 from math import ceil
 
 from Tribler.Core.Utilities.encoding import encode, decode
-from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
+from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.wallet import ASSET_MAP, INV_ASSET_MAP
 from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.conversion import BinaryConversion
@@ -254,4 +254,4 @@ class MarketConversion(BinaryConversion):
     def _decode_bitcoin_payment(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, TraderId, TransactionNumber, Price,
-                                     BitcoinTransactionId, Timestamp])
+                                     PaymentId, Timestamp])

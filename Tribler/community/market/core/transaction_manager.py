@@ -1,5 +1,6 @@
 import logging
 
+from Tribler.community.market.core.order import Order
 from payment import MultiChainPayment, BitcoinPayment
 from bitcoin_address import BitcoinAddress
 from price import Price
@@ -41,17 +42,18 @@ class TransactionManager(object):
                           str(transaction.transaction_id), str(transaction.total_quantity))
         return transaction
 
-    def create_from_start_transaction(self, start_transaction, timeout):
+    def create_from_start_transaction(self, start_transaction, order):
         """
         :type start_transaction: StartTransaction
         :type timeout: Timeout
         :rtype: Transaction
         """
         assert isinstance(start_transaction, StartTransaction), type(start_transaction)
-        assert isinstance(timeout, Timeout), type(timeout)
+        assert isinstance(order, Order), type(order)
 
         transaction = Transaction(start_transaction.transaction_id, start_transaction.transaction_id.trader_id,
-                                  start_transaction.price, start_transaction.quantity, timeout, Timestamp.now())
+                                  start_transaction.price, start_transaction.quantity, order.order_id,
+                                  order.timeout, Timestamp.now())
         self.transaction_repository.add(transaction)
 
         self._logger.info("Transaction created with id: %s, quantity: %s, price: %s",

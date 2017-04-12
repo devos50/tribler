@@ -1,5 +1,3 @@
-from base64 import b64encode
-
 from twisted.internet.defer import succeed
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
@@ -53,15 +51,16 @@ class MultichainWallet(Wallet):
         self.mc_community.create_introduction_request(new_candidate, False)
         return self.mc_community.wait_for_intro_of_candidate(new_candidate)
 
-    def monitor_transaction(self, mc_member, amount):
+    def monitor_transaction(self, member_pub_key, amount):
         """
         Monitor an incoming transaction. Returns a deferred that fires when we receive a signature request that matches
         the address and amount.
         """
+        mc_member = self.mc_community.dispersy.get_member(public_key=member_pub_key)
         return self.mc_community.wait_for_signature_request_of_member(mc_member, 0, amount)
 
     def get_address(self):
-        return b64encode(self.mc_community._public_key)
+        return self.mc_community._public_key
 
     def get_transactions(self):
         # TODO(Martijn): implement this

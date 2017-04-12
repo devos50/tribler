@@ -99,18 +99,20 @@ class TransactionId(object):
 class Transaction(object):
     """Class for representing a transaction between two nodes"""
 
-    def __init__(self, transaction_id, partner_trader_id, price, quantity, timeout, timestamp):
+    def __init__(self, transaction_id, partner_trader_id, price, quantity, order_id, timeout, timestamp):
         """
         :param transaction_id: An transaction id to identify the order
         :param partner_trader_id: The trader id from the peer that is traded with
         :param price: A price to indicate for which amount to sell or buy
         :param quantity: A quantity to indicate how much to sell or buy
+        :param order_id: The id of your order for this transaction
         :param timeout: A timeout when this transaction is going to expire
         :param timestamp: A timestamp when the transaction was created
         :type transaction_id: TransactionId
         :type partner_trader_id: TraderId
         :type price: Price
         :type quantity: Quantity
+        :type order_id: OrderId
         :type timeout: Timeout
         :type timestamp: Timestamp
         """
@@ -120,6 +122,7 @@ class Transaction(object):
         assert isinstance(partner_trader_id, TraderId), type(partner_trader_id)
         assert isinstance(price, Price), type(price)
         assert isinstance(quantity, Quantity), type(quantity)
+        assert isinstance(order_id, OrderId), type(order_id)
         assert isinstance(timeout, Timeout), type(timeout)
         assert isinstance(timestamp, Timestamp), type(timestamp)
 
@@ -127,14 +130,15 @@ class Transaction(object):
         self._partner_trader_id = partner_trader_id
         self._price = price
         self._quantity = quantity
+        self._order_id = order_id
         self._timeout = timeout
         self._timestamp = timestamp
         self._payments = {}
 
         self.sent_wallet_info = False
         self.received_wallet_info = False
-        self.destination_btc_address = None
-        self.destination_mc_candidate = None
+        self.partner_incoming_address = None
+        self.partner_outgoing_address = None
 
         self._payment_list = IncrementalManager.determine_incremental_payments_list(price, quantity)
         self._current_payment = 0
@@ -153,7 +157,7 @@ class Transaction(object):
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
 
         return cls(transaction_id, accepted_trade.recipient_order_id.trader_id, accepted_trade.price,
-                   accepted_trade.quantity, Timeout(float('inf')), accepted_trade.timestamp)
+                   accepted_trade.quantity, accepted_trade.order_id, Timeout(float('inf')), accepted_trade.timestamp)
 
     @property
     def transaction_id(self):
@@ -182,6 +186,14 @@ class Transaction(object):
         :rtype: Quantity
         """
         return self._quantity
+
+    @property
+    def order_id(self):
+        """
+        Return the id of your order
+        :rtype: OrderId
+        """
+        return self._order_id
 
     @property
     def timeout(self):

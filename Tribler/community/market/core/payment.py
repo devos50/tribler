@@ -1,4 +1,4 @@
-from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
+from Tribler.community.market.core.payment_id import PaymentId
 from bitcoin_address import BitcoinAddress
 from message import MessageId, Message, TraderId, MessageNumber
 from price import Price
@@ -78,7 +78,7 @@ class BitcoinPayment(Message):
     def __init__(self, message_id, transaction_id, price, txid, timestamp):
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
         assert isinstance(price, Price), type(price)
-        assert isinstance(txid, BitcoinTransactionId), type(txid)
+        assert isinstance(txid, PaymentId), type(txid)
         super(BitcoinPayment, self).__init__(message_id, timestamp)
         self._transaction_id = transaction_id
         self._price = price
@@ -110,7 +110,7 @@ class BitcoinPayment(Message):
         assert hasattr(data, 'transaction_trader_id'), isinstance(data.transaction_trader_id, TraderId)
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
         assert hasattr(data, 'price'), isinstance(data.price, Price)
-        assert hasattr(data, 'txid'), isinstance(data.txid, BitcoinTransactionId)
+        assert hasattr(data, 'txid'), isinstance(data.txid, PaymentId)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
 
         return cls(

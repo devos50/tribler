@@ -8,7 +8,7 @@ from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.transaction import TransactionNumber
-from Tribler.community.market.core.bitcoin_transaction_id import BitcoinTransactionId
+from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.payload import AcceptedTradePayload, DeclinedTradePayload, TradePayload, \
     OfferPayload, StartTransactionPayload, BitcoinPaymentPayload, MultiChainPaymentPayload
 from Tribler.community.market.ttl import Ttl
@@ -138,7 +138,7 @@ class BitcoinPaymentPayloadTestSuite(unittest.TestCase):
                                                                             TraderId('2'),
                                                                             TransactionNumber('2'),
                                                                             Price(10),
-                                                                            BitcoinTransactionId('3'),
+                                                                            PaymentId('3'),
                                                                             Timestamp(0.0))
 
     def test_properties(self):
