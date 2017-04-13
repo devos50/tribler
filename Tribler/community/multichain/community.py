@@ -4,7 +4,7 @@ This reputation system builds a tamper proof interaction history contained in a 
 Every node has a chain and these chains intertwine by blocks shared by chains.
 """
 import logging
-from twisted.internet.defer import inlineCallbacks, Deferred
+from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
@@ -66,6 +66,7 @@ class MultiChainCommunity(Community):
 
         self.expected_intro_responses = {}
         self.expected_sig_requests = {}
+        self.received_hashes = set()
 
         self.logger.debug("The multichain community started with Public Key: %s",
                           self.my_member.public_key.encode("hex"))
@@ -154,13 +155,16 @@ class MultiChainCommunity(Community):
         self.expected_intro_responses[candidate.sock_addr] = response_deferred
         return response_deferred
 
-    def wait_for_signature_request_of_member(self, member, up, down):
+    def wait_for_signature_request(self, block_hash):
         """
-        Returns a Deferred that fires when we receive a signature from a given member with some amount to sign.
+        Returns a Deferred that fires when we receive a signature request with a specific block hash.
         Used in the market community so we can monitor transactions.
         """
+        if block_hash in self.received_hashes:
+            return succeed(None)
+
         response_deferred = Deferred()
-        self.expected_sig_requests[(member.public_key, up, down)] = response_deferred
+        self.expected_sig_requests[block_hash] = response_deferred
         return response_deferred
 
     def sign_block(self, candidate, public_key=None, bytes_up=None, bytes_down=None, linked=None):

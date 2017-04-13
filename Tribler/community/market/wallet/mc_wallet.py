@@ -42,7 +42,10 @@ class MultichainWallet(Wallet):
                     lambda _: self.send_signature(candidate, quantity))
 
     def send_signature(self, candidate, quantity):
-        return succeed(self.mc_community.publish_signature_request_message(candidate, 0, quantity))
+        self.mc_community.publish_signature_request_message(candidate, 0, int(quantity))
+        latest_block = self.mc_community.persistence.get_latest_block(self.mc_community._public_key)
+
+        return succeed(latest_block.previous_hash_requester)
 
     def wait_for_intro_of_candidate(self, candidate):
         self._logger.info("Sending introduction request in multichain to candidate %s", candidate)
@@ -51,13 +54,11 @@ class MultichainWallet(Wallet):
         self.mc_community.create_introduction_request(new_candidate, False)
         return self.mc_community.wait_for_intro_of_candidate(new_candidate)
 
-    def monitor_transaction(self, member_pub_key, amount):
+    def monitor_transaction(self, block_hash):
         """
-        Monitor an incoming transaction. Returns a deferred that fires when we receive a signature request that matches
-        the address and amount.
+        Monitor an incoming transaction with a specific hash.
         """
-        mc_member = self.mc_community.dispersy.get_member(public_key=member_pub_key)
-        return self.mc_community.wait_for_signature_request_of_member(mc_member, 0, amount)
+        return self.mc_community.wait_for_signature_request(str(block_hash))
 
     def get_address(self):
         return self.mc_community._public_key

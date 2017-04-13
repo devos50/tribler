@@ -1,10 +1,7 @@
 import logging
 
 from Tribler.community.market.core.order import Order
-from payment import MultiChainPayment, BitcoinPayment
-from bitcoin_address import BitcoinAddress
-from price import Price
-from quantity import Quantity
+from payment import Payment
 from timeout import Timeout
 from timestamp import Timestamp
 from trade import AcceptedTrade
@@ -61,14 +58,14 @@ class TransactionManager(object):
 
         return transaction
 
-    def create_multi_chain_payment(self, message_id, transaction):
-        payment = transaction.next_payment()
-        multi_chain_payment = MultiChainPayment(message_id, transaction.transaction_id,
-                                                payment[0], payment[1], Timestamp.now())
-        transaction.add_payment(multi_chain_payment)
+    def create_payment_message(self, message_id, payment_id, transaction, payment):
+        payment_message = Payment(message_id, transaction.transaction_id, payment[0], payment[1],
+                                      transaction.outgoing_address, transaction.partner_incoming_address,
+                                      payment_id, Timestamp.now())
+        transaction.add_payment(payment_message)
         self.transaction_repository.update(transaction)
 
-        return multi_chain_payment
+        return payment_message
 
     def create_bitcoin_payment(self, message_id, transaction, price, txid):
         bitcoin_payment = BitcoinPayment(message_id, transaction.transaction_id, price, txid, Timestamp.now())

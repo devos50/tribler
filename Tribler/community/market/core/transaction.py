@@ -137,6 +137,8 @@ class Transaction(object):
 
         self.sent_wallet_info = False
         self.received_wallet_info = False
+        self.incoming_address = None
+        self.outgoing_address = None
         self.partner_incoming_address = None
         self.partner_outgoing_address = None
 

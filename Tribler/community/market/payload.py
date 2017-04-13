@@ -1,7 +1,6 @@
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.dispersy.payload import Payload, IntroductionRequestPayload
 
-from core.bitcoin_address import BitcoinAddress
 from core.message import TraderId, MessageNumber
 from core.order import OrderNumber
 from core.price import Price
@@ -279,43 +278,39 @@ class WalletInfoPayload(TransactionPayload):
             return self._outgoing_address
 
 
-class MultiChainPaymentPayload(TransactionPayload):
+class PaymentPayload(TransactionPayload):
     class Implementation(TransactionPayload.Implementation):
         def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number,
-                     transferor_quantity, transferee_price, timestamp):
-            assert isinstance(transferor_quantity, Quantity), type(transferor_quantity)
+                     transferee_quantity, transferee_price, address_from, address_to, payment_id, timestamp):
+            assert isinstance(transferee_quantity, Quantity), type(transferee_quantity)
             assert isinstance(transferee_price, Price), type(transferee_price)
-            super(MultiChainPaymentPayload.Implementation, self).__init__(meta, trader_id, message_number,
-                                                                          transaction_trader_id, transaction_number,
-                                                                          timestamp)
-            self._transferor_quantity = transferor_quantity
+            assert isinstance(address_from, str), type(address_from)
+            assert isinstance(address_to, str), type(address_to)
+            assert isinstance(payment_id, PaymentId), type(payment_id)
+            super(PaymentPayload.Implementation, self).__init__(meta, trader_id, message_number,
+                                                                transaction_trader_id, transaction_number, timestamp)
+            self._transferee_quantity = transferee_quantity
             self._transferee_price = transferee_price
+            self._address_from = address_from
+            self._address_to = address_to
+            self._payment_id = payment_id
 
         @property
-        def transferor_quantity(self):
-            return self._transferor_quantity
+        def transferee_quantity(self):
+            return self._transferee_quantity
 
         @property
         def transferee_price(self):
             return self._transferee_price
 
-
-class BitcoinPaymentPayload(TransactionPayload):
-    class Implementation(TransactionPayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number,
-                     price, txid, timestamp):
-            assert isinstance(price, Price), type(price)
-            assert isinstance(txid, PaymentId), type(txid)
-            super(BitcoinPaymentPayload.Implementation, self).__init__(meta, trader_id, message_number,
-                                                                       transaction_trader_id, transaction_number,
-                                                                       timestamp)
-            self._price = price
-            self._txid = txid
+        @property
+        def address_from(self):
+            return self._address_from
 
         @property
-        def price(self):
-            return self._price
+        def address_to(self):
+            return self._address_to
 
         @property
-        def txid(self):
-            return self._txid
+        def payment_id(self):
+            return self._payment_id
