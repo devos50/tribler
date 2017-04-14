@@ -13,7 +13,7 @@ UNKNOWN_SEQ = 0
 EMPTY_SIG = '0'*SIG_LENGTH
 EMPTY_PK = '0'*PK_LENGTH
 
-block_pack_format = "! i d i d d d {0}s I {0}s I {1}s {2}s".format(PK_LENGTH, HASH_LENGTH, SIG_LENGTH)
+block_pack_format = "! i d i d {0}s I {0}s I {1}s {2}s".format(PK_LENGTH, HASH_LENGTH, SIG_LENGTH)
 block_pack_size = calcsize(block_pack_format)
 
 
@@ -28,7 +28,6 @@ class TradeChainBlock(object):
             # data
             self.asset1_type = self.asset2_type = 0
             self.asset1_amount = self.asset2_amount = 0
-            self.total_btc = self.total_mc = 0
             # identity
             self.public_key = EMPTY_PK
             self.sequence_number = GENESIS_SEQ
@@ -41,10 +40,10 @@ class TradeChainBlock(object):
             # debug stuff
             self.insert_time = None
         else:
-            (self.asset1_type, self.asset1_amount, self.asset2_type, self.asset2_amount, self.total_btc, self.total_mc,
+            (self.asset1_type, self.asset1_amount, self.asset2_type, self.asset2_amount,
              self.public_key, self.sequence_number, self.link_public_key, self.link_sequence_number, self.previous_hash,
              self.signature, self.insert_time) = (data[0], data[1], data[2], data[3], data[4], data[5], data[6],
-                                                  data[7], data[8], data[9], data[10], data[11], data[12])
+                                                  data[7], data[8], data[9], data[10])
             if isinstance(self.public_key, buffer):
                 self.public_key = str(self.public_key)
             if isinstance(self.link_public_key, buffer):
@@ -305,13 +304,8 @@ class TradeChainBlock(object):
             ret.link_public_key = link.public_key
             ret.link_sequence_number = link.sequence_number
         if blk:
-            ret.total_btc = blk.total_btc + 5  # TODO(Martijn): hard-coded for now
-            ret.total_mc = blk.total_mc + 5  # TODO(Martijn): hard-coded for now
             ret.sequence_number = blk.sequence_number + 1
             ret.previous_hash = blk.hash
-        else:
-            ret.total_up = 5  # TODO(Martijn): hard-coded for now
-            ret.total_down = 5  # TODO(Martijn): hard-coded for now
         ret.public_key = public_key
         ret.signature = EMPTY_SIG
         return ret
@@ -326,9 +320,8 @@ class TradeChainBlock(object):
         """
         buff = data if data else bytearray(block_pack_size)
         pack_into(block_pack_format, buff, offset, self.asset1_type, self.asset1_amount, self.asset2_type,
-                  self.asset2_amount, self.total_btc, self.total_mc, self.public_key,
-                  self.sequence_number, self.link_public_key, self.link_sequence_number, self.previous_hash,
-                  self.signature if signature else EMPTY_SIG)
+                  self.asset2_amount, self.public_key, self.sequence_number, self.link_public_key,
+                  self.link_sequence_number, self.previous_hash, self.signature if signature else EMPTY_SIG)
         return str(buff)
 
     @classmethod
@@ -340,9 +333,9 @@ class TradeChainBlock(object):
         :return: The TradeChainBlock that was unpacked from the buffer
         """
         ret = TradeChainBlock()
-        (ret.asset1_type, ret.asset1_amount, ret.asset2_type, ret.asset2_amount, ret.total_btc, ret.total_mc,
-         ret.public_key, ret.sequence_number, ret.link_public_key,
-         ret.link_sequence_number, ret.previous_hash, ret.signature) = unpack_from(block_pack_format, data, offset)
+        (ret.asset1_type, ret.asset1_amount, ret.asset2_type, ret.asset2_amount, ret.public_key, ret.sequence_number,
+         ret.link_public_key, ret.link_sequence_number, ret.previous_hash, ret.signature) = \
+            unpack_from(block_pack_format, data, offset)
         return ret
 
     def pack_db_insert(self):
@@ -351,9 +344,8 @@ class TradeChainBlock(object):
         :return: A database insertable tuple
         """
         return (self.asset1_type, self.asset1_amount, self.asset2_type, self.asset2_amount,
-                self.total_btc, self.total_mc, buffer(self.public_key), self.sequence_number,
-                buffer(self.link_public_key), self.link_sequence_number, buffer(self.previous_hash),
-                buffer(self.signature), buffer(self.hash))
+                buffer(self.public_key), self.sequence_number, buffer(self.link_public_key), self.link_sequence_number,
+                buffer(self.previous_hash), buffer(self.signature), buffer(self.hash))
 
     def __iter__(self):
         """

@@ -19,8 +19,6 @@ CREATE TABLE IF NOT EXISTS trade_chain(
  asset1_amount        DOUBLE NOT NULL,
  asset2_type          INTEGER NOT NULL,
  asset2_amount        DOUBLE NOT NULL,
- total_btc            DOUBLE NOT NULL,
- total_mc             DOUBLE NOT NULL,
  public_key           TEXT NOT NULL,
  sequence_number      INTEGER NOT NULL,
  link_public_key      TEXT NOT NULL,
@@ -43,7 +41,7 @@ DROP TABLE IF EXISTS trade_chain;
 DROP TABLE IF EXISTS option;
 """
 
-_columns = u"asset1_type, asset1_amount, asset1_type, asset1_amount, total_btc, total_mc, public_key, sequence_number," \
+_columns = u"asset1_type, asset1_amount, asset1_type, asset1_amount, public_key, sequence_number," \
            u"link_public_key, link_sequence_number, previous_hash, signature, insert_time"
 _header = u"SELECT " + _columns + u" FROM trade_chain "
 
@@ -71,9 +69,9 @@ class TradeChainDB(Database):
         :param block: The data that will be saved.
         """
         self.execute(
-            u"INSERT INTO trade_chain (asset1_type, asset1_amount, asset2_type, asset2_amount, total_btc, total_mc,"
+            u"INSERT INTO trade_chain (asset1_type, asset1_amount, asset2_type, asset2_amount,"
             u"public_key, sequence_number, link_public_key,"
-            u"link_sequence_number, previous_hash, signature, block_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            u"link_sequence_number, previous_hash, signature, block_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
             block.pack_db_insert())
         self.commit()
 

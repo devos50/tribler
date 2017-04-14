@@ -990,7 +990,11 @@ class MarketCommunity(Community):
         self.notify_transaction_complete(transaction)
 
         def send_tradechain_request(_):
-            self.tradechain_community.sign_block(candidate, 'BTC', 3, 'MC', 4)
+            # TODO add a check that this transaction really happened
+            quantity = transaction.total_quantity
+            price = transaction.price
+            self.tradechain_community.sign_block(candidate, price.int_wallet_id, float(price),
+                                                 quantity.int_wallet_id, float(quantity))
 
         if self.tradechain_community:
             member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))

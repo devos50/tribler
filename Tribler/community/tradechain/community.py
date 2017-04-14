@@ -118,7 +118,6 @@ class TradeChainCommunity(Community):
         :param asset2_type: The type of asset 2 (string)
         :param asset2_amount: The amount of asset 2 (string)
         """
-        asset_type_map = {'BTC': 0, 'MC': 1}
 
         # NOTE to the future: This method reads from the database, increments and then writes back. If in some future
         # this method is allowed to execute in parallel, be sure to lock from before .create upto after .add_block
@@ -134,12 +133,10 @@ class TradeChainCommunity(Community):
         if candidate.get_member():
             if linked is None:
                 block = TradeChainBlock.create(self.persistence, self.my_member.public_key)
-                block.asset1_type = asset_type_map[asset1_type]
+                block.asset1_type = asset1_type
                 block.asset1_amount = asset1_amount
-                block.asset2_type = asset_type_map[asset2_type]
+                block.asset2_type = asset2_type
                 block.asset2_amount = asset2_amount
-                block.total_btc += 5  # TODO(Martijn): hard-coded for now
-                block.total_down += 5  # TODO(Martijn): hard-coded for now
                 block.link_public_key = candidate.get_member().public_key
             else:
                 block = TradeChainBlock.create(self.persistence, self.my_member.public_key, linked)
