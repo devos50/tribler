@@ -155,7 +155,7 @@ margin-top: 4px;
        </spacer>
       </item>
       <item>
-       <widget class="QLabel" name="label">
+       <widget class="QLabel" name="quantity_label">
         <property name="text">
          <string>Quantity:</string>
         </property>
@@ -185,7 +185,7 @@ margin-top: 4px;
        </spacer>
       </item>
       <item>
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="price_label">
         <property name="text">
          <string>Price (BTC):</string>
         </property>

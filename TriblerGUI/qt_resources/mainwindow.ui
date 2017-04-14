@@ -1015,7 +1015,7 @@ background-color: #e67300;
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>15</number>
+         <number>13</number>
         </property>
         <widget class="HomePage" name="home_page">
          <layout class="QVBoxLayout" name="verticalLayout">
@@ -9612,6 +9612,54 @@ font-size: 12px;
            </widget>
           </item>
           <item>
+           <widget class="QWidget" name="widget_39" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_51">
+             <item>
+              <widget class="QToolButton" name="market_currency_type_button">
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>28</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>90</width>
+                 <height>28</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background: none;
+color: white;
+border-radius: 4px;
+border: 1px solid white;
+font-size: 12px;</string>
+               </property>
+               <property name="text">
+                <string>- / -</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_83">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
            <widget class="QWidget" name="market_container" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -9699,50 +9747,9 @@ font-size: 12px;
                           <string notr="true">padding-left: 10px;</string>
                          </property>
                          <property name="text">
-                          <string>Sell orders (sell credits for bitcoin)</string>
+                          <string>BUYING</string>
                          </property>
                         </widget>
-                       </item>
-                       <item>
-                        <widget class="EllipseButton" name="create_ask_button">
-                         <property name="minimumSize">
-                          <size>
-                           <width>36</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>36</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                         <property name="cursor">
-                          <cursorShape>PointingHandCursor</cursorShape>
-                         </property>
-                         <property name="styleSheet">
-                          <string notr="true">border-radius: 10px;</string>
-                         </property>
-                         <property name="text">
-                          <string>NEW</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <spacer name="horizontalSpacer_73">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="sizeType">
-                          <enum>QSizePolicy::Fixed</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>10</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                        </spacer>
                        </item>
                       </layout>
                      </widget>
@@ -9758,21 +9765,107 @@ font-size: 12px;
                       <property name="sortingEnabled">
                        <bool>true</bool>
                       </property>
+                      <attribute name="headerStretchLastSection">
+                       <bool>true</bool>
+                      </attribute>
                       <column>
                        <property name="text">
-                        <string>Trader</string>
+                        <string>Volume</string>
                        </property>
                       </column>
                       <column>
                        <property name="text">
-                        <string>Credits</string>
+                        <string>Price</string>
                        </property>
                       </column>
-                      <column>
-                       <property name="text">
-                        <string>Price (BTC)</string>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QWidget" name="widget_40" native="true">
+                      <layout class="QHBoxLayout" name="horizontalLayout_52">
+                       <property name="spacing">
+                        <number>0</number>
                        </property>
-                      </column>
+                       <property name="leftMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>6</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>12</number>
+                       </property>
+                       <item>
+                        <spacer name="horizontalSpacer_82">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeType">
+                          <enum>QSizePolicy::Fixed</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>10</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                       <item>
+                        <widget class="QToolButton" name="create_bid_button">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>0</width>
+                           <height>28</height>
+                          </size>
+                         </property>
+                         <property name="maximumSize">
+                          <size>
+                           <width>16777215</width>
+                           <height>28</height>
+                          </size>
+                         </property>
+                         <property name="cursor">
+                          <cursorShape>PointingHandCursor</cursorShape>
+                         </property>
+                         <property name="styleSheet">
+                          <string notr="true">background: none;
+color: white;
+border-radius: 4px;
+border: 1px solid white;
+font-size: 12px;</string>
+                         </property>
+                         <property name="text">
+                          <string>Buy - for -</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <spacer name="horizontalSpacer_84">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeType">
+                          <enum>QSizePolicy::Fixed</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>10</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                      </layout>
                      </widget>
                     </item>
                    </layout>
@@ -9820,37 +9913,101 @@ font-size: 12px;
                           <string notr="true">padding-left: 10px</string>
                          </property>
                          <property name="text">
-                          <string>Buy orders (buy credits for bitcoin)</string>
+                          <string>SELLING</string>
                          </property>
                         </widget>
                        </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QTreeWidget" name="bids_list">
+                      <property name="indentation">
+                       <number>0</number>
+                      </property>
+                      <property name="sortingEnabled">
+                       <bool>true</bool>
+                      </property>
+                      <column>
+                       <property name="text">
+                        <string>Volume</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Price</string>
+                       </property>
+                      </column>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QWidget" name="widget_41" native="true">
+                      <layout class="QHBoxLayout" name="horizontalLayout_53">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>6</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>0</number>
+                       </property>
                        <item>
-                        <widget class="EllipseButton" name="create_bid_button">
+                        <spacer name="horizontalSpacer_85">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeType">
+                          <enum>QSizePolicy::Fixed</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>10</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                       <item>
+                        <widget class="QToolButton" name="create_ask_button">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
                          <property name="minimumSize">
                           <size>
-                           <width>36</width>
-                           <height>20</height>
+                           <width>0</width>
+                           <height>28</height>
                           </size>
                          </property>
                          <property name="maximumSize">
                           <size>
-                           <width>36</width>
-                           <height>20</height>
+                           <width>16777215</width>
+                           <height>28</height>
                           </size>
                          </property>
                          <property name="cursor">
                           <cursorShape>PointingHandCursor</cursorShape>
                          </property>
                          <property name="styleSheet">
-                          <string notr="true">border-radius: 10px;</string>
+                          <string notr="true">background: none;
+color: white;
+border-radius: 4px;
+border: 1px solid white;
+font-size: 12px;</string>
                          </property>
                          <property name="text">
-                          <string>NEW</string>
+                          <string>Sell - for -</string>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <spacer name="horizontalSpacer_74">
+                        <spacer name="horizontalSpacer_86">
                          <property name="orientation">
                           <enum>Qt::Horizontal</enum>
                          </property>
@@ -9866,31 +10023,6 @@ font-size: 12px;
                         </spacer>
                        </item>
                       </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QTreeWidget" name="bids_list">
-                      <property name="indentation">
-                       <number>0</number>
-                      </property>
-                      <property name="sortingEnabled">
-                       <bool>true</bool>
-                      </property>
-                      <column>
-                       <property name="text">
-                        <string>Trader</string>
-                       </property>
-                      </column>
-                      <column>
-                       <property name="text">
-                        <string>Credits</string>
-                       </property>
-                      </column>
-                      <column>
-                       <property name="text">
-                        <string>Price (BTC)</string>
-                       </property>
-                      </column>
                      </widget>
                     </item>
                    </layout>

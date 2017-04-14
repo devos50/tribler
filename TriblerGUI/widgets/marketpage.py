@@ -1,12 +1,15 @@
 import hashlib
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCursor
 from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
 from TriblerGUI.defs import PAGE_MARKET_TRANSACTIONS, PAGE_MARKET_WALLETS
 from TriblerGUI.dialogs.newmarketorderdialog import NewMarketOrderDialog
+from TriblerGUI.tribler_action_menu import TriblerActionMenu
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
 from TriblerGUI.widgets.tickwidgetitem import TickWidgetItem
@@ -22,6 +25,8 @@ class MarketPage(QWidget):
         self.request_mgr = None
         self.dialog = None
         self.initialized = False
+        self.wallets = []
+        self.chosen_wallets = None
 
     def initialize_market_page(self):
 
@@ -36,6 +41,7 @@ class MarketPage(QWidget):
 
             self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
             self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
+            self.window().market_currency_type_button.clicked.connect(self.on_currency_type_clicked)
             self.window().market_transactions_button.clicked.connect(self.on_transactions_button_clicked)
             self.window().market_wallets_button.clicked.connect(self.on_wallets_button_clicked)
             self.window().market_create_wallet_button.clicked.connect(self.on_wallets_button_clicked)
@@ -74,7 +80,20 @@ class MarketPage(QWidget):
             self.window().create_ask_button.hide()
             self.window().create_bid_button.hide()
 
+        self.wallets = []
+        for wallet_id in wallets.keys():
+            self.wallets.append(wallet_id)
+
+        if self.chosen_wallets is None:
+            self.chosen_wallets = (self.wallets[0], self.wallets[1])
+            self.update_button_texts()
+
         self.load_asks()
+
+    def update_button_texts(self):
+        self.window().market_currency_type_button.setText("%s / %s" % (self.chosen_wallets[0], self.chosen_wallets[1]))
+        self.window().create_ask_button.setText("Sell %s for %s" % (self.chosen_wallets[0], self.chosen_wallets[1]))
+        self.window().create_bid_button.setText("Buy %s for %s" % (self.chosen_wallets[0], self.chosen_wallets[1]))
 
     def create_widget_item_from_tick(self, tick_list, tick, is_ask=True):
         tick["type"] = "ask" if is_ask else "bid"
@@ -169,8 +188,23 @@ class MarketPage(QWidget):
     def on_create_bid_clicked(self):
         self.show_new_order_dialog(False)
 
+    def on_currency_type_clicked(self):
+        menu = TriblerActionMenu(self)
+
+        for first_wallet_id in self.wallets:
+            sub_menu = menu.addMenu(first_wallet_id)
+
+            for second_wallet_id in self.wallets:
+                if first_wallet_id == second_wallet_id:
+                    continue
+
+                wallet_action = QAction('%s / %s' % (first_wallet_id, second_wallet_id), self)
+                wallet_action.triggered.connect(self.on_create_ask_clicked)
+                sub_menu.addAction(wallet_action)
+        menu.exec_(QCursor.pos())
+
     def show_new_order_dialog(self, is_ask):
-        self.dialog = NewMarketOrderDialog(self.window().stackedWidget, is_ask)
+        self.dialog = NewMarketOrderDialog(self.window().stackedWidget, is_ask, *self.chosen_wallets)
         self.dialog.button_clicked.connect(self.on_new_order_action)
         self.dialog.show()
 
