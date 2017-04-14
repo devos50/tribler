@@ -63,11 +63,11 @@ class MarketPage(QWidget):
     def on_wallets(self, wallets):
         wallets = wallets["wallets"]
 
-        if 'mc' in wallets and wallets["mc"]["created"]:
-            self.window().net_score_label.setText("%s" % wallets["mc"]["balance"]["net"])
+        if 'MC' in wallets and wallets["MC"]["created"]:
+            self.window().net_score_label.setText("%s" % wallets["MC"]["balance"]["net"])
 
-        if 'btc' in wallets and wallets["btc"]["created"]:
-            self.window().btc_amount_label.setText("%s" % wallets["btc"]["balance"]["confirmed"])
+        if 'BTC' in wallets and wallets["BTC"]["created"]:
+            self.window().btc_amount_label.setText("%s" % wallets["BTC"]["balance"]["confirmed"])
 
         if len([wallet for wallet in wallets.values() if wallet["created"]]) < 2:
             self.window().market_create_wallet_button.show()

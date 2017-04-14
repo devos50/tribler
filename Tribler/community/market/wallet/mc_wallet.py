@@ -1,3 +1,5 @@
+from base64 import b64encode
+
 from twisted.internet.defer import succeed
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
@@ -61,7 +63,7 @@ class MultichainWallet(Wallet):
         return self.mc_community.wait_for_signature_request(str(block_hash))
 
     def get_address(self):
-        return self.mc_community._public_key
+        return b64encode(self.mc_community._public_key)
 
     def get_transactions(self):
         # TODO(Martijn): implement this

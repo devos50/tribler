@@ -44,10 +44,10 @@ class MarketWalletsPage(QWidget):
     def on_wallets(self, wallets):
         wallets = wallets["wallets"]
 
-        if 'mc' in wallets and wallets["mc"]["created"]:
+        if 'MC' in wallets and wallets["MC"]["created"]:
             self.window().wallet_mc_overview_button.show()
 
-        if 'btc' in wallets and wallets["btc"]["created"]:
+        if 'BTC' in wallets and wallets["BTC"]["created"]:
             self.window().wallet_btc_overview_button.show()
 
         # Find out which wallets we still can create
@@ -104,7 +104,7 @@ class MarketWalletsPage(QWidget):
     def on_add_wallet_clicked(self):
         menu = TriblerActionMenu(self)
 
-        id_names = {'btc': 'Bitcoin wallet'}
+        id_names = {'BTC': 'Bitcoin wallet'}
 
         for wallet_id in self.wallets_to_create:
             wallet_action = QAction(id_names[wallet_id], self)
@@ -114,7 +114,7 @@ class MarketWalletsPage(QWidget):
         menu.exec_(QCursor.pos())
 
     def should_create_wallet(self, wallet_id):
-        if wallet_id == 'btc':
+        if wallet_id == 'BTC':
             self.dialog = ConfirmationDialog(self, "Create Bitcoin wallet",
                                              "Please enter the password of your Bitcoin wallet below:",
                                              [('CREATE', BUTTON_TYPE_NORMAL), ('CANCEL', BUTTON_TYPE_CONFIRM)],

@@ -1,4 +1,5 @@
 import time
+from base64 import b64decode
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -913,7 +914,7 @@ class MarketCommunity(Community):
         # TODO this should be refactored to the MultichainWallet
         if isinstance(wallet, MultichainWallet):
             candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
-            member = self.dispersy.get_member(public_key=transaction.partner_incoming_address)
+            member = self.dispersy.get_member(public_key=b64decode(transaction.partner_incoming_address))
             candidate.associate(member)
             transfer_deferred = wallet.transfer(float(transfer_amount), candidate)
         else:

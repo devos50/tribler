@@ -32,7 +32,7 @@ class WalletEndpoint(resource.Resource):
     def __init__(self, session, identifier):
         resource.Resource.__init__(self)
         self.session = session
-        self.identifier = identifier
+        self.identifier = identifier.upper()
 
         child_handler_dict = {"balance": WalletBalanceEndpoint, "transactions": WalletTransactionsEndpoint}
         for path, child_cls in child_handler_dict.iteritems():
@@ -45,7 +45,7 @@ class WalletEndpoint(resource.Resource):
 
         parameters = http.parse_qs(request.content.read(), 1)
 
-        if self.identifier == "btc":  # get the password
+        if self.identifier == "BTC":  # get the password
             password = ''
             if parameters['password'] and len(parameters['password']) > 0:
                 password = parameters['password'][0]
