@@ -11,19 +11,19 @@ from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 
 
-class OrderTestSuite(unittest.TestCase):
+class TickEntryTestSuite(unittest.TestCase):
     """TickEntry test cases."""
 
     def setUp(self):
         # Object creation
         tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                    OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400), Quantity(30),
+                    OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'), Quantity(30, 'MC'),
                     Timeout(0.0), Timestamp(0.0), True)
         tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                     OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400), Quantity(30),
-                     Timeout(float("inf")), Timestamp(float("inf")), True)
+                     OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'), Quantity(30, 'MC'),
+                     Timeout(100), Timestamp.now(), True)
 
-        self.price_level = PriceLevel()
+        self.price_level = PriceLevel('MC')
         self.tick_entry = TickEntry(tick, self.price_level)
         self.tick_entry2 = TickEntry(tick2, self.price_level)
 
@@ -46,7 +46,7 @@ class OrderTestSuite(unittest.TestCase):
 
     def test_str(self):
         # Test for tick string representation
-        self.assertEquals('30\t@\t63400.000000', str(self.tick_entry))
+        self.assertEquals('30.000000 MC\t@\t63400.000000 BTC', str(self.tick_entry))
 
     def test_is_valid(self):
         # Test for is valid
@@ -57,8 +57,8 @@ class OrderTestSuite(unittest.TestCase):
         # Test for quantity setter
         self.price_level.append_tick(self.tick_entry)
         self.price_level.append_tick(self.tick_entry2)
-        self.tick_entry.quantity = Quantity(15)
-        self.assertEquals(Quantity(15), self.tick_entry.quantity)
+        self.tick_entry.quantity = Quantity(15, 'MC')
+        self.assertEquals(Quantity(15, 'MC'), self.tick_entry.quantity)
 
 
 if __name__ == '__main__':

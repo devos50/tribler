@@ -17,14 +17,18 @@ class PriceLevelTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                    OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400), Quantity(30),
+                    OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'), Quantity(30, 'MC'),
                     Timeout(float("inf")), Timestamp(float("inf")), True)
+        tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
+                     OrderId(TraderId('0'), OrderNumber("order_number")), Price(30, 'MC'), Quantity(30, 'BTC'),
+                     Timeout(float("inf")), Timestamp(float("inf")), True)
 
-        self.price_level = PriceLevel()
+        self.price_level = PriceLevel('MC')
         self.tick_entry1 = TickEntry(tick, self.price_level)
         self.tick_entry2 = TickEntry(tick, self.price_level)
         self.tick_entry3 = TickEntry(tick, self.price_level)
         self.tick_entry4 = TickEntry(tick, self.price_level)
+        self.tick_entry5 = TickEntry(tick2, self.price_level)
 
     def test_appending_length(self):
         # Test for tick appending and length
@@ -38,6 +42,7 @@ class PriceLevelTestSuite(unittest.TestCase):
 
         self.assertEquals(4, self.price_level.length)
         self.assertEquals(4, len(self.price_level))
+        self.assertRaises(AssertionError, self.price_level.append_tick, self.tick_entry5)
 
     def test_tick_removal(self):
         # Test for tick removal
@@ -56,8 +61,8 @@ class PriceLevelTestSuite(unittest.TestCase):
         # Test for price level string representation
         self.price_level.append_tick(self.tick_entry1)
         self.price_level.append_tick(self.tick_entry2)
-        self.assertEquals('30\t@\t63400.000000\n'
-                          '30\t@\t63400.000000\n', str(self.price_level))
+        self.assertEquals('30.000000 MC\t@\t63400.000000 BTC\n'
+                          '30.000000 MC\t@\t63400.000000 BTC\n', str(self.price_level))
 
 
 if __name__ == '__main__':

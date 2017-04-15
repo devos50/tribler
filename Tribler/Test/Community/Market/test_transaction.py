@@ -78,13 +78,12 @@ class TransactionTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.transaction_id = TransactionId(TraderId("0"), TransactionNumber("1"))
-        self.transaction = Transaction(self.transaction_id, TraderId("2"), Price(100), Quantity(30),
-                                       Timeout(float("inf")),
-                                       Timestamp(0.0))
+        self.transaction = Transaction(self.transaction_id, TraderId("2"), Price(100, 'BTC'), Quantity(30, 'MC'),
+                                       OrderId(TraderId('3'), OrderNumber('2')), Timeout(30), Timestamp(0.0))
         proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('1')),
                                        OrderId(TraderId('0'), OrderNumber('2')),
                                        OrderId(TraderId('1'), OrderNumber('3')),
-                                       Price(100), Quantity(30), Timestamp(0.0))
+                                       Price(100, 'BTC'), Quantity(30, 'MC'), Timestamp(0.0))
         self.accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('1')),
                                            Timestamp(0.0), proposed_trade)
 
@@ -93,7 +92,6 @@ class TransactionTestSuite(unittest.TestCase):
         transaction = Transaction.from_accepted_trade(self.accepted_trade, self.transaction_id)
         self.assertEqual(transaction.price, self.transaction.price)
         self.assertEqual(transaction.total_quantity, self.transaction.total_quantity)
-        self.assertEqual(float(transaction.timeout), float(self.transaction.timeout))
         self.assertEqual(transaction.timestamp, self.transaction.timestamp)
 
 
@@ -104,30 +102,29 @@ class StartTransactionTestSuite(unittest.TestCase):
         # Object creation
         self.start_transaction = StartTransaction(MessageId(TraderId('0'), MessageNumber('1')),
                                                   TransactionId(TraderId("0"), TransactionNumber("1")),
-                                                  OrderId(TraderId('0'), OrderNumber('1')), TraderId('2'),
-                                                  MessageId(TraderId('2'), MessageNumber('3')), Timestamp(0.0))
+                                                  OrderId(TraderId('0'), OrderNumber('1')),
+                                                  OrderId(TraderId('1'), OrderNumber('1')),
+                                                  Price(30, 'BTC'), Quantity(40, 'MC'), Timestamp(0.0))
 
-        def test_from_network(self):
-            # Test for from network
-            data = StartTransaction.from_network(
-                type('Data', (object,), {"message_id": MessageId(TraderId("0"), MessageNumber("1")),
-                                         "transaction_id": TransactionId(TraderId("0"), TransactionNumber("1")),
-                                         "order_id": OrderId(TraderId('0'), OrderNumber('1')),
-                                         "timestamp": Timestamp(0.0)}))
+    def test_from_network(self):
+        # Test for from network
+        data = StartTransaction.from_network(
+            type('Data', (object,), {"trader_id": TraderId('0'),
+                                     "message_number": MessageNumber("1"),
+                                     "transaction_trader_id": TraderId('0'),
+                                     "transaction_number": TransactionNumber("1"),
+                                     "order_trader_id": TraderId('0'),
+                                     "order_number": OrderNumber('1'),
+                                     "recipient_trader_id": TraderId('1'),
+                                     "recipient_order_number": OrderNumber('2'),
+                                     "price": Price(300, 'BTC'),
+                                     "quantity": Quantity(20, 'MC'),
+                                     "timestamp": Timestamp(0.0)}))
 
-            self.assertEquals(MessageId(TraderId("0"), MessageNumber("1")), data.message_id)
-            self.assertEquals(TransactionId(TraderId("0"), TransactionNumber("1")), data.transaction_id)
-            self.assertEquals(OrderId(TraderId('0'), OrderNumber('1')), data.order_id)
-            self.assertEquals(Timestamp(0.0), data.timestamp)
-
-        def test_to_network(self):
-            # Test for to network
-            self.assertEquals(
-                (
-                    (),
-                    (MessageId(TraderId('0'), MessageNumber('1')), TransactionId(TraderId("0"), TransactionNumber("1")),
-                     Timestamp(0.0))),
-                self.start_transaction.to_network())
+        self.assertEquals(MessageId(TraderId("0"), MessageNumber("1")), data.message_id)
+        self.assertEquals(TransactionId(TraderId("0"), TransactionNumber("1")), data.transaction_id)
+        self.assertEquals(OrderId(TraderId('0'), OrderNumber('1')), data.order_id)
+        self.assertEquals(Timestamp(0.0), data.timestamp)
 
     if __name__ == '__main__':
         unittest.main()

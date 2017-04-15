@@ -19,7 +19,7 @@ class TradeTestSuite(unittest.TestCase):
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             OrderId(TraderId('0'), OrderNumber('order_number')),
                                             OrderId(TraderId('0'), OrderNumber('order_number')),
-                                            Price(63400), Quantity(30), Timestamp(1462224447.117))
+                                            Price(63400, 'BTC'), Quantity(30, 'MC'), Timestamp(1462224447.117))
         self.accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('message_number')),
                                            Timestamp(1462224447.117), self.proposed_trade)
         self.declined_trade = Trade.decline(MessageId(TraderId('0'), MessageNumber('message_number')),
@@ -37,15 +37,16 @@ class ProposedTradeTestSuite(unittest.TestCase):
         # Object creation
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             OrderId(TraderId('0'), OrderNumber('order_number')),
-                                            OrderId(TraderId('1'),
-                                                    OrderNumber('recipient_order_number')), Price(63400), Quantity(30),
+                                            OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
+                                            Price(63400, 'BTC'), Quantity(30, 'MC'),
                                             Timestamp(1462224447.117))
 
     def test_to_network(self):
         # Test for to network
         self.assertEquals((TraderId('1'), (TraderId('0'), MessageNumber('message_number'),
                                            OrderNumber('order_number'), TraderId('1'),
-                                           OrderNumber('recipient_order_number'), Price(63400), Quantity(30),
+                                           OrderNumber('recipient_order_number'),
+                                           Price(63400, 'BTC'), Quantity(30, 'MC'),
                                            Timestamp(1462224447.117))), self.proposed_trade.to_network())
 
     def test_from_network(self):
@@ -57,15 +58,15 @@ class ProposedTradeTestSuite(unittest.TestCase):
                                                                    "recipient_order_number": OrderNumber(
                                                                        'recipient_order_number'),
                                                                    "timestamp": Timestamp(1462224447.117),
-                                                                   "price": Price(63400),
-                                                                   "quantity": Quantity(30),}))
+                                                                   "price": Price(63400, 'BTC'),
+                                                                   "quantity": Quantity(30, 'MC')}))
 
         self.assertEquals(MessageId(TraderId('0'), MessageNumber('message_number')), data.message_id)
         self.assertEquals(OrderId(TraderId('0'), OrderNumber('order_number')), data.order_id)
         self.assertEquals(OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
                           data.recipient_order_id)
-        self.assertEquals(Price(63400), data.price)
-        self.assertEquals(Quantity(30), data.quantity)
+        self.assertEquals(Price(63400, 'BTC'), data.price)
+        self.assertEquals(Quantity(30, 'MC'), data.quantity)
         self.assertEquals(Timestamp(1462224447.117), data.timestamp)
 
 
@@ -77,14 +78,14 @@ class AcceptedTradeTestSuite(unittest.TestCase):
         proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                        OrderId(TraderId('0'), OrderNumber('order_number')),
                                        OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
-                                       Price(63400), Quantity(30), Timestamp(1462224447.117))
+                                       Price(63400, 'BTC'), Quantity(30, 'MC'), Timestamp(1462224447.117))
         self.accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('message_number')),
                                            Timestamp(1462224447.117), proposed_trade)
 
     def test_accepted_trade(self):
         # Test for properties
-        self.assertEquals(self.accepted_trade.price, Price(63400))
-        self.assertEquals(self.accepted_trade.quantity, Quantity(30))
+        self.assertEquals(self.accepted_trade.price, Price(63400, 'BTC'))
+        self.assertEquals(self.accepted_trade.quantity, Quantity(30, 'MC'))
 
     def test_to_network(self):
         # Test for to network
@@ -96,8 +97,8 @@ class AcceptedTradeTestSuite(unittest.TestCase):
         self.assertEquals(data[1][2], OrderNumber("recipient_order_number"))
         self.assertEquals(data[1][3], TraderId("0"))
         self.assertEquals(data[1][4], OrderNumber("order_number"))
-        self.assertEquals(data[1][5], Price(63400))
-        self.assertEquals(data[1][6], Quantity(30))
+        self.assertEquals(data[1][5], Price(63400, 'BTC'))
+        self.assertEquals(data[1][6], Quantity(30, 'MC'))
         self.assertEquals(data[1][7], Timestamp(1462224447.117))
 
     def test_from_network(self):
@@ -109,15 +110,15 @@ class AcceptedTradeTestSuite(unittest.TestCase):
                                                                    "recipient_order_number": OrderNumber(
                                                                        'recipient_order_number'),
                                                                    "timestamp": Timestamp(1462224447.117),
-                                                                   "price": Price(63400),
-                                                                   "quantity": Quantity(30),}))
+                                                                   "price": Price(63400, 'BTC'),
+                                                                   "quantity": Quantity(30, 'MC'),}))
 
         self.assertEquals(MessageId(TraderId('0'), MessageNumber('message_number')), data.message_id)
         self.assertEquals(OrderId(TraderId('0'), OrderNumber('order_number')), data.order_id)
         self.assertEquals(OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
                           data.recipient_order_id)
-        self.assertEquals(Price(63400), data.price)
-        self.assertEquals(Quantity(30), data.quantity)
+        self.assertEquals(Price(63400, 'BTC'), data.price)
+        self.assertEquals(Quantity(30, 'MC'), data.quantity)
         self.assertEquals(Timestamp(1462224447.117), data.timestamp)
 
 
@@ -129,7 +130,7 @@ class DeclinedTradeTestSuite(unittest.TestCase):
         proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                        OrderId(TraderId('0'), OrderNumber('order_number')),
                                        OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
-                                       Price(63400), Quantity(30), Timestamp(1462224447.117))
+                                       Price(63400, 'BTC'), Quantity(30, 'MC'), Timestamp(1462224447.117))
         self.declined_trade = Trade.decline(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             Timestamp(1462224447.117), proposed_trade)
 
@@ -168,17 +169,17 @@ class CounterTradeTestSuite(unittest.TestCase):
         # Object creation
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             OrderId(TraderId('0'), OrderNumber('order_number')),
-                                            OrderId(TraderId('1'),
-                                                    OrderNumber('recipient_order_number')), Price(63400), Quantity(30),
+                                            OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
+                                            Price(63400, 'BTC'), Quantity(30, 'MC'),
                                             Timestamp(1462224447.117))
         self.counter_trade = Trade.counter(MessageId(TraderId('0'), MessageNumber('message_number')),
-                                           Quantity(15), Timestamp(1462224447.117), self.proposed_trade)
+                                           Quantity(15, 'MC'), Timestamp(1462224447.117), self.proposed_trade)
 
     def test_to_network(self):
         # Test for to network
         self.assertEquals(
             (TraderId('0'), (TraderId('1'), MessageNumber('message_number'), OrderNumber('recipient_order_number'),
-                             TraderId('0'), OrderNumber('order_number'), Price(63400), Quantity(15),
+                             TraderId('0'), OrderNumber('order_number'), Price(63400, 'BTC'), Quantity(15, 'MC'),
                              Timestamp(1462224447.117))), self.counter_trade.to_network())
 
     def test_from_network(self):
@@ -190,15 +191,15 @@ class CounterTradeTestSuite(unittest.TestCase):
                                                                   "recipient_order_number": OrderNumber(
                                                                       'recipient_order_number'),
                                                                   "timestamp": Timestamp(1462224447.117),
-                                                                  "price": Price(63400),
-                                                                  "quantity": Quantity(15),}))
+                                                                  "price": Price(63400, 'BTC'),
+                                                                  "quantity": Quantity(15, 'MC'),}))
 
         self.assertEquals(MessageId(TraderId('0'), MessageNumber('message_number')), data.message_id)
         self.assertEquals(OrderId(TraderId('0'), OrderNumber('order_number')), data.order_id)
         self.assertEquals(OrderId(TraderId('1'), OrderNumber('recipient_order_number')),
                           data.recipient_order_id)
-        self.assertEquals(Price(63400), data.price)
-        self.assertEquals(Quantity(15), data.quantity)
+        self.assertEquals(Price(63400, 'BTC'), data.price)
+        self.assertEquals(Quantity(15, 'MC'), data.quantity)
         self.assertEquals(Timestamp(1462224447.117), data.timestamp)
 
 

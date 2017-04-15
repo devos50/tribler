@@ -1,5 +1,6 @@
 import unittest
 
+from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.transaction_repository import TransactionRepository, MemoryTransactionRepository
 from Tribler.community.market.core.transaction import TransactionNumber, TransactionId, Transaction
 from Tribler.community.market.core.message import TraderId
@@ -16,7 +17,8 @@ class TransactionRepositoryTestSuite(unittest.TestCase):
         # Object creation
         self.transaction_repository = TransactionRepository()
         self.transaction_id = TransactionId(TraderId("0"), TransactionNumber("1"))
-        self.transaction = Transaction(self.transaction_id, TraderId("1"), Price(100), Quantity(30), Timeout(0.0), Timestamp(0.0))
+        self.transaction = Transaction(self.transaction_id, TraderId("1"), Price(100, 'BTC'), Quantity(30, 'MC'),
+                                       OrderId(TraderId("0"), OrderNumber("1")), Timeout(0.0), Timestamp(0.0))
 
     def test_abstraction(self):
         # Test for abstract functions
@@ -35,7 +37,8 @@ class MemoryTransactionRepositoryTestSuite(unittest.TestCase):
         # Object creation
         self.memory_transaction_repository = MemoryTransactionRepository("0")
         self.transaction_id = TransactionId(TraderId("0"), TransactionNumber("1"))
-        self.transaction = Transaction(self.transaction_id, TraderId("2"), Price(100), Quantity(30), Timeout(0.0), Timestamp(0.0))
+        self.transaction = Transaction(self.transaction_id, TraderId("2"), Price(100, 'BTC'), Quantity(30, 'MC'),
+                                       OrderId(TraderId("0"), OrderNumber("1")), Timeout(0.0), Timestamp(0.0))
 
     def test_find_by_id(self):
         # Test for find by id

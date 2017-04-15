@@ -17,10 +17,10 @@ class SideTestSuite(unittest.TestCase):
         # Object creation
 
         self.tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                         OrderId(TraderId('0'), OrderNumber("order_number")), Price(400), Quantity(30),
+                         OrderId(TraderId('0'), OrderNumber("order_number")), Price(400, 'BTC'), Quantity(30, 'MC'),
                          Timeout(float("inf")), Timestamp(float("inf")), True)
         self.tick2 = Tick(MessageId(TraderId('1'), MessageNumber('message_number')),
-                          OrderId(TraderId('1'), OrderNumber("order_number")), Price(800), Quantity(30),
+                          OrderId(TraderId('1'), OrderNumber("order_number")), Price(800, 'BTC'), Quantity(30, 'MC'),
                           Timeout(float("inf")), Timestamp(float("inf")), True)
         self.side = Side()
 
@@ -32,8 +32,8 @@ class SideTestSuite(unittest.TestCase):
         self.side.insert_tick(self.tick)
         self.side.insert_tick(self.tick2)
 
-        self.assertEquals('30\t@\t800.000000\n', str(self.side.max_price_list))
-        self.assertEquals(Price(800), self.side.max_price)
+        self.assertEquals('30.000000 MC\t@\t800.000000 BTC\n', str(self.side.max_price_list))
+        self.assertEquals(Price(800, 'BTC'), self.side.max_price)
 
     def test_min_price(self):
         # Test min price (list)
@@ -43,8 +43,8 @@ class SideTestSuite(unittest.TestCase):
         self.side.insert_tick(self.tick)
         self.side.insert_tick(self.tick2)
 
-        self.assertEquals('30\t@\t400.000000\n', str(self.side.min_price_list))
-        self.assertEquals(Price(400), self.side.min_price)
+        self.assertEquals('30.000000 MC\t@\t400.000000 BTC\n', str(self.side.min_price_list))
+        self.assertEquals(Price(400, 'BTC'), self.side.min_price)
 
     def test_insert_tick(self):
         # Test insert tick
