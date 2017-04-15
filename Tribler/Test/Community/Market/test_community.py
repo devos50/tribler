@@ -7,7 +7,7 @@ from twisted.python.threadable import registerAsIOThread
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.conversion import MarketConversion
-from Tribler.community.market.core.bitcoin_address import BitcoinAddress
+from Tribler.community.market.core.wallet_address import BitcoinAddress
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.price import Price

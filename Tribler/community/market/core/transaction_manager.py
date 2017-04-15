@@ -67,13 +67,6 @@ class TransactionManager(object):
 
         return payment_message
 
-    def create_bitcoin_payment(self, message_id, transaction, price, txid):
-        bitcoin_payment = BitcoinPayment(message_id, transaction.transaction_id, price, txid, Timestamp.now())
-        transaction.add_payment(bitcoin_payment)
-        self.transaction_repository.update(transaction)
-
-        return bitcoin_payment
-
     def find_by_id(self, transaction_id):
         """
         :param transaction_id: The transaction id to look for

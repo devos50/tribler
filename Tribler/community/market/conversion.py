@@ -4,6 +4,7 @@ from math import ceil
 
 from Tribler.Core.Utilities.encoding import encode, decode
 from Tribler.community.market.core.payment_id import PaymentId
+from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.wallet import ASSET_MAP, INV_ASSET_MAP
 from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.conversion import BinaryConversion
@@ -223,7 +224,8 @@ class MarketConversion(BinaryConversion):
 
     def _decode_wallet_info(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, TraderId, TransactionNumber, str, str, Timestamp])
+                                    [TraderId, MessageNumber, TraderId, TransactionNumber,
+                                     WalletAddress, WalletAddress, Timestamp])
 
     def _encode_payment(self, message):
         payload = message.payload
@@ -231,7 +233,7 @@ class MarketConversion(BinaryConversion):
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
             str(payload.transaction_number), float(payload.transferee_quantity),
             int(payload.transferee_quantity.int_wallet_id), float(payload.transferee_price),
-            int(payload.transferee_price.int_wallet_id), payload.address_from, payload.address_to,
+            int(payload.transferee_price.int_wallet_id), str(payload.address_from), str(payload.address_to),
             str(payload.payment_id), float(payload.timestamp)
         ))
         return packet,
@@ -239,4 +241,4 @@ class MarketConversion(BinaryConversion):
     def _decode_payment(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, TraderId, TransactionNumber, Quantity, Price,
-                                     str, str, PaymentId, Timestamp])
+                                     WalletAddress, WalletAddress, PaymentId, Timestamp])

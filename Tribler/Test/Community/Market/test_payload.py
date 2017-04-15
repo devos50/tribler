@@ -1,6 +1,5 @@
 import unittest
 
-from Tribler.community.market.core.bitcoin_address import BitcoinAddress
 from Tribler.community.market.core.message import TraderId, MessageNumber
 from Tribler.community.market.core.order import OrderNumber
 from Tribler.community.market.core.price import Price

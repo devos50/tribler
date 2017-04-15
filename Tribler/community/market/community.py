@@ -7,6 +7,7 @@ from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY
     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.payment_id import PaymentId
+from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
 from Tribler.community.market.wallet.wallet import InsufficientFunds
 from Tribler.dispersy.authentication import MemberAuthentication
@@ -276,11 +277,11 @@ class MarketCommunity(Community):
         Return a tuple of incoming and outgoing payment address of an order.
         """
         if order.is_ask():
-            return self.wallets[order.price.wallet_id].get_address(),\
-                   self.wallets[order.total_quantity.wallet_id].get_address()
+            return WalletAddress(self.wallets[order.price.wallet_id].get_address()),\
+                   WalletAddress(self.wallets[order.total_quantity.wallet_id].get_address())
         else:
-            return self.wallets[order.total_quantity.wallet_id].get_address(),\
-                   self.wallets[order.price.wallet_id].get_address()
+            return WalletAddress(self.wallets[order.total_quantity.wallet_id].get_address()), \
+                   WalletAddress(self.wallets[order.price.wallet_id].get_address())
 
     def check_history(self, message):
         """
@@ -914,7 +915,7 @@ class MarketCommunity(Community):
         # TODO this should be refactored to the MultichainWallet
         if isinstance(wallet, MultichainWallet):
             candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
-            member = self.dispersy.get_member(public_key=b64decode(transaction.partner_incoming_address))
+            member = self.dispersy.get_member(public_key=b64decode(str(transaction.partner_incoming_address)))
             candidate.associate(member)
             transfer_deferred = wallet.transfer(float(transfer_amount), candidate)
         else:

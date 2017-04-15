@@ -1,5 +1,5 @@
 from Tribler.community.market.core.payment_id import PaymentId
-from bitcoin_address import BitcoinAddress
+from Tribler.community.market.core.wallet_address import WalletAddress
 from message import MessageId, Message, TraderId, MessageNumber
 from price import Price
 from quantity import Quantity
@@ -15,8 +15,8 @@ class Payment(Message):
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
         assert isinstance(transferee_quantity, Quantity), type(transferee_quantity)
         assert isinstance(transferee_price, Price), type(transferee_price)
-        assert isinstance(address_from, str), type(address_from)
-        assert isinstance(address_to, str), type(address_to)
+        assert isinstance(address_from, WalletAddress), type(address_from)
+        assert isinstance(address_to, WalletAddress), type(address_to)
         assert isinstance(payment_id, PaymentId), type(payment_id)
 
         super(Payment, self).__init__(message_id, timestamp)
@@ -66,8 +66,8 @@ class Payment(Message):
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
         assert hasattr(data, 'transferee_quantity'), isinstance(data.transferee_quantity, Quantity)
         assert hasattr(data, 'transferee_price'), isinstance(data.transferee_price, Price)
-        assert hasattr(data, 'address_from'), isinstance(data.address_from, str)
-        assert hasattr(data, 'address_to'), isinstance(data.address_to, str)
+        assert hasattr(data, 'address_from'), isinstance(data.address_from, WalletAddress)
+        assert hasattr(data, 'address_to'), isinstance(data.address_to, WalletAddress)
         assert hasattr(data, 'payment_id'), isinstance(data.payment_id, PaymentId)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
 

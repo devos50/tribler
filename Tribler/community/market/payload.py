@@ -1,4 +1,5 @@
 from Tribler.community.market.core.payment_id import PaymentId
+from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.dispersy.payload import Payload, IntroductionRequestPayload
 
 from core.message import TraderId, MessageNumber
@@ -262,8 +263,8 @@ class WalletInfoPayload(TransactionPayload):
     class Implementation(TransactionPayload.Implementation):
         def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number,
                      incoming_address, outgoing_address, timestamp):
-            assert isinstance(incoming_address, str), type(incoming_address)
-            assert isinstance(outgoing_address, str), type(outgoing_address)
+            assert isinstance(incoming_address, WalletAddress), type(incoming_address)
+            assert isinstance(outgoing_address, WalletAddress), type(outgoing_address)
             super(WalletInfoPayload.Implementation, self).__init__(meta, trader_id, message_number,
                                                                    transaction_trader_id, transaction_number, timestamp)
             self._incoming_address = incoming_address
@@ -284,8 +285,8 @@ class PaymentPayload(TransactionPayload):
                      transferee_quantity, transferee_price, address_from, address_to, payment_id, timestamp):
             assert isinstance(transferee_quantity, Quantity), type(transferee_quantity)
             assert isinstance(transferee_price, Price), type(transferee_price)
-            assert isinstance(address_from, str), type(address_from)
-            assert isinstance(address_to, str), type(address_to)
+            assert isinstance(address_from, WalletAddress), type(address_from)
+            assert isinstance(address_to, WalletAddress), type(address_to)
             assert isinstance(payment_id, PaymentId), type(payment_id)
             super(PaymentPayload.Implementation, self).__init__(meta, trader_id, message_number,
                                                                 transaction_trader_id, transaction_number, timestamp)
