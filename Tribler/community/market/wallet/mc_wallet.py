@@ -68,3 +68,6 @@ class MultichainWallet(Wallet):
     def get_transactions(self):
         # TODO(Martijn): implement this
         return []
+
+    def min_unit(self):
+        return 1

@@ -36,3 +36,6 @@ class Wallet(TaskManager):
 
     def get_transactions(self):
         raise NotImplementedError("Please implement this method.")
+
+    def min_unit(self):
+        raise NotImplementedError("Please implement this method.")

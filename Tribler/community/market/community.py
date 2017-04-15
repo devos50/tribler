@@ -803,6 +803,11 @@ class MarketCommunity(Community):
         if order:
             transaction = self.transaction_manager.create_from_accepted_trade(accepted_trade)
 
+            price_wallet_id = accepted_trade.price.wallet_id
+            quantity_wallet_id = accepted_trade.quantity.wallet_id
+            transaction.determine_payments(self.wallets[price_wallet_id].min_unit(),
+                                           self.wallets[quantity_wallet_id].min_unit())
+
             start_transaction = StartTransaction(self.order_book.message_repository.next_identity(),
                                                  transaction.transaction_id, order.order_id,
                                                  accepted_trade.recipient_order_id, accepted_trade.price,
@@ -836,6 +841,11 @@ class MarketCommunity(Community):
 
             if order:
                 transaction = self.transaction_manager.create_from_start_transaction(start_transaction, order)
+
+                price_wallet_id = start_transaction.price.wallet_id
+                quantity_wallet_id = start_transaction.quantity.wallet_id
+                transaction.determine_payments(self.wallets[price_wallet_id].min_unit(),
+                                               self.wallets[quantity_wallet_id].min_unit())
 
                 try:
                     order.add_trade(start_transaction.order_id, start_transaction.quantity)

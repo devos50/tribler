@@ -8,23 +8,28 @@ from Tribler.community.market.core.quantity import Quantity
 class IncrementalPaymentManagerTests(unittest.TestCase):
     """Incremental payment manager test cases."""
 
-    def test_single_payment(self):
-        pay_list = IncrementalManager.determine_incremental_payments_list(Price(1), Quantity(1))
-        self.assertEqual(pay_list, [(Quantity(1), Price(1))])
+    def test_ic_1(self):
+        pay_list = IncrementalManager.determine_incremental_payments_list(Price(1, 'BTC'), Quantity(1, 'MC'), 1, 1)
+        self.assertEqual(pay_list, [(Quantity(1, 'MC'), Price(1, 'BTC'))])
 
-    def test_payment_unround(self):
-        pay_list = IncrementalManager.determine_incremental_payments_list(Price(1), Quantity(2))
-        self.assertEqual(pay_list, [(Quantity(1), Price(1)), (Quantity(1), Price(1))])
+    def test_ic_2(self):
+        pay_list = IncrementalManager.determine_incremental_payments_list(Price(1, 'BTC'), Quantity(1, 'MC'),
+                                                                          0.00001, 1)
+        self.assertEqual(pay_list, [(Quantity(1, 'MC'), Price(1, 'BTC'))])
 
-    def test_payment_max(self):
-        pay_list = IncrementalManager.determine_incremental_payments_list(Price(300), Quantity(2000))
-        self.assertEqual(len(pay_list), IncrementalManager.MAX_TRANSACTIONS)
-        self.assertEqual(pay_list[-1], (Quantity(200), Price(200 * 300)))
+    def test_ic_3(self):
+        pay_list = IncrementalManager.determine_incremental_payments_list(Price(1, 'BTC'), Quantity(1, 'MC'),
+                                                                          1, 0.00001)
+        self.assertEqual(pay_list, [(Quantity(1, 'MC'), Price(1, 'BTC'))])
 
-    def test_payment_last_not_fit(self):
-        pay_list = IncrementalManager.determine_incremental_payments_list(Price(1), Quantity(12))
-        self.assertEqual(len(pay_list), IncrementalManager.MAX_TRANSACTIONS)
-        self.assertEqual(pay_list[-1], (Quantity(3), Price(3)))
+    def test_ic_4(self):
+        pay_list = IncrementalManager.determine_incremental_payments_list(Price(2, 'BTC'), Quantity(2, 'MC'), 1, 1)
+        self.assertEqual(pay_list, [(Quantity(1, 'MC'), Price(1, 'BTC')), (Quantity(1, 'MC'), Price(1, 'BTC'))])
+
+    def test_ic_5(self):
+        pay_list = IncrementalManager.determine_incremental_payments_list(Price(10, 'BTC'), Quantity(10, 'MC'), 1, 1)
+        self.assertEqual(pay_list, [(Quantity(1, 'MC'), Price(1, 'BTC')), (Quantity(2, 'MC'), Price(2, 'BTC')),
+                                    (Quantity(4, 'MC'), Price(4, 'BTC')), (Quantity(3, 'MC'), Price(3, 'BTC'))])
 
 if __name__ == '__main__':
     unittest.main()
