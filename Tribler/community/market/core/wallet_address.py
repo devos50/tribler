@@ -14,5 +14,8 @@ class WalletAddress(object):
 
         self._wallet_address = wallet_address
 
+    def __eq__(self, other):
+        return str(other) == self._wallet_address
+
     def __str__(self):
         return "%s" % self._wallet_address

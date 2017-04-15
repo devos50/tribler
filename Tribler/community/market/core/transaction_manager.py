@@ -42,7 +42,7 @@ class TransactionManager(object):
     def create_from_start_transaction(self, start_transaction, order):
         """
         :type start_transaction: StartTransaction
-        :type timeout: Timeout
+        :type order: Order
         :rtype: Transaction
         """
         assert isinstance(start_transaction, StartTransaction), type(start_transaction)

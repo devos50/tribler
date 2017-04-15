@@ -3,7 +3,9 @@ from pricelevel import PriceLevel
 
 
 class PriceLevelList(object):
-    "Sorted doubly linked dictionary implementation."
+    """
+    Sorted doubly linked dictionary implementation.
+    """
 
     def __init__(self):
         super(PriceLevelList, self).__init__()

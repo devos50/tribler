@@ -72,6 +72,7 @@ class PriceLevel(object):
         :type tick: TickEntry
         """
         assert isinstance(tick, TickEntry), type(tick)
+        assert tick.quantity.wallet_id == self._quantity_wallet_id
 
         if self._length == 0:  # Add the first tick
             tick._prev_tick = None

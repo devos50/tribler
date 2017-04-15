@@ -142,8 +142,12 @@ class Transaction(object):
         self.partner_incoming_address = None
         self.partner_outgoing_address = None
 
-        self._payment_list = IncrementalManager.determine_incremental_payments_list(price, quantity)
+        self._payment_list = []
         self._current_payment = 0
+
+    def determine_payments(self, min_unit_price, min_unit_quantity):
+        self._payment_list = IncrementalManager.determine_incremental_payments_list(self._price, self._quantity,
+                                                                                    min_unit_price, min_unit_quantity)
 
     @classmethod
     def from_accepted_trade(cls, accepted_trade, transaction_id):
@@ -324,7 +328,7 @@ class StartTransaction(Message):
         :rtype: StartTransaction
         """
         assert hasattr(data, 'trader_id'), isinstance(data.trader_id, TraderId)
-        assert hasattr(data, 'message_number'), isinstance(data.message_message_number, MessageNumber)
+        assert hasattr(data, 'message_number'), isinstance(data.message_number, MessageNumber)
         assert hasattr(data, 'transaction_trader_id'), isinstance(data.transaction_trader_id, TraderId)
         assert hasattr(data, 'transaction_number'), isinstance(data.transaction_number, TransactionNumber)
         assert hasattr(data, 'order_trader_id'), isinstance(data.order_trader_id, TraderId)

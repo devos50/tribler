@@ -238,29 +238,27 @@ class OrderBook(TaskManager):
         """
         return self._bids
 
-    @property
-    def bid_price(self):
+    def get_bid_price(self, price_wallet_id, quantity_wallet_id):
         """
         Return the price an ask needs to have to make a trade
         :rtype: Price
         """
-        return self._bids.max_price
+        return self._bids.get_max_price(price_wallet_id, quantity_wallet_id)
 
-    @property
-    def ask_price(self):
+    def get_ask_price(self, price_wallet_id, quantity_wallet_id):
         """
         Return the price a bid needs to have to make a trade
         :rtype: Price
         """
-        return self._asks.min_price
+        return self._asks.get_min_price(price_wallet_id, quantity_wallet_id)
 
-    @property
-    def bid_ask_spread(self):
+    def get_bid_ask_spread(self, price_wallet_id, quantity_wallet_id):
         """
         Return the spread between the bid and the ask price
         :rtype: Price
         """
-        return self.ask_price - self.bid_price
+        return self.get_ask_price(price_wallet_id, quantity_wallet_id) - \
+               self.get_bid_price(price_wallet_id, quantity_wallet_id)
 
     @property
     def mid_price(self):
@@ -268,7 +266,7 @@ class OrderBook(TaskManager):
         Return the price in between the bid and the ask price
         :rtype: Price
         """
-        return Price((int(self.ask_price) + int(self.bid_price)) / 2)
+        return Price((int(self.ask_price) + int(self.bid_price)) / 2, self.ask_price.wallet_id)
 
     def bid_side_depth(self, price):
         """
@@ -354,21 +352,19 @@ class OrderBook(TaskManager):
         else:
             return self.bid_relative_price(tick.price)
 
-    @property
-    def bid_price_level(self):
+    def get_bid_price_level(self, price_wallet_id, quantity_wallet_id):
         """
         Return the price level that an ask has to match to make a trade
         :rtype: PriceLevel
         """
-        return self._bids.max_price_list
+        return self._bids.get_max_price_list(price_wallet_id, quantity_wallet_id)
 
-    @property
-    def ask_price_level(self):
+    def get_ask_price_level(self, price_wallet_id, quantity_wallet_id):
         """
         Return the price level that a bid has to match to make a trade
         :rtype: PriceLevel
         """
-        return self._asks.min_price_list
+        return self._asks.get_min_price_list(price_wallet_id, quantity_wallet_id)
 
     def get_order_ids(self):
         """
@@ -378,13 +374,15 @@ class OrderBook(TaskManager):
         """
         ids = []
 
-        for _, price_level in self.asks.price_level_list.items():
-            for ask in price_level:
-                ids.append(ask.tick.order_id)
+        for price_wallet_id, quantity_wallet_id in self.asks.get_price_level_list_wallets():
+            for _, price_level in self.asks.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
+                for ask in price_level:
+                    ids.append(ask.tick.order_id)
 
-        for _, price_level in self.bids.price_level_list.items():
-            for bid in price_level:
-                ids.append(bid.tick.order_id)
+        for price_wallet_id, quantity_wallet_id in self.asks.get_price_level_list_wallets():
+            for _, price_level in self.bids.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
+                for bid in price_level:
+                    ids.append(bid.tick.order_id)
 
         return sorted(ids)
 

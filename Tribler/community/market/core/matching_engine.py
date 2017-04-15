@@ -62,11 +62,12 @@ class PriceTimeStrategy(MatchingStrategy):
         proposed_trades = []
         quantity_to_trade = order.available_quantity
 
-        if order.price <= self.order_book.bid_price and quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
+        if order.price <= self.order_book.get_bid_price(order.price.wallet_id, order.total_quantity.wallet_id) \
+                and quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
             # Scan the price levels in the order book
             quantity_to_trade, proposed_trades = self._search_for_quantity_in_order_book(
-                self.order_book.bid_price,
-                self.order_book.bid_price_level,
+                self.order_book.get_bid_price(order.price.wallet_id, order.total_quantity.wallet_id),
+                self.order_book.get_bid_price_level(order.price.wallet_id, order.total_quantity.wallet_id),
                 quantity_to_trade,
                 order)
         return quantity_to_trade, proposed_trades
@@ -75,11 +76,12 @@ class PriceTimeStrategy(MatchingStrategy):
         proposed_trades = []
         quantity_to_trade = order.available_quantity
 
-        if order.price >= self.order_book.ask_price and quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
+        if order.price >= self.order_book.get_ask_price(order.price.wallet_id, order.total_quantity.wallet_id) \
+                and quantity_to_trade > Quantity(0, quantity_to_trade.wallet_id):
             # Scan the price levels in the order book
             quantity_to_trade, proposed_trades = self._search_for_quantity_in_order_book(
-                self.order_book.ask_price,
-                self.order_book.ask_price_level,
+                self.order_book.get_ask_price(order.price.wallet_id, order.total_quantity.wallet_id),
+                self.order_book.get_ask_price_level(order.price.wallet_id, order.total_quantity.wallet_id),
                 quantity_to_trade,
                 order)
         return quantity_to_trade, proposed_trades
@@ -137,7 +139,8 @@ class PriceTimeStrategy(MatchingStrategy):
         # Select the next price level
         try:
             # Search the next price level
-            next_price, next_price_level = self.order_book.bids.price_level_list.prev_item(price)
+            next_price, next_price_level = self.order_book.bids.\
+                get_price_level_list(price.wallet_id, quantity_to_trade.wallet_id).prev_item(price)
         except IndexError:
             return quantity_to_trade, []
 
@@ -156,7 +159,8 @@ class PriceTimeStrategy(MatchingStrategy):
         # Select the next price level
         try:
             # Search the next price level
-            next_price, next_price_level = self.order_book.asks.price_level_list.succ_item(price)
+            next_price, next_price_level = self.order_book.asks.\
+                get_price_level_list(price.wallet_id, quantity_to_trade.wallet_id).succ_item(price)
         except IndexError:
             return quantity_to_trade, []
 
