@@ -4,6 +4,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction
+from PyQt5.QtWidgets import QSizePolicy
+from PyQt5.QtWidgets import QSpacerItem
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
@@ -12,7 +14,11 @@ from TriblerGUI.dialogs.newmarketorderdialog import NewMarketOrderDialog
 from TriblerGUI.tribler_action_menu import TriblerActionMenu
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
+from TriblerGUI.widgets.marketcurrencybox import MarketCurrencyBox
 from TriblerGUI.widgets.tickwidgetitem import TickWidgetItem
+
+
+wallet_name_map = {'BTC': 'Bitcoin', 'PP': 'PayPal', 'MC': 'Reputation', 'DUM1': 'Dummy 1', 'DUM2': 'Dummy 2'}
 
 
 class MarketPage(QWidget):
@@ -29,6 +35,7 @@ class MarketPage(QWidget):
         self.initialized = False
         self.wallets = []
         self.chosen_wallets = None
+        self.wallet_widgets = {}
 
         self.bids = []
         self.asks = []
@@ -74,18 +81,6 @@ class MarketPage(QWidget):
     def on_wallets(self, wallets):
         wallets = wallets["wallets"]
 
-        if 'MC' in wallets and wallets["MC"]["created"]:
-            self.window().net_score_label.setText("%s" % wallets["MC"]["balance"]["net"])
-
-        if 'BTC' in wallets and wallets["BTC"]["created"]:
-            self.window().btc_amount_label.setText("%s" % wallets["BTC"]["balance"]["confirmed"])
-
-        if 'DUM1' in wallets and wallets["DUM1"]["created"]:
-            self.window().dum1_amount_label.setText("%s" % wallets["DUM1"]["balance"]["total"])
-
-        if 'DUM2' in wallets and wallets["DUM2"]["created"]:
-            self.window().dum2_amount_label.setText("%s" % wallets["DUM2"]["balance"]["total"])
-
         currency_wallets = ['BTC']
         total_currency_wallets = 0
         for wallet_id in wallets.keys():
@@ -104,6 +99,30 @@ class MarketPage(QWidget):
         if self.chosen_wallets is None:
             self.chosen_wallets = (self.wallets[0], self.wallets[1])
             self.update_button_texts()
+
+        for wallet_id, wallet in wallets.iteritems():
+            if not wallet['created']:
+                return
+
+            if not wallet_id in self.wallet_widgets:
+                wallet_widget = MarketCurrencyBox(self.window().market_header_widget, wallet_name_map[wallet_id])
+                self.window().market_header_widget.layout().insertWidget(4, wallet_widget)
+                wallet_widget.setFixedWidth(100)
+                wallet_widget.setFixedHeight(34)
+                wallet_widget.show()
+                self.wallet_widgets[wallet_id] = wallet_widget
+
+                spacer = QSpacerItem(10, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
+                self.window().market_header_widget.layout().insertSpacerItem(5, spacer)
+
+            # The total balance keys might be different between wallet
+            balance_key = "total"
+            if wallet_id == 'MC':
+                balance_key = 'net'
+            elif wallet_id == 'BTC':
+                balance_key = 'confirmed'
+
+            self.wallet_widgets[wallet_id].update_with_amount(wallet['balance'][balance_key])
 
         self.load_asks()
         self.load_bids()
