@@ -10,12 +10,14 @@ class NewMarketOrderDialog(DialogContainer):
 
     button_clicked = pyqtSignal(int)
 
-    def __init__(self, parent, is_ask, wallet_id_1, wallet_id_2):
+    def __init__(self, parent, is_ask, price_type, quantity_type):
         DialogContainer.__init__(self, parent)
 
         self.is_ask = is_ask
         self.price = -1
+        self.price_type = price_type
         self.quantity = -1
+        self.quantity_type = quantity_type
 
         uic.loadUi(get_ui_file_path('newmarketorderdialog.ui'), self.dialog_widget)
 
@@ -23,12 +25,12 @@ class NewMarketOrderDialog(DialogContainer):
         self.dialog_widget.error_text_label.hide()
 
         if is_ask:
-            self.dialog_widget.new_order_title_label.setText('Sell %s for %s' % (wallet_id_1, wallet_id_2))
+            self.dialog_widget.new_order_title_label.setText('Sell %s for %s' % (quantity_type, price_type))
         else:
-            self.dialog_widget.new_order_title_label.setText('Buy %s for %s' % (wallet_id_1, wallet_id_2))
+            self.dialog_widget.new_order_title_label.setText('Buy %s for %s' % (quantity_type, price_type))
 
-        self.dialog_widget.quantity_label.setText("Quantity (%s):" % wallet_id_1)
-        self.dialog_widget.price_label.setText("Price (%s):" % wallet_id_2)
+        self.dialog_widget.quantity_label.setText("Quantity (%s):" % quantity_type)
+        self.dialog_widget.price_label.setText("Price (%s):" % price_type)
 
         self.dialog_widget.create_button.clicked.connect(self.on_create_clicked)
         self.dialog_widget.cancel_button.clicked.connect(lambda: self.button_clicked.emit(0))

@@ -32,6 +32,7 @@ from Tribler.Core.simpledefs import (NTFY_DISPERSY, NTFY_STARTED, NTFY_TORRENTS,
                                      NTFY_FINISHED, DLSTATUS_DOWNLOADING, DLSTATUS_STOPPED_ON_ERROR, NTFY_ERROR,
                                      DLSTATUS_SEEDING, NTFY_TORRENT)
 from Tribler.community.market.wallet.btc_wallet import BitcoinWallet
+from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
 from Tribler.community.tradechain.community import TradeChainCommunity
 from Tribler.community.tunnel.tunnel_community import TunnelSettings
@@ -248,6 +249,13 @@ class TriblerLaunchMany(TaskManager):
 
             mc_wallet = MultichainWallet(mc_community)
             wallets[mc_wallet.get_identifier()] = mc_wallet
+
+            # For debugging purposes, we create dummy wallets
+            dummy_wallet1 = DummyWallet1()
+            wallets[dummy_wallet1.get_identifier()] = dummy_wallet1
+
+            dummy_wallet2 = DummyWallet2()
+            wallets[dummy_wallet2.get_identifier()] = dummy_wallet2
 
             from Tribler.community.market.community import MarketCommunity
             if self.session.get_enable_multichain():

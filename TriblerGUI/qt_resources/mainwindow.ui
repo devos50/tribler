@@ -9351,9 +9351,119 @@ background-color: transparent;
                                             font-weight: bold;</string>
                </property>
                <property name="text">
-                <string>Trust market</string>
+                <string>Market</string>
                </property>
               </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_67">
+               <property name="toolTip">
+                <string>Dummy 1</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">font-weight: bold; font-size: 14px;</string>
+               </property>
+               <property name="text">
+                <string>DUM1</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_88">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="dum1_amount_label">
+               <property name="styleSheet">
+                <string notr="true">font-weight: bold; font-size: 14px;</string>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_87">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_65">
+               <property name="toolTip">
+                <string>Dummy 2</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">font-weight: bold; font-size: 14px;</string>
+               </property>
+               <property name="text">
+                <string>DUM2</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_74">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Minimum</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>4</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="dum2_amount_label">
+               <property name="styleSheet">
+                <string notr="true">font-weight: bold; font-size: 14px;</string>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_73">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Minimum</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
              </item>
              <item>
               <widget class="QToolButton" name="toolButton_4">
@@ -9368,6 +9478,9 @@ background-color: transparent;
                  <width>28</width>
                  <height>28</height>
                 </size>
+               </property>
+               <property name="toolTip">
+                <string>Tribler reputation</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">border: none;</string>
@@ -9426,6 +9539,9 @@ background-color: transparent;
                  <width>26</width>
                  <height>28</height>
                 </size>
+               </property>
+               <property name="toolTip">
+                <string>Bitcoin</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">border: none;</string>
@@ -9615,16 +9731,23 @@ font-size: 12px;
            <widget class="QWidget" name="widget_39" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_51">
              <item>
+              <widget class="QLabel" name="label_63">
+               <property name="text">
+                <string>Currency:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QToolButton" name="market_currency_type_button">
                <property name="minimumSize">
                 <size>
-                 <width>90</width>
+                 <width>100</width>
                  <height>28</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>90</width>
+                 <width>100</width>
                  <height>28</height>
                 </size>
                </property>
@@ -9634,7 +9757,7 @@ font-size: 12px;
                <property name="styleSheet">
                 <string notr="true">background: none;
 color: white;
-border-radius: 4px;
+border-radius: 14px;
 border: 1px solid white;
 font-size: 12px;</string>
                </property>
@@ -9744,7 +9867,8 @@ font-size: 12px;</string>
                        <item>
                         <widget class="QLabel" name="label_45">
                          <property name="styleSheet">
-                          <string notr="true">padding-left: 10px;</string>
+                          <string notr="true">padding-left: 10px;
+font-weight: bold;</string>
                          </property>
                          <property name="text">
                           <string>BUYING</string>
@@ -9755,7 +9879,7 @@ font-size: 12px;</string>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QTreeWidget" name="asks_list">
+                     <widget class="QTreeWidget" name="bids_list">
                       <property name="styleSheet">
                        <string notr="true">QTreeWidget { border-right: 1px solid #444; }</string>
                       </property>
@@ -9840,7 +9964,7 @@ font-size: 12px;</string>
                          <property name="styleSheet">
                           <string notr="true">background: none;
 color: white;
-border-radius: 4px;
+border-radius: 14px;
 border: 1px solid white;
 font-size: 12px;</string>
                          </property>
@@ -9910,7 +10034,8 @@ font-size: 12px;</string>
                        <item>
                         <widget class="QLabel" name="label_46">
                          <property name="styleSheet">
-                          <string notr="true">padding-left: 10px</string>
+                          <string notr="true">padding-left: 10px;
+font-weight: bold;</string>
                          </property>
                          <property name="text">
                           <string>SELLING</string>
@@ -9921,7 +10046,7 @@ font-size: 12px;</string>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QTreeWidget" name="bids_list">
+                     <widget class="QTreeWidget" name="asks_list">
                       <property name="indentation">
                        <number>0</number>
                       </property>
@@ -9997,7 +10122,7 @@ font-size: 12px;</string>
                          <property name="styleSheet">
                           <string notr="true">background: none;
 color: white;
-border-radius: 4px;
+border-radius: 14px;
 border: 1px solid white;
 font-size: 12px;</string>
                          </property>
@@ -10090,17 +10215,31 @@ font-size: 12px;</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="2" column="0">
-                     <widget class="QLabel" name="label_55">
+                    <item row="2" column="1">
+                     <widget class="QLabel" name="market_detail_price_label">
                       <property name="text">
-                       <string>Credits</string>
+                       <string/>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="1">
+                     <widget class="QLabel" name="market_detail_quantity_label">
+                      <property name="text">
+                       <string/>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QLabel" name="label_54">
+                      <property name="text">
+                       <string>Price</string>
                       </property>
                      </widget>
                     </item>
                     <item row="3" column="0">
-                     <widget class="QLabel" name="label_54">
+                     <widget class="QLabel" name="label_55">
                       <property name="text">
-                       <string>Price (BTC)</string>
+                       <string>Quantity</string>
                       </property>
                      </widget>
                     </item>
@@ -10108,20 +10247,6 @@ font-size: 12px;</string>
                      <widget class="QLabel" name="label_56">
                       <property name="text">
                        <string>Time created</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="2" column="1">
-                     <widget class="QLabel" name="market_detail_credits_label">
-                      <property name="text">
-                       <string/>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="3" column="1">
-                     <widget class="QLabel" name="market_detail_price_label">
-                      <property name="text">
-                       <string/>
                       </property>
                      </widget>
                     </item>

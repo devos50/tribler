@@ -139,8 +139,10 @@ class Tick(Message):
             "trader_id": str(self.order_id.trader_id),
             "order_id": str(self.order_id.order_number),
             "message_id": str(self.message_id),
-            "price": str(self.price),
-            "quantity": int(self.quantity),
+            "price": float(self.price),
+            "price_type": self.price.wallet_id,
+            "quantity": float(self.quantity),
+            "quantity_type": self.quantity.wallet_id,
             "timeout": str(self.timeout),
             "timestamp": str(self.timestamp)
         }

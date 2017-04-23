@@ -340,9 +340,9 @@ class MarketCommunity(Community):
         Create an ask order (sell order)
 
         :param price: The price for the order in btc
-        :param price_wallet_id: The type of the price (i.e. eur, btc)
+        :param price_wallet_id: The type of the price (i.e. EUR, BTC)
         :param quantity: The quantity of the order
-        :param price_wallet_id: The type of the price (i.e. eur, btc)
+        :param price_wallet_id: The type of the price (i.e. EUR, BTC)
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
         :type price_wallet_id: str
@@ -450,9 +450,9 @@ class MarketCommunity(Community):
         Create an ask order (sell order)
 
         :param price: The price for the order in btc
-        :param price_wallet_id: The type of the price (i.e. eur, btc)
+        :param price_wallet_id: The type of the price (i.e. EUR, BTC)
         :param quantity: The quantity of the order
-        :param price_wallet_id: The type of the price (i.e. eur, btc)
+        :param price_wallet_id: The type of the price (i.e. EUR, BTC)
         :param timeout: The timeout of the order, when does the order need to be timed out
         :type price: float
         :type price_wallet_id: str

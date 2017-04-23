@@ -94,3 +94,15 @@ class PriceLevelList(object):
             else:
                 items.append((price, self._price_level_dictionary[price]))
         return items
+
+    def get_ticks_list(self):
+        """
+        Returns a list describing all ticks.
+        :return: list
+        """
+        ticks_list = []
+        for _, price_level in self.items():
+            for tick in price_level:
+                ticks_list.append(tick.tick.to_dictionary())
+
+        return ticks_list

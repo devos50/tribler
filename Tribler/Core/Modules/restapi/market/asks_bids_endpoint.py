@@ -23,7 +23,10 @@ class BaseAsksBidsEndpoint(BaseMarketEndpoint):
         price = float(get_param(parameters, 'price'))
         quantity = int(get_param(parameters, 'quantity'))
 
-        return price, quantity, timeout
+        price_type = get_param(parameters, 'price_type')
+        quantity_type = get_param(parameters, 'quantity_type')
+
+        return price, price_type, quantity, quantity_type, timeout
 
 
 class AsksEndpoint(BaseAsksBidsEndpoint):
@@ -32,12 +35,7 @@ class AsksEndpoint(BaseAsksBidsEndpoint):
     """
 
     def render_GET(self, request):
-        asks = []
-        for _, price_level in self.get_market_community().order_book.asks.price_level_list.items():
-            for ask in price_level:
-                asks.append(ask.tick.to_dictionary())
-
-        return json.dumps({"asks": asks})
+        return json.dumps({"asks": self.get_market_community().order_book.asks.get_list_representation()})
 
     def render_PUT(self, request):
         parameters = http.parse_qs(request.content.read(), 1)
@@ -45,6 +43,10 @@ class AsksEndpoint(BaseAsksBidsEndpoint):
         if not has_param(parameters, 'price') or not has_param(parameters, 'quantity'):
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": "price or quantity parameter missing"})
+
+        if not has_param(parameters, 'price_type') or not has_param(parameters, 'quantity_type'):
+            request.setResponseCode(http.BAD_REQUEST)
+            return json.dumps({"error": "price_type or quantity_type parameter missing"})
 
         self.get_market_community().create_ask(*self.create_ask_bid_from_params(parameters))
         return json.dumps({"created": True})
@@ -56,12 +58,7 @@ class BidsEndpoint(BaseAsksBidsEndpoint):
     """
 
     def render_GET(self, request):
-        bids = []
-        for _, price_level in self.get_market_community().order_book.bids.price_level_list.items():
-            for bid in price_level:
-                bids.append(bid.tick.to_dictionary())
-
-        return json.dumps({"bids": bids})
+        return json.dumps({"bids": self.get_market_community().order_book.bids.get_list_representation()})
 
     def render_PUT(self, request):
         parameters = http.parse_qs(request.content.read(), 1)
@@ -69,6 +66,10 @@ class BidsEndpoint(BaseAsksBidsEndpoint):
         if not has_param(parameters, 'price') or not has_param(parameters, 'quantity'):
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": "price or quantity parameter missing"})
+
+        if not has_param(parameters, 'price_type') or not has_param(parameters, 'quantity_type'):
+            request.setResponseCode(http.BAD_REQUEST)
+            return json.dumps({"error": "price_type or quantity_type parameter missing"})
 
         self.get_market_community().create_bid(*self.create_ask_bid_from_params(parameters))
         return json.dumps({"created": True})

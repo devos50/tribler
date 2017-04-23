@@ -182,3 +182,15 @@ class Side(object):
             return self.get_price_level(self.get_min_price(price_wallet_id, quantity_wallet_id))
         else:
             return None
+
+    def get_list_representation(self):
+        """
+        Return a list describing all ticks in this side.
+        :rtype: list
+        """
+        rlist = []
+        for price_type, quantity_type in self._price_level_list_map.keys():
+            rlist.append({'price_type': price_type, 'quantity_type': quantity_type,
+                          'ticks': self._price_level_list_map[(price_type, quantity_type)].get_ticks_list()})
+
+        return rlist
