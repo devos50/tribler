@@ -7,3 +7,6 @@
 [submodule "electrum"]
 	path = electrum
 	url = https://github.com/spesmilo/electrum
+[submodule "internet-of-money"]
+	path = Tribler/internetofmoney
+	url = https://gitlab.blockchain-lab.org/internet-of-money/Internet-of-Money.git
