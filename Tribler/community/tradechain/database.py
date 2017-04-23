@@ -109,6 +109,12 @@ class TradeChainDB(Database):
         return self._get(u"WHERE public_key = ? AND sequence_number = (SELECT MAX(sequence_number) FROM trade_chain "
                          u"WHERE public_key = ?)", (buffer(public_key), buffer(public_key)))
 
+    def get_all_blocks(self):
+        """
+        Return all blocks in the database.
+        """
+        return self._getall(u"", ())
+
     def get_latest_blocks(self, public_key, limit=25):
         return self._getall(u"WHERE public_key = ? ORDER BY sequence_number DESC LIMIT ?", (buffer(public_key), limit))
 

@@ -100,6 +100,8 @@ class TradeChainCommunity(Community):
                 self.expected_intro_responses[message.candidate.sock_addr].callback(None)
                 del self.expected_intro_responses[message.candidate.sock_addr]
 
+            self.send_crawl_request(message.candidate)
+
     def wait_for_intro_of_candidate(self, candidate):
         """
         Returns a Deferred that fires when we receive an introduction response from a given candidate.
@@ -250,27 +252,12 @@ class TradeChainCommunity(Community):
             statistics["total_down"] = 0
         return statistics
 
+    def start_walking(self):
+        self.register_task("take step", LoopingCall(self.take_step)).start(5.0, now=False)
+
     @inlineCallbacks
     def unload_community(self):
         self.logger.debug("Unloading the TradeChain Community.")
         yield super(TradeChainCommunity, self).unload_community()
         # Close the persistence layer
         self.persistence.close()
-
-
-class TradeChainCommunityCrawler(TradeChainCommunity):
-    """
-    Extended TradeChainCommunity that also crawls other TradeChainCommunities.
-    It requests the chains of other TradeChains.
-    """
-
-    # Time the crawler waits between crawling a new candidate.
-    CrawlerDelay = 5.0
-
-    def on_introduction_response(self, messages):
-        super(TradeChainCommunityCrawler, self).on_introduction_response(messages)
-        for message in messages:
-            self.send_crawl_request(message.candidate)
-
-    def start_walking(self):
-        self.register_task("take step", LoopingCall(self.take_step)).start(self.CrawlerDelay, now=False)
