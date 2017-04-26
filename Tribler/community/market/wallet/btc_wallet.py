@@ -87,6 +87,9 @@ class BitcoinWallet(Wallet):
             # Run the command to open the wallet
             server.daemon(options)
 
+    def get_name(self):
+        return 'Bitcoin'
+
     def get_identifier(self):
         return 'BTC'
 
@@ -125,6 +128,8 @@ class BitcoinWallet(Wallet):
         self.open_wallet()
 
         self._logger.info("Bitcoin wallet saved in '%s'" % self.wallet.storage.path)
+
+        return succeed(None)
 
     def get_balance(self):
         """

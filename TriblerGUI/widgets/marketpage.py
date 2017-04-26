@@ -18,9 +18,6 @@ from TriblerGUI.widgets.marketcurrencybox import MarketCurrencyBox
 from TriblerGUI.widgets.tickwidgetitem import TickWidgetItem
 
 
-wallet_name_map = {'BTC': 'Bitcoin', 'PP': 'PayPal', 'MC': 'Reputation', 'DUM1': 'Dummy 1', 'DUM2': 'Dummy 2'}
-
-
 class MarketPage(QWidget):
     """
     This page displays the decentralized market in Tribler.
@@ -102,10 +99,10 @@ class MarketPage(QWidget):
 
         for wallet_id, wallet in wallets.iteritems():
             if not wallet['created']:
-                return
+                continue
 
-            if not wallet_id in self.wallet_widgets:
-                wallet_widget = MarketCurrencyBox(self.window().market_header_widget, wallet_name_map[wallet_id])
+            if wallet_id not in self.wallet_widgets:
+                wallet_widget = MarketCurrencyBox(self.window().market_header_widget, wallets[wallet_id]['name'])
                 self.window().market_header_widget.layout().insertWidget(4, wallet_widget)
                 wallet_widget.setFixedWidth(100)
                 wallet_widget.setFixedHeight(34)

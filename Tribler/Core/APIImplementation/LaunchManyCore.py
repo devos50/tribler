@@ -11,6 +11,7 @@ from glob import iglob
 from threading import Event, enumerate as enumerate_threads
 from traceback import print_exc
 
+import sys
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks, DeferredList
 from twisted.internet.task import LoopingCall
@@ -25,6 +26,7 @@ from Tribler.Core.Modules.watch_folder import WatchFolder
 from Tribler.Core.TorrentChecker.torrent_checker import TorrentChecker
 from Tribler.Core.TorrentDef import TorrentDef, TorrentDefNoMetainfo
 from Tribler.Core.Utilities.configparser import CallbackConfigParser
+from Tribler.Core.Utilities.install_dir import get_lib_path
 from Tribler.Core.Video.VideoServer import VideoServer
 from Tribler.Core.defaults import tribler_defaults
 from Tribler.Core.exceptions import DuplicateDownloadException
@@ -256,6 +258,20 @@ class TriblerLaunchMany(TaskManager):
 
             dummy_wallet2 = DummyWallet2()
             wallets[dummy_wallet2.get_identifier()] = dummy_wallet2
+
+            # Internet of Money, check whether the API is available, if not, don't create these wallets
+            try:
+                iom_dir = os.path.join(self.session.get_state_dir(), 'iom')
+                sys.path.append(os.path.join(get_lib_path(), 'internetofmoney'))
+                if not os.path.exists(iom_dir):
+                    os.makedirs(iom_dir)
+
+                # PayPal
+                from Tribler.community.market.wallet.paypal_wallet import PayPalWallet
+                paypal_wallet = PayPalWallet(iom_dir)
+                wallets[paypal_wallet.get_identifier()] = paypal_wallet
+            except ImportError:
+                self._logger.info("Internet of Money API not found")
 
             from Tribler.community.market.community import MarketCommunity
             if self.session.get_enable_multichain():

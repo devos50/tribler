@@ -18,6 +18,9 @@ class MultichainWallet(Wallet):
         self.created = True
         self.check_negative_balance = True
 
+    def get_name(self):
+        return 'Reputation'
+
     def get_identifier(self):
         return 'MC'
 

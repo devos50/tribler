@@ -56,10 +56,17 @@ class BaseDummyWallet(Wallet):
 
 class DummyWallet1(BaseDummyWallet):
 
+    def get_name(self):
+        return 'Dummy 1'
+
     def get_identifier(self):
         return 'DUM1'
 
 
 class DummyWallet2(BaseDummyWallet):
+
+    def get_name(self):
+        return 'Dummy 2'
+
     def get_identifier(self):
         return 'DUM2'

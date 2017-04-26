@@ -1015,7 +1015,7 @@ background-color: #e67300;
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>13</number>
+         <number>15</number>
         </property>
         <widget class="HomePage" name="home_page">
          <layout class="QVBoxLayout" name="verticalLayout">
@@ -10469,7 +10469,7 @@ background-color: #333;
                 <cursorShape>PointingHandCursor</cursorShape>
                </property>
                <property name="text">
-                <string>Tribler reputation</string>
+                <string>Reputation</string>
                </property>
                <property name="icon">
                 <iconset>
@@ -10512,6 +10512,41 @@ background-color: #333;
                <property name="icon">
                 <iconset>
                  <normaloff>../images/bitcoin_color.png</normaloff>../images/bitcoin_color.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="wallet_paypal_overview_button">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>40</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>40</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>PayPal</string>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../images/paypal.png</normaloff>../images/paypal.png</iconset>
                </property>
                <property name="iconSize">
                 <size>

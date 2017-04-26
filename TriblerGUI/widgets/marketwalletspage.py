@@ -21,6 +21,7 @@ class MarketWalletsPage(QWidget):
         self.request_mgr = None
         self.initialized = False
         self.wallets_to_create = []
+        self.wallets = None
         self.dialog = None
 
     def initialize_wallets_page(self):
@@ -32,6 +33,7 @@ class MarketWalletsPage(QWidget):
             self.window().add_wallet_button.clicked.connect(self.on_add_wallet_clicked)
             self.window().wallet_mc_overview_button.hide()
             self.window().wallet_btc_overview_button.hide()
+            self.window().wallet_paypal_overview_button.hide()
 
             self.initialized = True
 
@@ -42,17 +44,20 @@ class MarketWalletsPage(QWidget):
         self.request_mgr.perform_request("wallets", self.on_wallets)
 
     def on_wallets(self, wallets):
-        wallets = wallets["wallets"]
+        self.wallets = wallets["wallets"]
 
-        if 'MC' in wallets and wallets["MC"]["created"]:
+        if 'MC' in self.wallets and self.wallets["MC"]["created"]:
             self.window().wallet_mc_overview_button.show()
 
-        if 'BTC' in wallets and wallets["BTC"]["created"]:
+        if 'BTC' in self.wallets and self.wallets["BTC"]["created"]:
             self.window().wallet_btc_overview_button.show()
+
+        if 'PP' in self.wallets and self.wallets["PP"]["created"]:
+            self.window().wallet_paypal_overview_button.show()
 
         # Find out which wallets we still can create
         self.wallets_to_create = []
-        for identifier, wallet in wallets.iteritems():
+        for identifier, wallet in self.wallets.iteritems():
             if not wallet["created"]:
                 self.wallets_to_create.append(identifier)
 
@@ -104,10 +109,8 @@ class MarketWalletsPage(QWidget):
     def on_add_wallet_clicked(self):
         menu = TriblerActionMenu(self)
 
-        id_names = {'BTC': 'Bitcoin wallet'}
-
         for wallet_id in self.wallets_to_create:
-            wallet_action = QAction(id_names[wallet_id], self)
+            wallet_action = QAction(self.wallets[wallet_id]['name'], self)
             wallet_action.triggered.connect(lambda: self.should_create_wallet(wallet_id))
             menu.addAction(wallet_action)
 
@@ -122,6 +125,9 @@ class MarketWalletsPage(QWidget):
             self.dialog.dialog_widget.dialog_input.setPlaceholderText('Wallet password')
             self.dialog.button_clicked.connect(self.on_create_btc_wallet_dialog_done)
             self.dialog.show()
+        else:
+            self.request_mgr.perform_request("wallets/%s" % wallet_id, self.on_btc_wallet_created,
+                                             method='PUT', data='')
 
     def on_create_btc_wallet_dialog_done(self, action):
         password = self.dialog.dialog_widget.dialog_input.text()

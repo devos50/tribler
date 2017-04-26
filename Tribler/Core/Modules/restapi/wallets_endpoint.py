@@ -2,6 +2,7 @@ import json
 
 from twisted.web import http
 from twisted.web import resource
+from twisted.web.server import NOT_DONE_YET
 
 
 class WalletsEndpoint(resource.Resource):
@@ -18,7 +19,7 @@ class WalletsEndpoint(resource.Resource):
         for wallet_id in self.session.lm.market_community.wallets.keys():
             wallet = self.session.lm.market_community.wallets[wallet_id]
             wallets[wallet_id] = {'created': wallet.created, 'balance': wallet.get_balance(),
-                                  'address': wallet.get_address()}
+                                  'address': wallet.get_address(), 'name': wallet.get_name()}
         return json.dumps({"wallets": wallets})
 
     def getChild(self, path, request):
@@ -43,18 +44,21 @@ class WalletEndpoint(resource.Resource):
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": "this wallet already exists"})
 
+        def on_wallet_created(_):
+            request.write(json.dumps({"created": True}))
+            self.finish_request(request)
+
         parameters = http.parse_qs(request.content.read(), 1)
 
         if self.identifier == "BTC":  # get the password
-            password = ''
             if parameters['password'] and len(parameters['password']) > 0:
                 password = parameters['password'][0]
-                self.session.lm.market_community.wallets[self.identifier].create_wallet(password=password)
+                self.session.lm.market_community.wallets[self.identifier].create_wallet(password=password)\
+                    .addCallback(on_wallet_created)
         else:
-            # We do not support creation of other wallets besides BTC right now
-            pass
+            self.session.lm.market_community.wallets[self.identifier].create_wallet().addCallback(on_wallet_created)
 
-        return json.dumps({"created": True})
+        return NOT_DONE_YET
 
 
 class WalletBalanceEndpoint(resource.Resource):
