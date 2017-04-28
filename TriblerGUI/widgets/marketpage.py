@@ -218,12 +218,17 @@ class MarketPage(QWidget):
         self.update_filter_bids_list()
 
     def on_transaction_complete(self, transaction):
-        main_text = "Transaction with price %f and quantity %d completed." \
-                    % (float(transaction["price"]), int(transaction["quantity"]))
+        main_text = "Transaction with price %f %s and quantity %f %s completed." \
+                    % (transaction["price"], transaction["price_type"],
+                       transaction["quantity"], transaction["quantity_type"])
         self.window().tray_icon.showMessage("Transaction completed", main_text)
 
         # Reload transactions
-        self.window().market_transactions_page.load_transactions()
+        # TODO(Martijn): fix transaction history page - persistency?
+        # self.window().market_transactions_page.load_transactions()
+
+        # Reload wallets
+        self.load_wallets()
 
     def on_iom_input_required(self, required_input):
         self.dialog = IomInputDialog(self.window().stackedWidget, required_input)

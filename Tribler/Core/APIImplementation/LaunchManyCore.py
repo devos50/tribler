@@ -290,7 +290,7 @@ class TriblerLaunchMany(TaskManager):
 
             self.tradechain_community = self.dispersy.define_auto_load(TradeChainCommunity,
                                                                        dispersy_member, load=True,
-                                                                       kargs=default_kwargs)
+                                                                       kargs=default_kwargs)[0]
             market_kwargs = {'tribler_session': self.session, 'wallets': wallets,
                              'tradechain_community': self.tradechain_community}
             self.market_community = self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member,

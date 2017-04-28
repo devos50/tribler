@@ -241,8 +241,10 @@ class Transaction(object):
             "trader_id": str(self.transaction_id.trader_id),
             "partner_trader_id": str(self.partner_trader_id),
             "transaction_number": str(self.transaction_id.transaction_number),
-            "price": str(self.price),
-            "quantity": int(self.total_quantity),
+            "price": float(self.price),
+            "price_type": self.price.wallet_id,
+            "quantity": float(self.total_quantity),
+            "quantity_type": self.total_quantity.wallet_id,
             "timestamp": str(self.timestamp),
             "payment_complete": self.is_payment_complete()
         }
