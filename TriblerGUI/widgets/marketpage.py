@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
 from TriblerGUI.defs import PAGE_MARKET_TRANSACTIONS, PAGE_MARKET_WALLETS
+from TriblerGUI.dialogs.iom_input_dialog import IomInputDialog
 from TriblerGUI.dialogs.newmarketorderdialog import NewMarketOrderDialog
 from TriblerGUI.tribler_action_menu import TriblerActionMenu
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
@@ -47,6 +48,7 @@ class MarketPage(QWidget):
             self.window().core_manager.events_manager.expired_market_ask.connect(self.on_ask_timeout)
             self.window().core_manager.events_manager.expired_market_bid.connect(self.on_bid_timeout)
             self.window().core_manager.events_manager.market_transaction_complete.connect(self.on_transaction_complete)
+            self.window().core_manager.events_manager.market_iom_input_required.connect(self.on_iom_input_required)
 
             self.window().create_ask_button.clicked.connect(self.on_create_ask_clicked)
             self.window().create_bid_button.clicked.connect(self.on_create_bid_clicked)
@@ -195,6 +197,21 @@ class MarketPage(QWidget):
 
         # Reload transactions
         self.window().market_transactions_page.load_transactions()
+
+    def on_iom_input_required(self, required_input):
+        print "WE REQUIRE IOM INPUT!!!!!!"
+        print required_input
+        self.dialog = IomInputDialog(self.window().stackedWidget, required_input)
+        self.dialog.button_clicked.connect(self.on_iom_input)
+        self.dialog.show()
+
+    def on_iom_input(self, action):
+        if action == 1:
+            # TODO pass the data to IOM module
+            pass
+
+        self.dialog.setParent(None)
+        self.dialog = None
 
     def create_order(self, is_ask, price, price_type, quantity, quantity_type):
         post_data = str("price=%f&price_type=%s&quantity=%d&quantity_type=%s" %

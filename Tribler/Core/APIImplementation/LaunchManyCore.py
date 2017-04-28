@@ -32,7 +32,7 @@ from Tribler.Core.defaults import tribler_defaults
 from Tribler.Core.exceptions import DuplicateDownloadException
 from Tribler.Core.simpledefs import (NTFY_DISPERSY, NTFY_STARTED, NTFY_TORRENTS, NTFY_UPDATE, NTFY_TRIBLER,
                                      NTFY_FINISHED, DLSTATUS_DOWNLOADING, DLSTATUS_STOPPED_ON_ERROR, NTFY_ERROR,
-                                     DLSTATUS_SEEDING, NTFY_TORRENT)
+                                     DLSTATUS_SEEDING, NTFY_TORRENT, NTFY_MARKET_IOM_INPUT_REQUIRED)
 from Tribler.community.market.wallet.btc_wallet import BitcoinWallet
 from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
@@ -97,6 +97,7 @@ class TriblerLaunchMany(TaskManager):
         self.startup_deferred = Deferred()
 
         self.boosting_manager = None
+        self.iom_input_deferreds = {}
 
     def register(self, session, sesslock):
         assert isInIOThread()
@@ -268,7 +269,7 @@ class TriblerLaunchMany(TaskManager):
 
                 # PayPal
                 from Tribler.community.market.wallet.paypal_wallet import PayPalWallet
-                paypal_wallet = PayPalWallet(iom_dir)
+                paypal_wallet = PayPalWallet(self.iom_input_handler, iom_dir)
                 wallets[paypal_wallet.get_identifier()] = paypal_wallet
             except ImportError:
                 self._logger.info("Internet of Money API not found")
@@ -428,6 +429,17 @@ class TriblerLaunchMany(TaskManager):
                 write_my_pref()
 
         return d
+
+    def iom_input_handler(self, required_input):
+        """
+        This method handles required input for the Internet-of-Money module.
+        :param required_input: a RequiredInput object containing information about the fields the user has to provide
+        :return: A deferred that fires when the input has been provided
+        """
+        input_deferred = Deferred()
+        self.iom_input_deferreds[required_input.name] = input_deferred
+        self.session.notifier.notify(NTFY_MARKET_IOM_INPUT_REQUIRED, NTFY_UPDATE, None, required_input)
+        return input_deferred
 
     def on_download_handle_created(self, download):
         """

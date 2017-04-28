@@ -10,10 +10,11 @@ class PayPalWallet(Wallet):
     This class manages a PayPal wallet.
     """
 
-    def __init__(self, cache_dir='.'):
+    def __init__(self, input_handler, cache_dir='.'):
         super(PayPalWallet, self).__init__()
 
         self.paypal_manager = PayPalManager(cache_dir=cache_dir)
+        self.paypal_manager.input_handler = input_handler
 
         self.created = False
         # Check whether we have logged in once
