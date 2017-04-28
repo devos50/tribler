@@ -182,7 +182,7 @@ class TestMarketBase(TestAsServer):
 
         if self.should_fake_btc:
             market.wallets['BTC'].get_balance = lambda: {"confirmed": 50, "unconfirmed": 0, "unmatured": 0}
-            market.wallets['BTC'].transfer = lambda *_: succeed('abcd')
+            market.wallets['BTC'].transfer = lambda amount, address: succeed('abcd')
             market.wallets['BTC'].monitor_transaction = mocked_monitor_transaction
 
     @inlineCallbacks

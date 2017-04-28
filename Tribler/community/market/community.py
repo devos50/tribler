@@ -327,10 +327,16 @@ class MarketCommunity(Community):
         self.mid_register[trader_id] = ip
 
     def on_ask_timeout(self, ask):
+        if not ask:
+            return
+
         if self.tribler_session:
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_UPDATE, None, ask)
 
     def on_bid_timeout(self, bid):
+        if not bid:
+            return
+
         if self.tribler_session:
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID_TIMEOUT, NTFY_UPDATE, None, bid)
 
@@ -596,7 +602,8 @@ class MarketCommunity(Community):
                 insert_method(tick).addCallback(timeout_method)
 
                 if self.tribler_session:
-                    self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID, NTFY_UPDATE, None, tick)
+                    notify_subject = NTFY_MARKET_ON_ASK if message.payload.is_ask else NTFY_MARKET_ON_BID
+                    self.tribler_session.notifier.notify(notify_subject, NTFY_UPDATE, None, tick)
 
     # Proposed trade
     def send_proposed_trade(self, proposed_trade):
@@ -929,7 +936,7 @@ class MarketCommunity(Community):
             candidate.associate(member)
             transfer_deferred = wallet.transfer(float(transfer_amount), candidate)
         else:
-            transfer_deferred = wallet.transfer(float(transfer_amount))
+            transfer_deferred = wallet.transfer(float(transfer_amount), transaction.partner_incoming_address)
 
         # TODO add errback for insufficient funds
         transfer_deferred.addCallback(lambda txid: self.send_payment_message(PaymentId(txid), transaction, payment_tup))

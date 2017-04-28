@@ -30,17 +30,21 @@ class BaseDummyWallet(Wallet):
         return succeed({'total': self.balance})
 
     def transfer(self, quantity, candidate):
-        if self.get_balance()['total'] < quantity:
-            raise InsufficientFunds()
+        def on_balance(balance):
+            if balance['total'] < quantity:
+                raise InsufficientFunds()
 
-        self.balance -= quantity
+            self.balance -= quantity
+            return succeed(str(quantity))
 
-    def monitor_transaction(self, amount):
+        return self.get_balance().addCallback(on_balance)
+
+    def monitor_transaction(self, transaction_id):
         """
-        Monitor an incoming transaction with a specific amount.
+        Monitor an incoming transaction with a specific ID.
         """
         def on_transaction_done():
-            self.balance -= amount
+            self.balance -= float(transaction_id)  # txid = amount of money transferred
 
         return deferLater(reactor, 1, on_transaction_done)
 

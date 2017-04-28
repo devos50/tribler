@@ -145,30 +145,33 @@ class BitcoinWallet(Wallet):
             return succeed({"confirmed": 0, "unconfirmed": 0, "unmatured": 0})
 
     def transfer(self, amount, address):
-        self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)
-        if self.get_balance()['confirmed'] >= amount:
-            options = {'tx_fee': '0.0001', 'password': self.wallet_password, 'verbose': False, 'nocheck': False,
-                       'cmd': 'payto', 'wallet_path': self.wallet_file, 'destination': address,
-                       'cwd': self.wallet_dir, 'testnet': False, 'rbf': False, 'amount': amount,
-                       'segwit': False, 'unsigned': False, 'portable': False}
-            config = SimpleConfig(options)
+        def on_balance(balance):
+            self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)
+            if balance['confirmed'] >= amount:
+                options = {'tx_fee': '0.0001', 'password': self.wallet_password, 'verbose': False, 'nocheck': False,
+                           'cmd': 'payto', 'wallet_path': self.wallet_file, 'destination': address,
+                           'cwd': self.wallet_dir, 'testnet': False, 'rbf': False, 'amount': amount,
+                           'segwit': False, 'unsigned': False, 'portable': False}
+                config = SimpleConfig(options)
 
-            server = daemon.get_server(config)
-            result = server.run_cmdline(options)
-            transaction_hex = result['hex']
+                server = daemon.get_server(config)
+                result = server.run_cmdline(options)
+                transaction_hex = result['hex']
 
-            # Broadcast this transaction
-            options = {'password': None, 'verbose': False, 'tx': transaction_hex, 'cmd': 'broadcast', 'testnet': False,
-                       'timeout': 30, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
-            config = SimpleConfig(options)
+                # Broadcast this transaction
+                options = {'password': None, 'verbose': False, 'tx': transaction_hex, 'cmd': 'broadcast', 'testnet': False,
+                           'timeout': 30, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
+                config = SimpleConfig(options)
 
-            server = daemon.get_server(config)
-            result = server.run_cmdline(options)
+                server = daemon.get_server(config)
+                result = server.run_cmdline(options)
 
-            # TODO(Martijn): check whether the broadcast has been successful
-            return succeed(str(result[1]))
-        else:
-            return fail(InsufficientFunds())
+                # TODO(Martijn): check whether the broadcast has been successful
+                return succeed(str(result[1]))
+            else:
+                return fail(InsufficientFunds())
+
+        return self.get_balance().addCallback(on_balance)
 
     def monitor_transaction(self, txid):
         """

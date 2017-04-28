@@ -191,12 +191,31 @@ class MarketPage(QWidget):
                     self.create_widget_item_from_tick(self.window().bids_list, bid, is_ask=False))
 
     def on_ask(self, ask):
-        self.window().asks_list.addTopLevelItem(
-            self.create_widget_item_from_tick(self.window().asks_list, ask, is_ask=True))
+        print "RECEIVED ASK"
+        has_level = False
+        for price_level_info in self.asks:
+            if price_level_info['quantity_type'] == ask['quantity_type'] \
+                    and price_level_info['price_type'] == ask['price_type']:
+                price_level_info['ticks'].append(ask)
+                has_level = True
+
+        if not has_level:
+            self.asks.append({'price_type': ask['price_type'], 'quantity_type': ask['quantity_type'], 'ticks': [ask]})
+
+        self.update_filter_asks_list()
 
     def on_bid(self, bid):
-        self.window().bids_list.addTopLevelItem(
-            self.create_widget_item_from_tick(self.window().bids_list, bid, is_ask=False))
+        print "RECEIVED BID"
+        has_level = False
+        for price_level_info in self.bids:
+            if price_level_info['quantity_type'] == bid['quantity_type'] \
+                    and price_level_info['price_type'] == bid['price_type']:
+                price_level_info['ticks'].append(bid)
+
+        if not has_level:
+            self.bids.append({'price_type': bid['price_type'], 'quantity_type': bid['quantity_type'], 'ticks': [bid]})
+
+        self.update_filter_bids_list()
 
     def on_transaction_complete(self, transaction):
         main_text = "Transaction with price %f and quantity %d completed." \
