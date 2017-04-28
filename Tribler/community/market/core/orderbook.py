@@ -379,7 +379,7 @@ class OrderBook(TaskManager):
                 for ask in price_level:
                     ids.append(ask.tick.order_id)
 
-        for price_wallet_id, quantity_wallet_id in self.asks.get_price_level_list_wallets():
+        for price_wallet_id, quantity_wallet_id in self.bids.get_price_level_list_wallets():
             for _, price_level in self.bids.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
                 for bid in price_level:
                     ids.append(bid.tick.order_id)
