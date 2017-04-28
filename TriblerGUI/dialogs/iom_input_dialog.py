@@ -16,15 +16,24 @@ class IomInputDialog(DialogContainer):
     def __init__(self, parent, required_input):
         DialogContainer.__init__(self, parent)
 
+        self.required_input = required_input
+
         uic.loadUi(get_ui_file_path('iom_input_dialog.ui'), self.dialog_widget)
 
         self.dialog_widget.cancel_button.clicked.connect(lambda: self.button_clicked.emit(0))
         self.dialog_widget.confirm_button.clicked.connect(lambda: self.button_clicked.emit(1))
 
+        if 'error_text' in required_input:
+            self.dialog_widget.error_text_label.setText(required_input['error_text'])
+        else:
+            self.dialog_widget.error_text_label.hide()
+
         vlayout = QVBoxLayout()
         self.dialog_widget.input_container.setLayout(vlayout)
 
-        for specific_input in required_input['required_fields']:
+        self.input_widgets = {}
+
+        for specific_input in self.required_input['required_fields']:
             label_widget = QLabel(self.dialog_widget.input_container)
             label_widget.setText(specific_input['text'] + ":")
             label_widget.show()
@@ -34,6 +43,7 @@ class IomInputDialog(DialogContainer):
             input_widget.setPlaceholderText(specific_input['placeholder'])
             input_widget.show()
             vlayout.addWidget(input_widget)
+            self.input_widgets[specific_input['name']] = input_widget
 
         self.dialog_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.dialog_widget.adjustSize()

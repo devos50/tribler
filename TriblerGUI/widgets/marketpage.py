@@ -1,4 +1,5 @@
 import hashlib
+from urllib import urlencode
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor
@@ -115,13 +116,20 @@ class MarketPage(QWidget):
                 self.window().market_header_widget.layout().insertSpacerItem(5, spacer)
 
             # The total balance keys might be different between wallet
-            balance_key = "total"
-            if wallet_id == 'MC':
-                balance_key = 'net'
-            elif wallet_id == 'BTC':
-                balance_key = 'confirmed'
+            balance_amount = None
+            balance_currency = None
 
-            self.wallet_widgets[wallet_id].update_with_amount(wallet['balance'][balance_key])
+            if wallet_id == 'MC':
+                balance_amount = wallet['balance']['net']
+            elif wallet_id == 'BTC':
+                balance_amount = wallet['balance']['confirmed']
+            elif wallet_id == 'PP':
+                balance_amount = wallet['balance']['available']['amount']
+                balance_currency = wallet['balance']['available']['currency']
+            else:
+                balance_amount = wallet['balance']['total']
+
+            self.wallet_widgets[wallet_id].update_with_amount(balance_amount, balance_currency)
 
         self.load_asks()
         self.load_bids()
@@ -199,16 +207,18 @@ class MarketPage(QWidget):
         self.window().market_transactions_page.load_transactions()
 
     def on_iom_input_required(self, required_input):
-        print "WE REQUIRE IOM INPUT!!!!!!"
-        print required_input
         self.dialog = IomInputDialog(self.window().stackedWidget, required_input)
         self.dialog.button_clicked.connect(self.on_iom_input)
         self.dialog.show()
 
     def on_iom_input(self, action):
         if action == 1:
-            # TODO pass the data to IOM module
-            pass
+            post_data = {'input_name': self.dialog.required_input['name']}
+            for input_name, input_widget in self.dialog.input_widgets.iteritems():
+                post_data[input_name] = input_widget.text()
+
+            self.request_mgr = TriblerRequestManager()
+            self.request_mgr.perform_request("iominput", None, data=urlencode(post_data), method='POST')
 
         self.dialog.setParent(None)
         self.dialog = None

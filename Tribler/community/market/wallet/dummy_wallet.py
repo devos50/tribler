@@ -2,6 +2,7 @@ import string
 from random import choice
 
 from twisted.internet import reactor
+from twisted.internet.defer import succeed
 from twisted.internet.task import deferLater
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
@@ -26,7 +27,7 @@ class BaseDummyWallet(Wallet):
         pass
 
     def get_balance(self):
-        return {'total': self.balance}
+        return succeed({'total': self.balance})
 
     def transfer(self, quantity, candidate):
         if self.get_balance()['total'] < quantity:

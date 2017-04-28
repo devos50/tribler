@@ -1,4 +1,5 @@
 from twisted.internet import reactor
+from twisted.internet.defer import succeed
 from twisted.internet.task import deferLater
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
@@ -33,11 +34,11 @@ class PayPalWallet(Wallet):
 
     def get_balance(self):
         if not self.created:
-            return {
+            return succeed({
                 'available': {'amount': 0, 'currency': 'EUR'},
                 'pending': {'amount': 0, 'currency': 'EUR'},
                 'total': {'amount': 0, 'currency': 'EUR'},
-            }
+            })
         return self.paypal_manager.get_balance()
 
     def transfer(self, quantity, address):

@@ -94,6 +94,18 @@ color: white;
     </spacer>
    </item>
    <item>
+    <widget class="QLabel" name="error_text_label">
+     <property name="styleSheet">
+      <string notr="true">color: #e62e00;
+margin-left: 12px;
+margin-right: 12px;</string>
+     </property>
+     <property name="text">
+      <string>Error text goes here</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QWidget" name="input_container" native="true">
      <property name="styleSheet">
       <string notr="true">QLabel {

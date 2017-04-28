@@ -1,3 +1,4 @@
+# coding=utf-8
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QLabel
@@ -34,8 +35,14 @@ class MarketCurrencyBox(QWidget):
         self.currency_type_label.setAlignment(Qt.AlignCenter)
         self.vlayout.addWidget(self.currency_type_label)
 
-    def update_with_amount(self, amount):
-        self.currency_amount_label.setText("%s" % amount)
+    def update_with_amount(self, amount, currency_type):
+        if currency_type == 'EUR':
+            currency_type = '€'
+
+        if currency_type:
+            self.currency_amount_label.setText("%s %s" % (currency_type, amount))
+        else:
+            self.currency_amount_label.setText("%s" % amount)
 
     def paintEvent(self, _):
         opt = QStyleOption()

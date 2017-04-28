@@ -138,11 +138,11 @@ class BitcoinWallet(Wallet):
         divider = 100000000
         if self.created:
             confirmed, unconfirmed, unmatured = self.wallet.get_balance()
-            return {"confirmed": float(confirmed) / divider,
-                    "unconfirmed": float(unconfirmed) / divider,
-                    "unmatured": float(unmatured) / divider}
+            return succeed({"confirmed": float(confirmed) / divider,
+                            "unconfirmed": float(unconfirmed) / divider,
+                            "unmatured": float(unmatured) / divider})
         else:
-            return {"confirmed": 0, "unconfirmed": 0, "unmatured": 0}
+            return succeed({"confirmed": 0, "unconfirmed": 0, "unmatured": 0})
 
     def transfer(self, amount, address):
         self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)

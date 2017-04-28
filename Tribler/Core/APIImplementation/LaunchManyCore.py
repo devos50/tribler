@@ -97,6 +97,8 @@ class TriblerLaunchMany(TaskManager):
         self.startup_deferred = Deferred()
 
         self.boosting_manager = None
+
+        self.has_iom = False
         self.iom_input_deferreds = {}
 
     def register(self, session, sesslock):
@@ -269,8 +271,13 @@ class TriblerLaunchMany(TaskManager):
 
                 # PayPal
                 from Tribler.community.market.wallet.paypal_wallet import PayPalWallet
+                self.has_iom = True
                 paypal_wallet = PayPalWallet(self.iom_input_handler, iom_dir)
                 wallets[paypal_wallet.get_identifier()] = paypal_wallet
+
+                # Use custom root SSL certificate
+                os.environ['SSL_CERT_FILE'] = os.path.join(get_lib_path(), 'internetofmoney', 'root_certs.pem')
+
             except ImportError:
                 self._logger.info("Internet of Money API not found")
 
@@ -440,6 +447,20 @@ class TriblerLaunchMany(TaskManager):
         self.iom_input_deferreds[required_input.name] = input_deferred
         self.session.notifier.notify(NTFY_MARKET_IOM_INPUT_REQUIRED, NTFY_UPDATE, None, required_input)
         return input_deferred
+
+    def on_iom_input(self, name, user_input):
+        """
+        This method is invoked when there is user input available.
+        :param name: the name of the input, should match the name passed to iom_input_handler
+        :type name: str
+        :param user_input: a dictionary with the given user input.
+        :type user_input: dict
+        """
+        if name not in self.iom_input_deferreds:
+            raise RuntimeError("Received input that we didn't expect!")
+
+        self.iom_input_deferreds[name].callback(user_input)
+        del self.iom_input_deferreds[name]
 
     def on_download_handle_created(self, download):
         """

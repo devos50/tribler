@@ -6,6 +6,7 @@ from Tribler.Core.Modules.restapi.create_torrent_endpoint import CreateTorrentEn
 from Tribler.Core.Modules.restapi.debug_endpoint import DebugEndpoint
 from Tribler.Core.Modules.restapi.downloads_endpoint import DownloadsEndpoint
 from Tribler.Core.Modules.restapi.events_endpoint import EventsEndpoint
+from Tribler.Core.Modules.restapi.iom_input_endpoint import IomInputEndpoint
 from Tribler.Core.Modules.restapi.market_endpoint import MarketEndpoint
 from Tribler.Core.Modules.restapi.multichain_endpoint import MultichainEndpoint
 from Tribler.Core.Modules.restapi.search_endpoint import SearchEndpoint
@@ -48,6 +49,9 @@ class RootEndpoint(resource.Resource):
                               "torrents": TorrentsEndpoint, "debug": DebugEndpoint, "shutdown": ShutdownEndpoint,
                               "multichain": MultichainEndpoint, "statistics": StatisticsEndpoint,
                               "torrentinfo": TorrentInfoEndpoint, "market": MarketEndpoint, "wallets": WalletsEndpoint}
+
+        if self.session.lm.has_iom:
+            child_handler_dict['iominput'] = IomInputEndpoint
 
         for path, child_cls in child_handler_dict.iteritems():
             self.putChild(path, child_cls(self.session))

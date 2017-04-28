@@ -1,5 +1,6 @@
 import json
 
+from twisted.internet.defer import DeferredList
 from twisted.web import http
 from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
@@ -16,11 +17,24 @@ class WalletsEndpoint(resource.Resource):
 
     def render_GET(self, request):
         wallets = {}
+        balance_deferreds = []
         for wallet_id in self.session.lm.market_community.wallets.keys():
             wallet = self.session.lm.market_community.wallets[wallet_id]
-            wallets[wallet_id] = {'created': wallet.created, 'balance': wallet.get_balance(),
-                                  'address': wallet.get_address(), 'name': wallet.get_name()}
-        return json.dumps({"wallets": wallets})
+            wallets[wallet_id] = {'created': wallet.created, 'address': wallet.get_address(), 'name': wallet.get_name()}
+            balance_deferreds.append(wallet.get_balance().addCallback(
+                lambda balance, wid=wallet_id: (wid, balance)))
+
+        def on_received_balances(balances):
+            for error, balance_info in balances:
+                wallets[balance_info[0]]['balance'] = balance_info[1]
+
+            request.write(json.dumps({"wallets": wallets}))
+            request.finish()
+
+        balance_deferred_list = DeferredList(balance_deferreds)
+        balance_deferred_list.addCallback(on_received_balances)
+
+        return NOT_DONE_YET
 
     def getChild(self, path, request):
         return WalletEndpoint(self.session, path)
@@ -46,7 +60,7 @@ class WalletEndpoint(resource.Resource):
 
         def on_wallet_created(_):
             request.write(json.dumps({"created": True}))
-            self.finish_request(request)
+            request.finish()
 
         parameters = http.parse_qs(request.content.read(), 1)
 
