@@ -22,8 +22,8 @@ class AcceptedTradePayloadTestSuite(unittest.TestCase):
         # Object creation
         self.accepted_trade_payload = AcceptedTradePayload.Implementation(MetaObject(), TraderId('0'),
                                                                           MessageNumber('message_number'),
-                                                                          OrderNumber('order_number'), TraderId('1'),
-                                                                          OrderNumber('recipient_order_number'),
+                                                                          OrderNumber(1), TraderId('1'),
+                                                                          OrderNumber(2),
                                                                           Price(63400, 'BTC'), Quantity(30, 'MC'),
                                                                           Timestamp(1462224447.117), Ttl(2),
                                                                           '192.168.1.1', 1234)
@@ -33,8 +33,8 @@ class AcceptedTradePayloadTestSuite(unittest.TestCase):
         self.assertEquals(Price(63400, 'BTC'), self.accepted_trade_payload.price)
         self.assertEquals(Quantity(30, 'MC'), self.accepted_trade_payload.quantity)
         self.assertEquals(MessageNumber('message_number'), self.accepted_trade_payload.message_number)
-        self.assertEquals(OrderNumber('order_number'), self.accepted_trade_payload.order_number)
-        self.assertEquals(OrderNumber('recipient_order_number'), self.accepted_trade_payload.recipient_order_number)
+        self.assertEquals(OrderNumber(1), self.accepted_trade_payload.order_number)
+        self.assertEquals(OrderNumber(2), self.accepted_trade_payload.recipient_order_number)
         self.assertEquals(TraderId('1'), self.accepted_trade_payload.recipient_trader_id)
         self.assertEquals(Timestamp(1462224447.117), self.accepted_trade_payload.timestamp)
         self.assertEquals(2, int(self.accepted_trade_payload.ttl))
@@ -48,15 +48,15 @@ class DeclinedTradePayloadTestSuite(unittest.TestCase):
         # Object creation
         self.declined_trade_payload = DeclinedTradePayload.Implementation(MetaObject(), TraderId('0'),
                                                                           MessageNumber('message_number'),
-                                                                          OrderNumber('order_number'), TraderId('1'),
-                                                                          OrderNumber('recipient_order_number'),
+                                                                          OrderNumber(1), TraderId('1'),
+                                                                          OrderNumber(2),
                                                                           Timestamp(1462224447.117))
 
     def test_properties(self):
         # Test for properties
         self.assertEquals(MessageNumber('message_number'), self.declined_trade_payload.message_number)
-        self.assertEquals(OrderNumber('order_number'), self.declined_trade_payload.order_number)
-        self.assertEquals(OrderNumber('recipient_order_number'), self.declined_trade_payload.recipient_order_number)
+        self.assertEquals(OrderNumber(1), self.declined_trade_payload.order_number)
+        self.assertEquals(OrderNumber(2), self.declined_trade_payload.recipient_order_number)
         self.assertEquals(TraderId('1'), self.declined_trade_payload.recipient_trader_id)
         self.assertEquals(Timestamp(1462224447.117), self.declined_trade_payload.timestamp)
         self.assertEquals(TraderId('0'), self.declined_trade_payload.trader_id)
@@ -69,8 +69,8 @@ class ProposedTradePayloadTestSuite(unittest.TestCase):
         # Object creation
         self.proposed_trade_payload = TradePayload.Implementation(MetaObject(), TraderId('0'),
                                                                   MessageNumber('message_number'),
-                                                                  OrderNumber('order_number'), TraderId('1'),
-                                                                  OrderNumber('recipient_order_number'),
+                                                                  OrderNumber(1), TraderId('1'),
+                                                                  OrderNumber(2),
                                                                   Price(63400, 'BTC'), Quantity(30, 'MC'),
                                                                   Timestamp(1462224447.117), '192.168.1.1', 1234)
 
@@ -79,8 +79,8 @@ class ProposedTradePayloadTestSuite(unittest.TestCase):
         self.assertEquals(Price(63400, 'BTC'), self.proposed_trade_payload.price)
         self.assertEquals(Quantity(30, 'MC'), self.proposed_trade_payload.quantity)
         self.assertEquals(MessageNumber('message_number'), self.proposed_trade_payload.message_number)
-        self.assertEquals(OrderNumber('order_number'), self.proposed_trade_payload.order_number)
-        self.assertEquals(OrderNumber('recipient_order_number'), self.proposed_trade_payload.recipient_order_number)
+        self.assertEquals(OrderNumber(1), self.proposed_trade_payload.order_number)
+        self.assertEquals(OrderNumber(2), self.proposed_trade_payload.recipient_order_number)
         self.assertEquals(TraderId('1'), self.proposed_trade_payload.recipient_trader_id)
         self.assertEquals(Timestamp(1462224447.117), self.proposed_trade_payload.timestamp)
         self.assertEquals(TraderId('0'), self.proposed_trade_payload.trader_id)
@@ -92,7 +92,7 @@ class OfferPayloadTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.offer_payload = OfferPayload.Implementation(MetaObject(), TraderId('0'), MessageNumber('message_number'),
-                                                         OrderNumber('order_number'), Price(63400, 'BTC'),
+                                                         OrderNumber(1), Price(63400, 'BTC'),
                                                          Quantity(30, 'MC'), Timeout(1470004447.117),
                                                          Timestamp(1462224447.117), Ttl(2), "1.1.1.1", 1)
 
@@ -101,7 +101,7 @@ class OfferPayloadTestSuite(unittest.TestCase):
         self.assertEquals(Price(63400, 'BTC'), self.offer_payload.price)
         self.assertEquals(Quantity(30, 'MC'), self.offer_payload.quantity)
         self.assertEquals(MessageNumber('message_number'), self.offer_payload.message_number)
-        self.assertEquals(OrderNumber('order_number'), self.offer_payload.order_number)
+        self.assertEquals(OrderNumber(1), self.offer_payload.order_number)
         self.assertEquals(1470004447.117, float(self.offer_payload.timeout))
         self.assertEquals(Timestamp(1462224447.117), self.offer_payload.timestamp)
         self.assertEquals(2, int(self.offer_payload.ttl))
@@ -117,15 +117,15 @@ class StartTransactionPayloadTestSuite(unittest.TestCase):
         # Object creation
         self.start_transaction_payload = StartTransactionPayload.Implementation(MetaObject(), TraderId('0'),
                                                                                 MessageNumber('1'), TraderId('2'),
-                                                                                TransactionNumber('2'), TraderId('2'),
-                                                                                OrderNumber('3'), TraderId('0'),
-                                                                                OrderNumber('4'), Price(2, 'BTC'),
+                                                                                TransactionNumber(2), TraderId('2'),
+                                                                                OrderNumber(3), TraderId('0'),
+                                                                                OrderNumber(4), Price(2, 'BTC'),
                                                                                 Quantity(3, 'MC'), Timestamp(0.0))
 
     def test_properties(self):
         # Test for properties
         self.assertEquals(MessageNumber('1'), self.start_transaction_payload.message_number)
-        self.assertEquals(TransactionNumber('2'), self.start_transaction_payload.transaction_number)
+        self.assertEquals(TransactionNumber(2), self.start_transaction_payload.transaction_number)
         self.assertEquals(Timestamp(0.0), self.start_transaction_payload.timestamp)
 
 
@@ -137,7 +137,7 @@ class PaymentPayloadTestSuite(unittest.TestCase):
         self.payment_payload = PaymentPayload.Implementation(MetaObject(), TraderId('0'),
                                                                             MessageNumber('1'),
                                                                             TraderId('2'),
-                                                                            TransactionNumber('2'),
+                                                                            TransactionNumber(2),
                                                                             Quantity(20, 'MC'),
                                                                             Price(10, 'BTC'),
                                                                             WalletAddress('a'),
@@ -148,7 +148,7 @@ class PaymentPayloadTestSuite(unittest.TestCase):
     def test_properties(self):
         # Test for properties
         self.assertEquals(MessageNumber('1'), self.payment_payload.message_number)
-        self.assertEquals(TransactionNumber('2'), self.payment_payload.transaction_number)
+        self.assertEquals(TransactionNumber(2), self.payment_payload.transaction_number)
         self.assertEquals(10, int(self.payment_payload.transferee_price))
         self.assertEquals('3', str(self.payment_payload.payment_id))
         self.assertEquals(Timestamp(0.0), self.payment_payload.timestamp)

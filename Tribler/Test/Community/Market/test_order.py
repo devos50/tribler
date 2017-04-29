@@ -18,32 +18,31 @@ class OrderTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.transaction_id = TransactionId(TraderId("0"), TransactionNumber("1"))
-        self.transaction = Transaction(self.transaction_id, TraderId("1"), Price(100), Quantity(30),
-                                       Timeout(float("inf")),
-                                       Timestamp(0.0))
+        self.transaction_id = TransactionId(TraderId("0"), TransactionNumber(1))
+        self.transaction = Transaction(self.transaction_id, TraderId("1"), Price(100, 'BTC'), Quantity(30, 'MC'),
+                                       OrderId(TraderId('0'), OrderNumber(2)), Timestamp(0.0))
         proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('1')),
-                                       OrderId(TraderId('0'), OrderNumber('2')),
-                                       OrderId(TraderId('1'), OrderNumber('3')),
-                                       Price(100), Quantity(30), Timestamp(0.0))
+                                       OrderId(TraderId('0'), OrderNumber(2)),
+                                       OrderId(TraderId('1'), OrderNumber(3)),
+                                       Price(100, 'BTC'), Quantity(30, 'MC'), Timestamp(0.0))
         self.accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('1')),
                                            Timestamp(0.0), proposed_trade)
 
         self.tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                         OrderId(TraderId('0'), OrderNumber("order_number")), Price(100), Quantity(5),
+                         OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(5, 'MC'),
                          Timeout(0.0), Timestamp(float("inf")), True)
         self.tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                          OrderId(TraderId('0'), OrderNumber("order_number")), Price(100), Quantity(100),
+                          OrderId(TraderId('0'), OrderNumber(2)), Price(100, 'BTC'), Quantity(100, 'MC'),
                           Timeout(0.0), Timestamp(float("inf")), True)
-        self.order = Order(OrderId(TraderId("0"), OrderNumber("order_number")), Price(100), Quantity(30),
+        self.order = Order(OrderId(TraderId("0"), OrderNumber(3)), Price(100, 'BTC'), Quantity(30, 'MC'),
                            Timeout(5000), Timestamp(time.time()), False)
-        self.order2 = Order(OrderId(TraderId("0"), OrderNumber("order_number")), Price(100), Quantity(30),
+        self.order2 = Order(OrderId(TraderId("0"), OrderNumber(4)), Price(100, 'BTC'), Quantity(30, 'MC'),
                             Timeout(5), Timestamp(time.time() - 1000), True)
 
     def test_add_trade(self):
         # Test for add trade
-        self.order.add_trade(self.accepted_trade, Quantity(10))
-        self.assertEquals(self.order._traded_quantity, Quantity(10))
+        self.order.add_trade(self.accepted_trade, Quantity(10, 'MC'))
+        self.assertEquals(self.order._traded_quantity, Quantity(10, 'MC'))
 
     def test_is_ask(self):
         # Test for is ask
@@ -56,16 +55,16 @@ class OrderTestSuite(unittest.TestCase):
 
     def test_reserve_quantity(self):
         # Test for reserve quantity
-        self.assertEquals(Quantity(0), self.order.reserved_quantity)
+        self.assertEquals(Quantity(0, 'MC'), self.order.reserved_quantity)
         self.assertTrue(self.order.reserve_quantity_for_tick(self.tick.order_id, self.tick.quantity))
-        self.assertEquals(Quantity(5), self.order.reserved_quantity)
+        self.assertEquals(Quantity(5, 'MC'), self.order.reserved_quantity)
 
     def test_release_quantity(self):
         # Test for release quantity
         self.order.reserve_quantity_for_tick(self.tick.order_id, self.tick.quantity)
-        self.assertEquals(Quantity(5), self.order.reserved_quantity)
+        self.assertEquals(Quantity(5, 'MC'), self.order.reserved_quantity)
         self.order.release_quantity_for_tick(self.tick.order_id)
-        self.assertEquals(Quantity(0), self.order.reserved_quantity)
+        self.assertEquals(Quantity(0, 'MC'), self.order.reserved_quantity)
 
     def test_release_unreserved_quantity(self):
         # Test for release unreserved quantity
@@ -82,9 +81,9 @@ class OrderIDTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.order_id = OrderId(TraderId("0"), OrderNumber("order_number"))
-        self.order_id2 = OrderId(TraderId("0"), OrderNumber("order_number"))
-        self.order_id3 = OrderId(TraderId("0"), OrderNumber("order_number2"))
+        self.order_id = OrderId(TraderId("0"), OrderNumber(1))
+        self.order_id2 = OrderId(TraderId("0"), OrderNumber(1))
+        self.order_id3 = OrderId(TraderId("0"), OrderNumber(2))
 
     def test_equality(self):
         # Test for equality
@@ -104,7 +103,7 @@ class OrderIDTestSuite(unittest.TestCase):
 
     def test_str(self):
         # Test for string representation
-        self.assertEquals('0.order_number', str(self.order_id))
+        self.assertEquals('0.1', str(self.order_id))
 
 
 class OrderNumberTestSuite(unittest.TestCase):
@@ -113,7 +112,7 @@ class OrderNumberTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.order_number = OrderNumber(1)
-        self.order_number2 = OrderNumber(2)
+        self.order_number2 = OrderNumber(1)
         self.order_number3 = OrderNumber(3)
 
     def test_init(self):
@@ -139,7 +138,7 @@ class OrderNumberTestSuite(unittest.TestCase):
 
     def test_str(self):
         # Test for string representation
-        self.assertEquals('order_number', str(self.order_number))
+        self.assertEquals('1', str(self.order_number))
 
     def test_int(self):
         # Test for integer representation

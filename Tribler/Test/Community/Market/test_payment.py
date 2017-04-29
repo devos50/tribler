@@ -16,7 +16,7 @@ class PaymentTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.payment = Payment(MessageId(TraderId("0"), MessageNumber("1")),
-                               TransactionId(TraderId('2'), TransactionNumber("2")),
+                               TransactionId(TraderId('2'), TransactionNumber(2)),
                                Quantity(3, 'MC'), Price(2, 'BTC'),
                                WalletAddress('a'), WalletAddress('b'),
                                PaymentId('aaa'), Timestamp(4.0))
@@ -27,7 +27,7 @@ class PaymentTestSuite(unittest.TestCase):
             type('Data', (object,), {"trader_id": TraderId("0"),
                                      "message_number": MessageNumber("1"),
                                      "transaction_trader_id": TraderId('2'),
-                                     "transaction_number": TransactionNumber('2'),
+                                     "transaction_number": TransactionNumber(2),
                                      "transferee_quantity": Quantity(3, 'MC'),
                                      "transferee_price": Price(2, 'BTC'),
                                      "address_from": WalletAddress('a'),
@@ -36,7 +36,7 @@ class PaymentTestSuite(unittest.TestCase):
                                      "timestamp": Timestamp(4.0)}))
 
         self.assertEquals(MessageId(TraderId("0"), MessageNumber("1")), data.message_id)
-        self.assertEquals(TransactionId(TraderId('2'), TransactionNumber("2")), data.transaction_id)
+        self.assertEquals(TransactionId(TraderId('2'), TransactionNumber(2)), data.transaction_id)
         self.assertEquals(Quantity(3, 'MC'), data.transferee_quantity)
         self.assertEquals(Price(2, 'BTC'), data.transferee_price)
         self.assertEquals(Timestamp(4.0), data.timestamp)
@@ -48,7 +48,7 @@ class PaymentTestSuite(unittest.TestCase):
         self.assertEquals(data[0], TraderId("0"))
         self.assertEquals(data[1], MessageNumber("1"))
         self.assertEquals(data[2], TraderId("2"))
-        self.assertEquals(data[3], TransactionNumber('2'))
+        self.assertEquals(data[3], TransactionNumber(2))
         self.assertEquals(data[4], Quantity(3, 'MC'))
         self.assertEquals(data[5], Price(2, 'BTC'))
         self.assertEquals(data[6], WalletAddress('a')),

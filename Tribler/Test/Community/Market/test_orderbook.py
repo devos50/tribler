@@ -11,7 +11,7 @@ from Tribler.community.market.core.tick import Ask, Bid
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.trade import Trade
-from Tribler.dispersy.util import blocking_call_on_reactor_thread
+
 
 
 class OrderBookTestSuite(AbstractServer):
@@ -21,20 +21,20 @@ class OrderBookTestSuite(AbstractServer):
         super(OrderBookTestSuite, self).setUp(annotate=annotate)
         # Object creation
         self.ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
-                       OrderId(TraderId('0'), OrderNumber("order_number")), Price(100, 'BTC'), Quantity(30, 'MC'),
+                       OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
                        Timeout(1462224447.117), Timestamp(1462224447.117))
         self.ask2 = Ask(MessageId(TraderId('1'), MessageNumber('message_number')),
-                        OrderId(TraderId('1'), OrderNumber("order_number")), Price(400, 'BTC'), Quantity(30, 'MC'),
+                        OrderId(TraderId('1'), OrderNumber(1)), Price(400, 'BTC'), Quantity(30, 'MC'),
                         Timeout(1462224447.117), Timestamp(1462224447.117))
         self.bid = Bid(MessageId(TraderId('2'), MessageNumber('message_number')),
-                       OrderId(TraderId('2'), OrderNumber("order_number")), Price(200, 'BTC'), Quantity(30, 'MC'),
+                       OrderId(TraderId('2'), OrderNumber(1)), Price(200, 'BTC'), Quantity(30, 'MC'),
                        Timeout(1462224447.117), Timestamp(1462224447.117))
         self.bid2 = Bid(MessageId(TraderId('3'), MessageNumber('message_number')),
-                        OrderId(TraderId('3'), OrderNumber("order_number")), Price(300, 'BTC'), Quantity(30, 'MC'),
+                        OrderId(TraderId('3'), OrderNumber(1)), Price(300, 'BTC'), Quantity(30, 'MC'),
                         Timeout(1462224447.117), Timestamp(1462224447.117))
         self.trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
-                                   OrderId(TraderId('0'), OrderNumber("order_number")),
-                                   OrderId(TraderId('0'), OrderNumber("order_number")), Price(100, 'BTC'),
+                                   OrderId(TraderId('0'), OrderNumber(1)),
+                                   OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'),
                                    Quantity(30, 'MC'), Timestamp(1462224447.117))
         self.order_book = OrderBook(MemoryMessageRepository('0'))
 

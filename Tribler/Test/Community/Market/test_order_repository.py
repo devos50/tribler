@@ -15,7 +15,7 @@ class OrderRepositoryTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.order_repository = OrderRepository()
-        self.order_id = OrderId(TraderId("0"), OrderNumber("order_number"))
+        self.order_id = OrderId(TraderId("0"), OrderNumber(1))
         self.order = Order(self.order_id, Price(100, 'BTC'), Quantity(30, 'MC'), Timeout(0.0), Timestamp(10.0), False)
 
     def test_add(self):
@@ -45,7 +45,7 @@ class MemoryOrderRepositoryTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.memory_order_repository = MemoryOrderRepository("0")
-        self.order_id = OrderId(TraderId("0"), OrderNumber("order_number"))
+        self.order_id = OrderId(TraderId("0"), OrderNumber(1))
         self.order = Order(self.order_id, Price(100, 'BTC'), Quantity(30, 'MC'), Timeout(0.0), Timestamp(10.0), False)
         self.order2 = Order(self.order_id, Price(1000, 'BTC'), Quantity(30, 'MC'), Timeout(0.0), Timestamp(10.0), False)
 
@@ -81,7 +81,7 @@ class MemoryOrderRepositoryTestSuite(unittest.TestCase):
 
     def test_next_identity(self):
         # Test for next identity
-        self.assertEquals(OrderId(TraderId("0"), OrderNumber("1")),
+        self.assertEquals(OrderId(TraderId("0"), OrderNumber(1)),
                           self.memory_order_repository.next_identity())
 
     def test_update(self):

@@ -20,7 +20,7 @@ class PortfolioTestSuite(unittest.TestCase):
         # Test for create ask order
         ask_order = self.order_manager.create_ask_order(Price(100, 'BTC'), Quantity(10, 'MC'), Timeout(0.0))
         self.assertTrue(ask_order.is_ask())
-        self.assertEquals(OrderId(TraderId("0"), OrderNumber("1")), ask_order.order_id)
+        self.assertEquals(OrderId(TraderId("0"), OrderNumber(1)), ask_order.order_id)
         self.assertEquals(Price(100, 'BTC'), ask_order.price)
         self.assertEquals(Quantity(10, 'MC'), ask_order.total_quantity)
         self.assertEquals(0.0, float(ask_order.timeout))
@@ -29,7 +29,7 @@ class PortfolioTestSuite(unittest.TestCase):
         # Test for create bid order
         bid_order = self.order_manager.create_bid_order(Price(100, 'BTC'), Quantity(10, 'MC'), Timeout(0.0))
         self.assertFalse(bid_order.is_ask())
-        self.assertEquals(OrderId(TraderId("0"), OrderNumber("1")), bid_order.order_id)
+        self.assertEquals(OrderId(TraderId("0"), OrderNumber(1)), bid_order.order_id)
         self.assertEquals(Price(100, 'BTC'), bid_order.price)
         self.assertEquals(Quantity(10, 'MC'), bid_order.total_quantity)
         self.assertEquals(0.0, float(bid_order.timeout))
