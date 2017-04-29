@@ -18,8 +18,8 @@ class MarketTransactionsPage(QWidget):
 
     def initialize_transactions_page(self):
         if not self.initialized:
-            self.window().core_manager.events_manager.market_payment_received.connect(self.on_payment_received)
-            self.window().core_manager.events_manager.market_payment_sent.connect(self.on_payment_sent)
+            self.window().core_manager.events_manager.market_payment_received.connect(self.on_payment)
+            self.window().core_manager.events_manager.market_payment_sent.connect(self.on_payment)
 
             self.window().transactions_back_button.setIcon(QIcon(get_image_path('page_back.png')))
             self.initialized = True
@@ -32,13 +32,17 @@ class MarketTransactionsPage(QWidget):
         self.request_mgr = TriblerRequestManager()
         self.request_mgr.perform_request("market/transactions", self.on_received_transactions)
 
-    def on_payment_received(self, payment):
-        print "received"
-        print payment
+    def get_widget_with_transaction(self, trader_id, transaction_number):
+        for i in range(self.window().market_transactions_list.topLevelItemCount()):
+            item = self.window().market_transactions_list.topLevelItem(i)
+            if item.transaction["trader_id"] == trader_id and item.transaction["transaction_number"] == transaction_number:
+                return item
 
-    def on_payment_sent(self, payment):
-        print "sent"
-        print payment
+    def on_payment(self, payment):
+        item = self.get_widget_with_transaction(payment["trader_id"], payment["transaction_number"])
+        if item:
+            item.transaction["current_payment"] += 1
+            item.update_item()
 
     def on_received_transactions(self, transactions):
         for transaction in transactions["transactions"]:
