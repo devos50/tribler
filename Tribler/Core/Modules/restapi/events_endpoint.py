@@ -8,7 +8,8 @@ from Tribler.Core.simpledefs import (NTFY_CHANNELCAST, SIGNAL_CHANNEL, SIGNAL_ON
                                      NTFY_DISCOVERED, NTFY_TORRENT, NTFY_ERROR, NTFY_DELETE, NTFY_MARKET_ON_ASK,
                                      NTFY_UPDATE, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE,
                                      NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT,
-                                     NTFY_MARKET_IOM_INPUT_REQUIRED)
+                                     NTFY_MARKET_IOM_INPUT_REQUIRED, NTFY_MARKET_ON_PAYMENT_RECEIVED,
+                                     NTFY_MARKET_ON_PAYMENT_SENT)
 from Tribler.Core.version import version_id
 
 
@@ -49,6 +50,8 @@ class EventsEndpoint(resource.Resource):
     - market_bid_timeout: An bid has expired. The event includes information about the bid.
     - market_transaction_complete: A transaction has been completed in the market. The event contains the transaction
       that was completed.
+    - market_payment_received: We received a payment in the market. The events contains the payment information.
+    - market_payment_sent: We sent a payment in the market. The events contains the payment information.
     - market_iom_input_required: The Internet-of-Money modules requires user input (like a password or challenge
       response).
     """
@@ -82,6 +85,8 @@ class EventsEndpoint(resource.Resource):
         self.session.add_observer(self.on_market_bid_timeout, NTFY_MARKET_ON_BID_TIMEOUT, [NTFY_UPDATE])
         self.session.add_observer(self.on_market_transaction_complete,
                                   NTFY_MARKET_ON_TRANSACTION_COMPLETE, [NTFY_UPDATE])
+        self.session.add_observer(self.on_market_payment_received, NTFY_MARKET_ON_PAYMENT_RECEIVED, [NTFY_UPDATE])
+        self.session.add_observer(self.on_market_payment_sent, NTFY_MARKET_ON_PAYMENT_SENT, [NTFY_UPDATE])
         self.session.add_observer(self.on_market_iom_input_required, NTFY_MARKET_IOM_INPUT_REQUIRED, [NTFY_UPDATE])
 
     def write_data(self, message):
@@ -186,6 +191,12 @@ class EventsEndpoint(resource.Resource):
 
     def on_market_transaction_complete(self, subject, changetype, objectID, *args):
         self.write_data({"type": "market_transaction_complete", "event": args[0].to_dictionary()})
+
+    def on_market_payment_received(self, subject, changetype, objectID, *args):
+        self.write_data({"type": "market_payment_received", "event": args[0].to_dictionary()})
+
+    def on_market_payment_sent(self, subject, changetype, objectID, *args):
+        self.write_data({"type": "market_payment_sent", "event": args[0].to_dictionary()})
 
     def on_market_iom_input_required(self, subject, changetype, objectID, *args):
         self.write_data({"type": "market_iom_input_required", "event": args[0].to_dictionary()})

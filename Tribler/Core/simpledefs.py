@@ -94,6 +94,8 @@ NTFY_MARKET_ON_BID = 'onmarketbid'
 NTFY_MARKET_ON_ASK_TIMEOUT = 'onmarketasktimeout'
 NTFY_MARKET_ON_BID_TIMEOUT = 'onmarketbidtimeout'
 NTFY_MARKET_ON_TRANSACTION_COMPLETE = 'onmarkettransactioncomplete'
+NTFY_MARKET_ON_PAYMENT_RECEIVED = 'onmarketpaymentreceived'
+NTFY_MARKET_ON_PAYMENT_SENT = 'onmarketpaymentsent'
 NTFY_MARKET_IOM_INPUT_REQUIRED = 'onmarketiominputrequired'
 
 # non data handler subjects

@@ -15,7 +15,7 @@ class TransactionWidgetItem(QTreeWidgetItem):
         transaction_time = datetime.datetime.fromtimestamp(
             int(self.transaction["timestamp"])).strftime('%Y-%m-%d %H:%M:%S')
 
-        self.setText(0, "%d" % self.transaction["order_number"])
+        self.setText(0, "%s" % self.transaction["transaction_number"])
         self.setText(1, "%s %s" % (self.transaction["price"], self.transaction["price_type"]))
         self.setText(2, "%s %s" % (self.transaction["quantity"], self.transaction["quantity_type"]))
         self.setText(3, transaction_time)

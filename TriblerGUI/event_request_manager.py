@@ -29,6 +29,8 @@ class EventRequestManager(QNetworkAccessManager):
     expired_market_ask = pyqtSignal(object)
     expired_market_bid = pyqtSignal(object)
     market_transaction_complete = pyqtSignal(object)
+    market_payment_received = pyqtSignal(object)
+    market_payment_sent = pyqtSignal(object)
     market_iom_input_required = pyqtSignal(object)
 
     def __init__(self):
@@ -104,6 +106,10 @@ class EventRequestManager(QNetworkAccessManager):
                     self.expired_market_bid.emit(json_dict["event"])
                 elif json_dict["type"] == "market_transaction_complete":
                     self.market_transaction_complete.emit(json_dict["event"])
+                elif json_dict["type"] == "market_payment_received":
+                    self.market_payment_received.emit(json_dict["event"])
+                elif json_dict["type"] == "market_payment_sent":
+                    self.market_payment_sent.emit(json_dict["event"])
                 elif json_dict["type"] == "market_iom_input_required":
                     self.market_iom_input_required.emit(json_dict["event"])
                 elif json_dict["type"] == "tribler_exception":

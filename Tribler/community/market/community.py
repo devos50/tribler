@@ -4,7 +4,7 @@ from base64 import b64decode
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE, \
-    NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT
+    NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT, NTFY_MARKET_ON_PAYMENT_RECEIVED, NTFY_MARKET_ON_PAYMENT_SENT
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
@@ -956,6 +956,10 @@ class MarketCommunity(Community):
     def send_payment_message(self, payment_id, transaction, payment):
         message_id = self.order_book.message_repository.next_identity()
         payment_message = self.transaction_manager.create_payment_message(message_id, payment_id, transaction, payment)
+
+        if self.tribler_session:
+            self.tribler_session.notifier.notify(NTFY_MARKET_ON_PAYMENT_SENT, NTFY_UPDATE, None, payment_message)
+
         payload = payment_message.to_network()
 
         candidate = Candidate(self.lookup_ip(transaction.partner_trader_id), False)
@@ -989,6 +993,9 @@ class MarketCommunity(Community):
     def received_payment(self, payment, transaction):
         transaction.add_payment(payment)
         self.transaction_manager.transaction_repository.update(transaction)
+
+        if self.tribler_session:
+            self.tribler_session.notifier.notify(NTFY_MARKET_ON_PAYMENT_RECEIVED, NTFY_UPDATE, None, payment)
 
         if not transaction.is_payment_complete():
             self.send_payment(transaction)

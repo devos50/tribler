@@ -98,3 +98,17 @@ class Payment(Message):
             self._payment_id,
             self._timestamp,
         )
+
+    def to_dictionary(self):
+        return {
+            "trader_id": str(self.transaction_id.trader_id),
+            "transaction_number": str(self.transaction_id.transaction_number),
+            "price": float(self.transferee_price),
+            "price_type": self.transferee_price.wallet_id,
+            "quantity": float(self.transferee_quantity),
+            "quantity_type": self.transferee_quantity.wallet_id,
+            "payment_id": str(self.payment_id),
+            "address_from": str(self.address_from),
+            "address_to": str(self.address_to),
+            "timestamp": float(self.timestamp)
+        }

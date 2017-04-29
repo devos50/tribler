@@ -10284,7 +10284,7 @@ font-weight: bold;</string>
             </attribute>
             <column>
              <property name="text">
-              <string>Order number</string>
+              <string>Transaction number</string>
              </property>
             </column>
             <column>
