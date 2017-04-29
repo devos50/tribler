@@ -322,9 +322,10 @@ class Order(object):
         """
         Return a dictionary representation of this dictionary.
         """
+        completed_timestamp = int(self.completed_timestamp) if self.completed_timestamp else None
         return {
             "trader_id": str(self.order_id.trader_id),
-            "order_number": str(self.order_id.order_number),
+            "order_number": int(self.order_id.order_number),
             "price": float(self.price),
             "price_type": self.price.wallet_id,
             "quantity": float(self.total_quantity),
@@ -332,7 +333,7 @@ class Order(object):
             "reserved_quantity": float(self.reserved_quantity),
             "traded_quantity": float(self.traded_quantity),
             "timeout": float(self.timeout),
-            "timestamp": str(self.timestamp),
-            "completed_timestamp": str(self.completed_timestamp),
+            "timestamp": float(self.timestamp),
+            "completed_timestamp": completed_timestamp,
             "is_ask": self.is_ask()
         }
