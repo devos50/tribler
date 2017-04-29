@@ -15,14 +15,14 @@ class TickTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                         OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'), Quantity(30, 'MC'),
+                         OrderId(TraderId('0'), OrderNumber(1)), Price(63400, 'BTC'), Quantity(30, 'MC'),
                          Timeout(30), Timestamp.now(), True)
         self.tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                          OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'), Quantity(30, 'MC'),
+                          OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'), Quantity(30, 'MC'),
                           Timeout(0.0), Timestamp(0.0), False)
-        self.order_ask = Order(OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'),
+        self.order_ask = Order(OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'),
                                Quantity(30, 'MC'), Timeout(0.0), Timestamp(0.0), True)
-        self.order_bid = Order(OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'),
+        self.order_bid = Order(OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'),
                                Quantity(30, 'MC'), Timeout(0.0), Timestamp(0.0), False)
 
     def test_is_ask(self):
@@ -37,7 +37,7 @@ class TickTestSuite(unittest.TestCase):
 
     def test_to_network(self):
         # Test for to network
-        self.assertEquals((TraderId('0'), MessageNumber('message_number'), OrderNumber('order_number'),
+        self.assertEquals((TraderId('0'), MessageNumber('message_number'), OrderNumber(1),
                            Price(63400, 'BTC'), Quantity(30, 'MC'), self.tick.timeout, self.tick.timestamp),
                           self.tick.to_network())
 
@@ -74,7 +74,7 @@ class AskTestSuite(unittest.TestCase):
         # Test for from network
         now = Timestamp.now()
         data = Ask.from_network(type('Data', (object,), {"trader_id": TraderId('0'),
-                                                         "order_number": OrderNumber('order_number'),
+                                                         "order_number": OrderNumber(1),
                                                          "message_number": MessageNumber('message_number'),
                                                          "price": Price(63400, 'BTC'),
                                                          "quantity": Quantity(30, 'MC'),
@@ -95,7 +95,7 @@ class BidTestSuite(unittest.TestCase):
         # Test for from network
         now = Timestamp.now()
         data = Bid.from_network(type('Data', (object,), {"trader_id": TraderId('0'),
-                                                         "order_number": OrderNumber('order_number'),
+                                                         "order_number": OrderNumber(2),
                                                          "message_number": MessageNumber('message_number'),
                                                          "price": Price(63400, 'BTC'),
                                                          "quantity": Quantity(40, 'MC'),

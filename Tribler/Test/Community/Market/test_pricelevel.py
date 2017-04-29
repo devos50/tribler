@@ -17,10 +17,10 @@ class PriceLevelTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                    OrderId(TraderId('0'), OrderNumber("order_number")), Price(63400, 'BTC'), Quantity(30, 'MC'),
+                    OrderId(TraderId('0'), OrderNumber(1)), Price(63400, 'BTC'), Quantity(30, 'MC'),
                     Timeout(float("inf")), Timestamp(float("inf")), True)
         tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
-                     OrderId(TraderId('0'), OrderNumber("order_number")), Price(30, 'MC'), Quantity(30, 'BTC'),
+                     OrderId(TraderId('0'), OrderNumber(2)), Price(30, 'MC'), Quantity(30, 'BTC'),
                      Timeout(float("inf")), Timestamp(float("inf")), True)
 
         self.price_level = PriceLevel('MC')
