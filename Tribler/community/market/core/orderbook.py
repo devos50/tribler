@@ -62,6 +62,9 @@ class OrderBook(TaskManager):
     def on_timeout_error(self, _):
         pass
 
+    def on_invalid_tick_insert(self, _):
+        self._logger.warning("Invalid tick inserted in order book.")
+
     def insert_ask(self, ask):
         """
         :type ask: Ask
@@ -76,7 +79,7 @@ class OrderBook(TaskManager):
             task = deferLater(reactor, timeout_delay, self.timeout_ask, ask.order_id)
             self.register_task("ask_%s_timeout" % ask.order_id, task)
             return task.addErrback(self.on_timeout_error)
-        return fail(Failure(RuntimeError("ask invalid")))
+        return fail(Failure(RuntimeError("ask invalid"))).addErrback(self.on_invalid_tick_insert)
 
     def remove_ask(self, order_id):
         """
@@ -102,7 +105,7 @@ class OrderBook(TaskManager):
             task = deferLater(reactor, timeout_delay, self.timeout_bid, bid.order_id)
             self.register_task("bid_%s_timeout" % bid.order_id, task)
             return task.addErrback(self.on_timeout_error)
-        return fail(Failure(RuntimeError("bid invalid")))
+        return fail(Failure(RuntimeError("bid invalid"))).addErrback(self.on_invalid_tick_insert)
 
     def remove_bid(self, order_id):
         """

@@ -1,6 +1,6 @@
-import hashlib
 from urllib import urlencode
 
+import datetime
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor
 from PyQt5.QtGui import QIcon
@@ -287,12 +287,12 @@ class MarketPage(QWidget):
         else:
             self.window().asks_list.clearSelection()
 
-        self.window().market_detail_order_id_label.setText(
-            hashlib.sha1(tick["trader_id"] + tick["order_id"]).hexdigest())
-        self.window().market_detail_trader_id_label.setText(hashlib.sha1(tick["trader_id"]).hexdigest())
+        tick_time = datetime.datetime.fromtimestamp(int(tick["timestamp"])).strftime('%Y-%m-%d %H:%M:%S')
+        self.window().market_detail_trader_id_label.setText(tick["trader_id"])
+        self.window().market_detail_order_number_label.setText("%s" % tick["order_number"])
         self.window().market_detail_quantity_label.setText("%s %s" % (tick["quantity"], tick["quantity_type"]))
         self.window().market_detail_price_label.setText("%s %s" % (tick["price"], tick["price_type"]))
-        self.window().market_detail_time_created_label.setText(tick["timestamp"])
+        self.window().market_detail_time_created_label.setText(tick_time)
 
         self.window().tick_detail_container.show()
 

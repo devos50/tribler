@@ -115,7 +115,8 @@ class Tick(Message):
         :return: True if valid, False otherwise
         :rtype: bool
         """
-        return not self._timeout.is_timed_out(self._timestamp) and not time.time() < float(self.timestamp)
+        time_tol = 10  # A small tolerance for the timestamp, to account for network delays
+        return not self._timeout.is_timed_out(self._timestamp) and time.time() >= float(self.timestamp) - time_tol
 
     def to_network(self):
         """
@@ -137,7 +138,7 @@ class Tick(Message):
         """
         return {
             "trader_id": str(self.order_id.trader_id),
-            "order_number": str(self.order_id.order_number),
+            "order_number": int(self.order_id.order_number),
             "message_id": str(self.message_id),
             "price": float(self.price),
             "price_type": self.price.wallet_id,
