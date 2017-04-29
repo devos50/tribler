@@ -48,6 +48,8 @@ class MarketPage(QWidget):
             self.window().core_manager.events_manager.received_market_bid.connect(self.on_bid)
             self.window().core_manager.events_manager.expired_market_ask.connect(self.on_ask_timeout)
             self.window().core_manager.events_manager.expired_market_bid.connect(self.on_bid_timeout)
+            self.window().core_manager.events_manager.market_payment_received.connect(self.on_payment)
+            self.window().core_manager.events_manager.market_payment_sent.connect(self.on_payment)
             self.window().core_manager.events_manager.market_transaction_complete.connect(self.on_transaction_complete)
             self.window().core_manager.events_manager.market_iom_input_required.connect(self.on_iom_input_required)
 
@@ -223,6 +225,7 @@ class MarketPage(QWidget):
                     % (transaction["price"], transaction["price_type"],
                        transaction["quantity"], transaction["quantity_type"])
         self.window().tray_icon.showMessage("Transaction completed", main_text)
+        self.window().hide_status_bar()
 
         # Reload wallets
         self.load_wallets()
@@ -349,3 +352,6 @@ class MarketPage(QWidget):
 
         if index_to_remove != -1:
             tick_list.takeTopLevelItem(index_to_remove)
+
+    def on_payment(self, payment):
+        self.window().show_status_bar("Transaction in process, please don't close Tribler.")

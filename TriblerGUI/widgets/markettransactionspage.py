@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget
 
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
-from TriblerGUI.widgets.TransactionWidgetItem import TransactionWidgetItem
+from TriblerGUI.widgets.transactionwidgetitem import TransactionWidgetItem
 
 
 class MarketTransactionsPage(QWidget):
