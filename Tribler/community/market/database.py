@@ -31,6 +31,14 @@ CREATE TABLE IF NOT EXISTS orders(
  PRIMARY KEY (trader_id, order_number)
  );
 
+CREATE TABLE IF NOT EXISTS traders(
+ trader_id            TEXT NOT NULL,
+ ip_address           TEXT NOT NULL,
+ port                 INTEGER NOT NULL,
+
+ PRIMARY KEY(trader_id)
+ );
+
 CREATE TABLE option(key TEXT PRIMARY KEY, value BLOB);
 INSERT INTO option(key, value) VALUES('database_version', '""" + str(LATEST_DB_VERSION) + u"""');
 """
@@ -93,6 +101,13 @@ class MarketDB(Database):
         if not highest_order_number[0]:
             return 1
         return highest_order_number[0] + 1
+
+    def add_trader_identity(self, trader_id, ip, port):
+        self.execute(u"INSERT OR REPLACE INTO traders VALUES(?,?,?)", (unicode(trader_id), unicode(ip), port))
+        self.commit()
+
+    def get_traders(self):
+        return self.execute(u"SELECT * FROM traders").fetchall()
 
     def open(self, initial_statements=True, prepare_visioning=True):
         return super(MarketDB, self).open(initial_statements, prepare_visioning)

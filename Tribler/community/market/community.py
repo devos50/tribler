@@ -79,9 +79,11 @@ class MarketCommunity(Community):
         self.relayed_asks = []
         self.relayed_bids = []
 
-        market_database = MarketDB(self.dispersy.working_directory)
+        self.market_database = MarketDB(self.dispersy.working_directory)
+        for trader in self.market_database.get_traders():
+            self.update_ip(TraderId(str(trader[0])), (str(trader[1]), trader[2]))
 
-        order_repository = DatabaseOrderRepository(self.mid, market_database)
+        order_repository = DatabaseOrderRepository(self.mid, self.market_database)
         message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)
@@ -255,6 +257,10 @@ class MarketCommunity(Community):
 
     @inlineCallbacks
     def unload_community(self):
+        # Store all traders to the database
+        for trader_id, sock_addr in self.mid_register.iteritems():
+            self.market_database.add_trader_identity(trader_id, sock_addr[0], sock_addr[1])
+
         self.order_book.cancel_all_pending_tasks()
         yield super(MarketCommunity, self).unload_community()
 

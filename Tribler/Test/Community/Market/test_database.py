@@ -66,3 +66,14 @@ class TestDatabase(AbstractServer):
         self.assertEqual(self.database.get_next_order_number(), 1)
         self.database.add_order(self.order1)
         self.assertEqual(self.database.get_next_order_number(), 5)
+
+    @blocking_call_on_reactor_thread
+    def test_add_get_trader_identity(self):
+        """
+        Test the addition and retrieval of a trader identity
+        """
+        self.database.add_trader_identity("a", "123", 1234)
+        self.database.add_trader_identity("b", "124", 1235)
+        traders = self.database.get_traders()
+        self.assertEqual(len(traders), 2)
+        self.assertEqual(traders, [("a", "123", 1234), ("b", "124", 1235)])

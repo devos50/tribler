@@ -137,14 +137,14 @@ class Tick(Message):
         """
         return {
             "trader_id": str(self.order_id.trader_id),
-            "order_id": str(self.order_id.order_number),
+            "order_number": str(self.order_id.order_number),
             "message_id": str(self.message_id),
             "price": float(self.price),
             "price_type": self.price.wallet_id,
             "quantity": float(self.quantity),
             "quantity_type": self.quantity.wallet_id,
             "timeout": str(self.timeout),
-            "timestamp": str(self.timestamp)
+            "timestamp": float(self.timestamp)
         }
 
 
