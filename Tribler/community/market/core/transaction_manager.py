@@ -50,7 +50,7 @@ class TransactionManager(object):
 
         transaction = Transaction(start_transaction.transaction_id, start_transaction.transaction_id.trader_id,
                                   start_transaction.price, start_transaction.quantity, order.order_id,
-                                  order.timeout, Timestamp.now())
+                                  Timestamp.now())
         self.transaction_repository.add(transaction)
 
         self._logger.info("Transaction created with id: %s, quantity: %s, price: %s",
