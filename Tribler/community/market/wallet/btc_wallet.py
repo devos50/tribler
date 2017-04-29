@@ -203,7 +203,7 @@ class BitcoinWallet(Wallet):
 
         server = daemon.get_server(config)
         result = server.run_cmdline(options)
-        return result
+        return succeed(result)
 
     def min_unit(self):
         return 0.00000001

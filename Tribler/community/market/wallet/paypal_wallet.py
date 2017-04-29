@@ -62,8 +62,7 @@ class PayPalWallet(Wallet):
         return self.paypal_manager.persistent_storage['email']
 
     def get_transactions(self):
-        # TODO(Martijn): implement this
-        return []
+        return self.paypal_manager.get_transactions()
 
     def min_unit(self):
         return 0.01

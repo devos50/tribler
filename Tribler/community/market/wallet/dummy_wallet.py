@@ -53,7 +53,7 @@ class BaseDummyWallet(Wallet):
 
     def get_transactions(self):
         # TODO(Martijn): implement this
-        return []
+        return succeed([])
 
     def min_unit(self):
         return 1

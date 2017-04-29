@@ -100,4 +100,10 @@ class WalletTransactionsEndpoint(resource.Resource):
         self.identifier = identifier
 
     def render_GET(self, request):
-        return json.dumps({"transactions": self.session.lm.market_community.wallets[self.identifier].get_transactions()})
+        def on_transactions(transactions):
+            request.write(json.dumps({"transactions": transactions}))
+            request.finish()
+
+        self.session.lm.market_community.wallets[self.identifier].get_transactions().addCallback(on_transactions)
+
+        return NOT_DONE_YET
