@@ -226,13 +226,16 @@ class Transaction(object):
         """
         return {
             "trader_id": str(self.transaction_id.trader_id),
+            "order_number": int(self.order_id.order_number),
             "partner_trader_id": str(self.partner_trader_id),
             "transaction_number": str(self.transaction_id.transaction_number),
             "price": float(self.price),
             "price_type": self.price.wallet_id,
             "quantity": float(self.total_quantity),
             "quantity_type": self.total_quantity.wallet_id,
-            "timestamp": str(self.timestamp),
+            "timestamp": float(self.timestamp),
+            "total_payments": len(self._payment_list) * 2,
+            "current_payment": len(self._payments.keys()),
             "payment_complete": self.is_payment_complete()
         }
 

@@ -1015,7 +1015,7 @@ background-color: #e67300;
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>13</number>
+         <number>14</number>
         </property>
         <widget class="HomePage" name="home_page">
          <layout class="QVBoxLayout" name="verticalLayout">
@@ -10284,17 +10284,12 @@ font-weight: bold;</string>
             </attribute>
             <column>
              <property name="text">
-              <string>Time</string>
+              <string>Order number</string>
              </property>
             </column>
             <column>
              <property name="text">
-              <string>Trader</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>Price (BTC)</string>
+              <string>Price</string>
              </property>
             </column>
             <column>
@@ -10304,7 +10299,12 @@ font-weight: bold;</string>
             </column>
             <column>
              <property name="text">
-              <string>Completed?</string>
+              <string>Time</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Payments done</string>
              </property>
             </column>
            </widget>

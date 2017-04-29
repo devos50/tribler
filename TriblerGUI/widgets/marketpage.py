@@ -224,10 +224,6 @@ class MarketPage(QWidget):
                        transaction["quantity"], transaction["quantity_type"])
         self.window().tray_icon.showMessage("Transaction completed", main_text)
 
-        # Reload transactions
-        # TODO(Martijn): fix transaction history page - persistency?
-        # self.window().market_transactions_page.load_transactions()
-
         # Reload wallets
         self.load_wallets()
 

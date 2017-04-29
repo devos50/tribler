@@ -1,11 +1,9 @@
-import hashlib
-
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
+from TriblerGUI.widgets.TransactionWidgetItem import TransactionWidgetItem
 
 
 class MarketTransactionsPage(QWidget):
@@ -33,10 +31,6 @@ class MarketTransactionsPage(QWidget):
 
     def on_received_transactions(self, transactions):
         for transaction in transactions["transactions"]:
-            item = QTreeWidgetItem(self.window().market_transactions_list)
-            item.setText(0, transaction["timestamp"])
-            item.setText(1, transaction["trader_id"])
-            item.setText(2, transaction["price"])
-            item.setText(3, "%d" % transaction["quantity"])
-            item.setText(4, "%s" % ("yes" if transaction["payment_complete"] else "no"))
+            item = TransactionWidgetItem(self.window().market_transactions_list, transaction)
+            item.update_item()
             self.window().market_transactions_list.addTopLevelItem(item)
