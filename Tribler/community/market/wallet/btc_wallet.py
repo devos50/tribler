@@ -202,8 +202,32 @@ class BitcoinWallet(Wallet):
         config = SimpleConfig(options)
 
         server = daemon.get_server(config)
-        result = server.run_cmdline(options)
-        return succeed(result)
+        result = server.run_cmdline(options)[:-10]  # Get last ten transactions
+
+        # TODO we still need to add several fields here
+        transactions = []
+        for transaction in result:
+            outgoing = transaction['value'] < 0
+            if outgoing:
+                from_address = self.get_address()
+                to_address = ''
+            else:
+                from_address = ''
+                to_address = self.get_address()
+
+            transactions.append({
+                'id': transaction['txid'],
+                'outgoing': outgoing,
+                'from': from_address,
+                'to': to_address,
+                'amount': abs(transaction['value']),
+                'fee_amount': 0.0,
+                'currency': 'BTC',
+                'timestamp': str(transaction['timestamp']),
+                'description': ''
+            })
+
+        return succeed(transactions)
 
     def min_unit(self):
         return 0.00000001

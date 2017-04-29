@@ -41,6 +41,9 @@ class IomInputDialog(DialogContainer):
 
             input_widget = QLineEdit(self.dialog_widget.input_container)
             input_widget.setPlaceholderText(specific_input['placeholder'])
+            if specific_input['type'] == 'password':
+                input_widget.setEchoMode(QLineEdit.Password)
+
             input_widget.show()
             vlayout.addWidget(input_widget)
             self.input_widgets[specific_input['name']] = input_widget

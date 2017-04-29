@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
-from TriblerGUI.defs import PAGE_WALLET_NONE, PAGE_WALLET_BTC, PAGE_WALLET_MC, BUTTON_TYPE_NORMAL, BUTTON_TYPE_CONFIRM
+from TriblerGUI.defs import BUTTON_TYPE_NORMAL, BUTTON_TYPE_CONFIRM
 from TriblerGUI.dialogs.confirmationdialog import ConfirmationDialog
 from TriblerGUI.tribler_action_menu import TriblerActionMenu
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
@@ -27,9 +27,9 @@ class MarketWalletsPage(QWidget):
     def initialize_wallets_page(self):
         if not self.initialized:
             self.window().wallets_back_button.setIcon(QIcon(get_image_path('page_back.png')))
-            self.window().wallets_stacked_widget.setCurrentIndex(PAGE_WALLET_NONE)
-            self.window().wallet_btc_overview_button.clicked.connect(self.on_btc_wallet_clicked)
-            self.window().wallet_mc_overview_button.clicked.connect(self.on_mc_wallet_clicked)
+            self.window().wallet_btc_overview_button.clicked.connect(lambda: self.load_transactions('BTC'))
+            self.window().wallet_mc_overview_button.clicked.connect(lambda: self.load_transactions('MC'))
+            self.window().wallet_paypal_overview_button.clicked.connect(lambda: self.load_transactions('PP'))
             self.window().add_wallet_button.clicked.connect(self.on_add_wallet_clicked)
             self.window().wallet_mc_overview_button.hide()
             self.window().wallet_btc_overview_button.hide()
@@ -64,47 +64,22 @@ class MarketWalletsPage(QWidget):
         if len(self.wallets_to_create) > 0:
             self.window().add_wallet_button.setEnabled(True)
 
-    def on_btc_wallet_clicked(self):
-        self.window().wallets_stacked_widget.setCurrentIndex(PAGE_WALLET_BTC)
-        self.load_btc_wallet_balance()
-
-    def on_mc_wallet_clicked(self):
-        self.window().wallets_stacked_widget.setCurrentIndex(PAGE_WALLET_MC)
-        self.load_mc_wallet_balance()
-
-    def load_btc_wallet_balance(self):
+    def load_transactions(self, wallet_id):
         self.request_mgr = TriblerRequestManager()
-        self.request_mgr.perform_request("wallets/btc/balance", self.on_btc_wallet_balance)
+        self.request_mgr.perform_request("wallets/%s/transactions" % wallet_id, self.on_transactions)
 
-    def on_btc_wallet_balance(self, balance):
-        self.window().btc_wallet_confirmed_label.setText("%s" % balance["balance"]["confirmed"])
-        self.window().btc_wallet_unconfirmed_label.setText("%s" % balance["balance"]["unconfirmed"])
-        self.window().btc_wallet_unmatured_label.setText("%s" % balance["balance"]["unmatured"])
-        self.load_btc_transactions()
-
-    def load_btc_transactions(self):
-        self.request_mgr = TriblerRequestManager()
-        self.request_mgr.perform_request("wallets/btc/transactions", self.on_btc_transactions)
-
-    def on_btc_transactions(self, transactions):
-        self.window().btc_wallet_transactions_list.clear()
+    def on_transactions(self, transactions):
+        self.window().wallet_transactions_list.clear()
         for transaction in transactions["transactions"]:
-            item = QTreeWidgetItem(self.window().btc_wallet_transactions_list)
-            item.setText(0, "sent" if transaction["value"] < 0 else "received")
-            item.setText(1, transaction["txid"])
-            item.setText(2, transaction["date"])
-            item.setText(3, "%f" % transaction["value"])
-            item.setText(4, "%d" % transaction["confirmations"])
-            self.window().btc_wallet_transactions_list.addTopLevelItem(item)
-
-    def load_mc_wallet_balance(self):
-        self.request_mgr = TriblerRequestManager()
-        self.request_mgr.perform_request("wallets/mc/balance", self.on_mc_wallet_balance)
-
-    def on_mc_wallet_balance(self, balance):
-        self.window().mc_wallet_given_label.setText("%s" % balance["balance"]["total_up"])
-        self.window().mc_wallet_taken_label.setText("%s" % balance["balance"]["total_down"])
-        self.window().mc_wallet_balance_label.setText("%s" % balance["balance"]["net"])
+            item = QTreeWidgetItem(self.window().wallet_transactions_list)
+            item.setText(0, "Sent" if transaction["outgoing"] else "Received")
+            item.setText(1, transaction["from"])
+            item.setText(2, transaction["to"])
+            item.setText(3, "%g %s" % (transaction["amount"], transaction["currency"]))
+            item.setText(4, "%g %s" % (transaction["fee_amount"], transaction["currency"]))
+            item.setText(5, transaction["id"])
+            item.setText(6, transaction["timestamp"])
+            self.window().wallet_transactions_list.addTopLevelItem(item)
 
     def on_add_wallet_clicked(self):
         menu = TriblerActionMenu(self)
