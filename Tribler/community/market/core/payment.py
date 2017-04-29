@@ -102,7 +102,7 @@ class Payment(Message):
     def to_dictionary(self):
         return {
             "trader_id": str(self.transaction_id.trader_id),
-            "transaction_number": str(self.transaction_id.transaction_number),
+            "transaction_number": int(self.transaction_id.transaction_number),
             "price": float(self.transferee_price),
             "price_type": self.transferee_price.wallet_id,
             "quantity": float(self.transferee_quantity),

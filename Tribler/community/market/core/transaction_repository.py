@@ -110,4 +110,4 @@ class MemoryTransactionRepository(TransactionRepository):
         :rtype: TransactionId
         """
         self._next_id += 1
-        return TransactionId(TraderId(self._mid), TransactionNumber(str(self._next_id)))
+        return TransactionId(TraderId(self._mid), TransactionNumber(self._next_id))

@@ -189,7 +189,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.order_trader_id), int(payload.order_number),
+            int(payload.transaction_number), str(payload.order_trader_id), int(payload.order_number),
             str(payload.recipient_trader_id), int(payload.recipient_order_number),
             float(payload.price), int(payload.price.int_wallet_id), float(payload.quantity),
             int(payload.quantity.int_wallet_id), float(payload.timestamp)
@@ -205,7 +205,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), float(payload.timestamp)
+            int(payload.transaction_number), float(payload.timestamp)
         ))
         return packet,
 
@@ -217,7 +217,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.incoming_address), str(payload.outgoing_address),
+            int(payload.transaction_number), str(payload.incoming_address), str(payload.outgoing_address),
             float(payload.timestamp)
         ))
         return packet,
@@ -231,7 +231,7 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), float(payload.transferee_quantity),
+            int(payload.transaction_number), float(payload.transferee_quantity),
             int(payload.transferee_quantity.int_wallet_id), float(payload.transferee_price),
             int(payload.transferee_price.int_wallet_id), str(payload.address_from), str(payload.address_to),
             str(payload.payment_id), float(payload.timestamp)

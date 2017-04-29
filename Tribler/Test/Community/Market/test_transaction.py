@@ -15,13 +15,14 @@ class TransactionNumberTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.transaction_number = TransactionNumber('message_number')
-        self.transaction_number2 = TransactionNumber('message_number')
-        self.transaction_number3 = TransactionNumber('message_number_2')
+        self.transaction_number = TransactionNumber(1)
+        self.transaction_number2 = TransactionNumber(2)
+        self.transaction_number3 = TransactionNumber(3)
 
     def test_conversion(self):
         # Test for conversions
-        self.assertEqual('message_number', str(self.transaction_number))
+        self.assertEqual(1, int(self.transaction_number))
+        self.assertEqual('1', str(self.transaction_number))
 
     def test_init(self):
         # Test for init validation

@@ -12,15 +12,18 @@ class TransactionNumber(object):
 
     def __init__(self, transaction_number):
         """
-        :type transaction_number: str
+        :type transaction_number: int
         :raises ValueError: Thrown when one of the arguments are invalid
         """
         super(TransactionNumber, self).__init__()
 
-        if not isinstance(transaction_number, str):
-            raise ValueError("Transaction number must be a string")
+        if not isinstance(transaction_number, int):
+            raise ValueError("Transaction number must be an integer")
 
         self._transaction_number = transaction_number
+
+    def __int__(self):
+        return self._transaction_number
 
     def __str__(self):
         return "%s" % self._transaction_number
@@ -228,7 +231,7 @@ class Transaction(object):
             "trader_id": str(self.transaction_id.trader_id),
             "order_number": int(self.order_id.order_number),
             "partner_trader_id": str(self.partner_trader_id),
-            "transaction_number": str(self.transaction_id.transaction_number),
+            "transaction_number": int(self.transaction_id.transaction_number),
             "price": float(self.price),
             "price_type": self.price.wallet_id,
             "quantity": float(self.total_quantity),
