@@ -111,4 +111,71 @@ class MemoryOrderRepository(OrderRepository):
         :rtype: OrderId
         """
         self._next_id += 1
-        return OrderId(TraderId(self._mid), OrderNumber(str(self._next_id)))
+        return OrderId(TraderId(self._mid), OrderNumber(self._next_id))
+
+
+class DatabaseOrderRepository(OrderRepository):
+    """A repository that stores orders in the database"""
+
+    def __init__(self, mid, persistence):
+        """
+        :param mid: Hex encoded version of the member id of this node
+        :type mid: str
+        """
+        super(DatabaseOrderRepository, self).__init__()
+
+        self._logger.info("Memory order repository used")
+
+        try:
+            int(mid, 16)
+        except ValueError:  # Not a hexadecimal
+            raise ValueError("Encoded member id must be hexadecimal")
+
+        self._mid = mid
+        self.persistence = persistence
+
+    def find_all(self):
+        """
+        :rtype: [Order]
+        """
+        return self.persistence.get_all_orders()
+
+    def find_by_id(self, order_id):
+        """
+        :param order_id: The order id to look for
+        :type order_id: OrderId
+        :return: The order or null if it cannot be found
+        :rtype: Order
+        """
+        assert isinstance(order_id, OrderId), type(order_id)
+
+        self._logger.debug("Order with the id: " + str(order_id) + " was searched for in the order repository")
+
+        return self.persistence.get_order(order_id)
+
+    def add(self, order):
+        """
+        :param order: The order to add to the database
+        :type order: Order
+        """
+        self.persistence.add_order(order)
+
+    def update(self, order):
+        """
+        :param order: The order to update
+        :type order: Order
+        """
+        self.delete_by_id(order.order_id)
+        self.add(order)
+
+    def delete_by_id(self, order_id):
+        """
+        :param order_id: The id of the order to remove
+        """
+        self.persistence.delete_order(order_id)
+
+    def next_identity(self):
+        """
+        :rtype OrderId
+        """
+        return OrderId(TraderId(self._mid), OrderNumber(self.persistence.get_next_order_number()))

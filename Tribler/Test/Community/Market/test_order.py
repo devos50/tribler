@@ -112,9 +112,9 @@ class OrderNumberTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.order_number = OrderNumber("order_number")
-        self.order_number2 = OrderNumber("order_number")
-        self.order_number3 = OrderNumber("order_number3")
+        self.order_number = OrderNumber(1)
+        self.order_number2 = OrderNumber(2)
+        self.order_number3 = OrderNumber(3)
 
     def test_init(self):
         # Test for init validation
@@ -140,6 +140,10 @@ class OrderNumberTestSuite(unittest.TestCase):
     def test_str(self):
         # Test for string representation
         self.assertEquals('order_number', str(self.order_number))
+
+    def test_int(self):
+        # Test for integer representation
+        self.assertEquals(1, int(self.order_number))
 
 
 if __name__ == '__main__':

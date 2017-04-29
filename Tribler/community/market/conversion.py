@@ -116,7 +116,7 @@ class MarketConversion(BinaryConversion):
     def _encode_offer(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), str(payload.order_number), float(payload.price),
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.price),
             int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
             float(payload.timeout), float(payload.timestamp), int(payload.ttl), str(payload.address.ip),
             int(payload.address.port)
@@ -131,7 +131,7 @@ class MarketConversion(BinaryConversion):
     def _encode_offer_sync(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), str(payload.order_number), float(payload.price),
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.price),
             int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
             float(payload.timeout), float(payload.timestamp), int(payload.ttl), str(payload.address.ip),
             int(payload.address.port), bool(payload.is_ask)
@@ -146,8 +146,8 @@ class MarketConversion(BinaryConversion):
     def _encode_proposed_trade(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), str(payload.order_number),
-            str(payload.recipient_trader_id), str(payload.recipient_order_number), float(payload.price),
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number),
+            str(payload.recipient_trader_id), int(payload.recipient_order_number), float(payload.price),
             int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
             float(payload.timestamp), str(payload.address.ip), int(payload.address.port)
         ))
@@ -161,8 +161,8 @@ class MarketConversion(BinaryConversion):
     def _encode_accepted_trade(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), str(payload.order_number),
-            str(payload.recipient_trader_id), str(payload.recipient_order_number), float(payload.price),
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number),
+            str(payload.recipient_trader_id), int(payload.recipient_order_number), float(payload.price),
             int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
             float(payload.timestamp), int(payload.ttl), str(payload.address.ip), int(payload.address.port)
         ))
@@ -176,8 +176,8 @@ class MarketConversion(BinaryConversion):
     def _encode_declined_trade(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), str(payload.order_number),
-            str(payload.recipient_trader_id), str(payload.recipient_order_number), float(payload.timestamp)
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number),
+            str(payload.recipient_trader_id), int(payload.recipient_order_number), float(payload.timestamp)
         ))
         return packet,
 
@@ -189,8 +189,8 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
-            str(payload.transaction_number), str(payload.order_trader_id), str(payload.order_number),
-            str(payload.recipient_trader_id), str(payload.recipient_order_number),
+            str(payload.transaction_number), str(payload.order_trader_id), int(payload.order_number),
+            str(payload.recipient_trader_id), int(payload.recipient_order_number),
             float(payload.price), int(payload.price.int_wallet_id), float(payload.quantity),
             int(payload.quantity.int_wallet_id), float(payload.timestamp)
         ))

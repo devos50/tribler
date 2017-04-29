@@ -8,6 +8,7 @@ from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
+from Tribler.community.market.database import MarketDB
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
 from Tribler.community.market.wallet.wallet import InsufficientFunds
 from Tribler.dispersy.authentication import MemberAuthentication
@@ -26,7 +27,7 @@ from core.message import TraderId
 from core.message_repository import MemoryMessageRepository
 from core.order import TickWasNotReserved
 from core.order_manager import OrderManager
-from core.order_repository import MemoryOrderRepository
+from core.order_repository import MemoryOrderRepository, DatabaseOrderRepository
 from core.orderbook import OrderBook
 from core.payment import Payment
 from core.price import Price
@@ -78,7 +79,9 @@ class MarketCommunity(Community):
         self.relayed_asks = []
         self.relayed_bids = []
 
-        order_repository = MemoryOrderRepository(self.mid)
+        market_database = MarketDB(self.dispersy.working_directory)
+
+        order_repository = DatabaseOrderRepository(self.mid, market_database)
         message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)

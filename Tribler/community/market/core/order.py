@@ -17,16 +17,19 @@ class OrderNumber(object):
 
     def __init__(self, order_number):
         """
-        :param order_number: String representing the number of an order
-        :type order_number: str
+        :param order_number: Integer representing the number of an order
+        :type order_number: int
         :raises ValueError: Thrown when one of the arguments are invalid
         """
         super(OrderNumber, self).__init__()
 
-        if not isinstance(order_number, str):
-            raise ValueError("Order number must be a string")
+        if not isinstance(order_number, int):
+            raise ValueError("Order number must be an integer")
 
         self._order_number = order_number
+
+    def __int__(self):
+        return self._order_number
 
     def __str__(self):
         return "%s" % self._order_number
@@ -139,6 +142,28 @@ class Order(object):
         self._completed_timestamp = None
         self._is_ask = is_ask
         self._reserved_ticks = {}
+
+    @classmethod
+    def from_database(cls, data):
+        """
+        Create an Order object based on information in the database.
+        """
+        order_id = OrderId(TraderId(str(data[0])), OrderNumber(data[1]))
+        order = cls(order_id, Price(data[2], str(data[3])), Quantity(data[4], str(data[5])), Timeout(data[7]),
+                    Timestamp(data[8]), bool(data[9]))
+        order._traded_quantity = Quantity(data[6], str(data[5]))
+        return order
+
+    def to_database(self):
+        """
+        Returns a database representation of an Order object.
+        :rtype: tuple
+        """
+        completed_timestamp = float(self.completed_timestamp) if self.completed_timestamp else None
+        return (unicode(self.order_id.trader_id), unicode(self.order_id.order_number), float(self.price),
+                unicode(self.price.wallet_id), float(self.total_quantity), unicode(self.total_quantity.wallet_id),
+                float(self.traded_quantity), float(self.timeout), float(self.timestamp), completed_timestamp,
+                self.is_ask())
 
     @property
     def reserved_ticks(self):
@@ -292,3 +317,22 @@ class Order(object):
 
         if self.is_complete():
             self._completed_timestamp = Timestamp.now()
+
+    def to_dictionary(self):
+        """
+        Return a dictionary representation of this dictionary.
+        """
+        return {
+            "trader_id": str(self.order_id.trader_id),
+            "order_number": str(self.order_id.order_number),
+            "price": float(self.price),
+            "price_type": self.price.wallet_id,
+            "quantity": float(self.total_quantity),
+            "quantity_type": self.total_quantity.wallet_id,
+            "reserved_quantity": float(self.reserved_quantity),
+            "traded_quantity": float(self.traded_quantity),
+            "timeout": float(self.timeout),
+            "timestamp": str(self.timestamp),
+            "completed_timestamp": str(self.completed_timestamp),
+            "is_ask": self.is_ask()
+        }

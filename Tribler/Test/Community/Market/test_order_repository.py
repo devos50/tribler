@@ -22,10 +22,6 @@ class OrderRepositoryTestSuite(unittest.TestCase):
         # Test for add
         self.assertEquals(NotImplemented, self.order_repository.add(self.order))
 
-    def test_delete_by_id(self):
-        # Test for delete by id
-        self.assertEquals(NotImplemented, self.order_repository.delete_by_id(self.order_id))
-
     def test_find_by_id(self):
         # Test for find by id
         self.assertEquals(NotImplemented, self.order_repository.find_by_id(self.order_id))
