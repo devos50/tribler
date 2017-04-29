@@ -27,11 +27,11 @@ class BaseDummyWallet(Wallet):
         pass
 
     def get_balance(self):
-        return succeed({'total': self.balance})
+        return succeed({'available': self.balance, 'pending': 0, 'currency': self.get_identifier()})
 
     def transfer(self, quantity, candidate):
         def on_balance(balance):
-            if balance['total'] < quantity:
+            if balance['available'] < quantity:
                 raise InsufficientFunds()
 
             self.balance -= quantity

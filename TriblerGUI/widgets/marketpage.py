@@ -119,18 +119,11 @@ class MarketPage(QWidget):
                 self.window().market_header_widget.layout().insertSpacerItem(5, spacer)
 
             # The total balance keys might be different between wallet
-            balance_amount = None
+            balance_amount = wallet['balance']['available']
             balance_currency = None
 
-            if wallet_id == 'MC':
-                balance_amount = wallet['balance']['net']
-            elif wallet_id == 'BTC':
-                balance_amount = wallet['balance']['confirmed']
-            elif wallet_id == 'PP':
-                balance_amount = wallet['balance']['available']['amount']
-                balance_currency = wallet['balance']['available']['currency']
-            else:
-                balance_amount = wallet['balance']['total']
+            if wallet_id == 'PP':
+                balance_currency = wallet['balance']['currency']
 
             self.wallet_widgets[wallet_id].update_with_amount(balance_amount, balance_currency)
 
@@ -194,7 +187,6 @@ class MarketPage(QWidget):
                     self.create_widget_item_from_tick(self.window().bids_list, bid, is_ask=False))
 
     def on_ask(self, ask):
-        print "RECEIVED ASK"
         has_level = False
         for price_level_info in self.asks:
             if price_level_info['quantity_type'] == ask['quantity_type'] \
@@ -208,7 +200,6 @@ class MarketPage(QWidget):
         self.update_filter_asks_list()
 
     def on_bid(self, bid):
-        print "RECEIVED BID"
         has_level = False
         for price_level_info in self.bids:
             if price_level_info['quantity_type'] == bid['quantity_type'] \

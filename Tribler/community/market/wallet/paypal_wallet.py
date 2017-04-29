@@ -35,9 +35,9 @@ class PayPalWallet(Wallet):
     def get_balance(self):
         if not self.created:
             return succeed({
-                'available': {'amount': 0, 'currency': 'EUR'},
-                'pending': {'amount': 0, 'currency': 'EUR'},
-                'total': {'amount': 0, 'currency': 'EUR'},
+                'available': 0,
+                'pending': 0,
+                'currency': '-'
             })
         return self.paypal_manager.get_balance()
 

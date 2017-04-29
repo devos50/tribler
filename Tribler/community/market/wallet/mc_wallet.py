@@ -29,7 +29,7 @@ class MultichainWallet(Wallet):
 
     def get_balance(self):
         total = self.mc_community.persistence.get_total(self.mc_community._public_key)
-        return succeed({'total_up': total[0], 'total_down': total[1], 'net': total[0] - total[1]})
+        return succeed({'available': total[0] - total[1], 'pending': 0, 'currency': self.get_identifier()})
 
     def transfer(self, quantity, candidate):
         if self.check_negative_balance and self.get_balance()['net'] < quantity:
