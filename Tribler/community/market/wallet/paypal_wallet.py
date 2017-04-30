@@ -57,12 +57,14 @@ class PayPalWallet(Wallet):
         monitor_deferred = Deferred()
 
         def monitor_loop():
-            transactions = self.get_transactions()
-            for transaction in transactions:
-                print "ID: %s" % transaction['id']
-                if transaction['id'] == transaction_id:
-                    monitor_deferred.callback(None)
-                    monitor_lc.stop()
+            def on_transactions():
+                transactions = self.get_transactions()
+                for transaction in transactions:
+                    print "ID: %s" % transaction['id']
+                    if transaction['id'] == transaction_id:
+                        monitor_deferred.callback(None)
+                        monitor_lc.stop()
+            return self.get_transactions().addCallback(on_transactions)
 
         monitor_lc = LoopingCall(monitor_loop)
         monitor_lc.start(5)
