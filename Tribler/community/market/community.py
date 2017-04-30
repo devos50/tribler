@@ -948,7 +948,7 @@ class MarketCommunity(Community):
             candidate.associate(member)
             transfer_deferred = wallet.transfer(float(transfer_amount), candidate)
         else:
-            transfer_deferred = wallet.transfer(float(transfer_amount), transaction.partner_incoming_address)
+            transfer_deferred = wallet.transfer(float(transfer_amount), str(transaction.partner_incoming_address))
 
         # TODO add errback for insufficient funds
         transfer_deferred.addCallback(lambda txid: self.send_payment_message(PaymentId(txid), transaction, payment_tup))
