@@ -19,6 +19,11 @@ class Wallet(TaskManager):
         super(Wallet, self).__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
 
+        # Properties for the monitor poll mechanism
+        self.min_poll_interval = 1
+        self.max_poll_interval = 10
+        self.max_poll_duration = 180
+
     def get_identifier(self):
         raise NotImplementedError("Please implement this method.")
 

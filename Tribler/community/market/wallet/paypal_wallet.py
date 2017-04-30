@@ -1,6 +1,6 @@
 from twisted.internet import reactor
-from twisted.internet.defer import succeed
-from twisted.internet.task import deferLater
+from twisted.internet.defer import succeed, Deferred
+from twisted.internet.task import deferLater, LoopingCall
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
 from Tribler.internetofmoney.Managers.PayPal.PayPalManager import PayPalManager
@@ -47,14 +47,24 @@ class PayPalWallet(Wallet):
 
         return self.paypal_manager.perform_payment(quantity, address, None)
 
-    def monitor_transaction(self, amount):
+    def monitor_transaction(self, transaction_id):
         """
-        Monitor an incoming transaction with a specific amount.
+        Monitor an incoming transaction with a specific id.
         """
-        def on_transaction_done():
-            self.balance -= amount
+        monitor_deferred = Deferred()
 
-        return deferLater(reactor, 1, on_transaction_done)
+        def monitor_loop():
+            transactions = self.get_transactions()
+            for transaction in transactions:
+                print "ID: %s" % transaction['id']
+                if transaction['id'] == transaction_id:
+                    monitor_deferred.callback(None)
+                    monitor_lc.stop()
+
+        monitor_lc = LoopingCall(monitor_loop)
+        monitor_lc.start(5)
+
+        return monitor_deferred
 
     def get_address(self):
         if not self.created:
