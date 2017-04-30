@@ -12,6 +12,7 @@ from Tribler.Test.common import TESTS_DATA_DIR
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.wallet.btc_wallet import BitcoinWallet
+from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
 from Tribler.community.multichain.community import MultiChainCommunity
 from Tribler.community.tradechain.community import TradeChainCommunity
@@ -94,7 +95,6 @@ class TestMarketBase(TestAsServer):
 
         yield TestAsServer.setUp(self, autoload_discovery=autoload_discovery)
 
-        self.should_fake_btc = True
         self.sessions = []
         self.eccrypto = ECCrypto()
         ec = self.eccrypto.generate_key(u"curve25519")
@@ -109,7 +109,6 @@ class TestMarketBase(TestAsServer):
         self.market_communities = {}
         mc_community = self.load_multichain_community_in_session(self.session)
         market_community = self.load_market_community_in_session(self.session, market_member, mc_community)
-        self.load_btc_wallet_in_market(market_community, 0)
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
@@ -139,7 +138,7 @@ class TestMarketBase(TestAsServer):
         Load the market community and tradechain community in a given session.
         """
         wallets = {'BTC': BitcoinWallet(os.path.join(session.get_state_dir(), 'wallet')),
-                   'MC': MultichainWallet(mc_community)}
+                   'MC': MultichainWallet(mc_community), 'DUM1': DummyWallet1(), 'DUM2': DummyWallet2()}
         wallets['MC'].check_negative_balance = False
 
         dispersy = session.get_dispersy_instance()
@@ -175,16 +174,6 @@ class TestMarketBase(TestAsServer):
         else:
             market.wallets['BTC'].create_wallet()
 
-        def mocked_monitor_transaction(_):
-            monitor_deferred = Deferred()
-            reactor.callLater(0.5, monitor_deferred.callback, None)
-            return monitor_deferred
-
-        if self.should_fake_btc:
-            market.wallets['BTC'].get_balance = lambda: {"confirmed": 50, "unconfirmed": 0, "unmatured": 0}
-            market.wallets['BTC'].transfer = lambda amount, address: succeed('abcd')
-            market.wallets['BTC'].monitor_transaction = mocked_monitor_transaction
-
     @inlineCallbacks
     def create_session(self, index):
         """
@@ -201,6 +190,5 @@ class TestMarketBase(TestAsServer):
 
         market_member = self.generate_member(session)
         mc_community = self.load_multichain_community_in_session(session)
-        market_community = self.load_market_community_in_session(session, market_member, mc_community)
-        self.load_btc_wallet_in_market(market_community, index)
+        self.load_market_community_in_session(session, market_member, mc_community)
         returnValue(session)
