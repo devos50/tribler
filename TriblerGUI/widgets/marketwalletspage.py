@@ -86,7 +86,7 @@ class MarketWalletsPage(QWidget):
 
         for wallet_id in self.wallets_to_create:
             wallet_action = QAction(self.wallets[wallet_id]['name'], self)
-            wallet_action.triggered.connect(lambda: self.should_create_wallet(wallet_id))
+            wallet_action.triggered.connect(lambda wid=wallet_id: self.should_create_wallet(wid))
             menu.addAction(wallet_action)
 
         menu.exec_(QCursor.pos())
