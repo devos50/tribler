@@ -194,7 +194,7 @@ class BitcoinWallet(Wallet):
 
     def get_address(self):
         if not self.created:
-            return None
+            return ''
         return str(self.wallet.get_receiving_address())
 
     def get_transactions(self):

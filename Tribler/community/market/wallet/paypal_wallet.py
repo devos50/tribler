@@ -68,8 +68,8 @@ class PayPalWallet(Wallet):
 
     def get_address(self):
         if not self.created:
-            return None
-        return self.paypal_manager.persistent_storage['email']
+            return ''
+        return str(self.paypal_manager.persistent_storage['email'])
 
     def get_transactions(self):
         return self.paypal_manager.get_transactions()
