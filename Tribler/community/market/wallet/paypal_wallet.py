@@ -1,5 +1,5 @@
 from twisted.internet import reactor
-from twisted.internet.defer import succeed, Deferred
+from twisted.internet.defer import succeed, Deferred, fail
 from twisted.internet.task import deferLater, LoopingCall
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
@@ -42,10 +42,13 @@ class PayPalWallet(Wallet):
         return self.paypal_manager.get_balance()
 
     def transfer(self, quantity, address):
-        if self.get_balance()['total'] < quantity:
-            raise InsufficientFunds()
+        def on_balance(balance):
+            if balance['available'] < quantity:
+                return fail(InsufficientFunds())
+            else:
+                return self.paypal_manager.perform_payment(quantity, address, None)
 
-        return self.paypal_manager.perform_payment(quantity, address, None)
+        return self.get_balance().addCallback(on_balance)
 
     def monitor_transaction(self, transaction_id):
         """
