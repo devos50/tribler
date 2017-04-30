@@ -150,7 +150,7 @@ class Order(object):
         """
         order_id = OrderId(TraderId(str(data[0])), OrderNumber(data[1]))
         order = cls(order_id, Price(data[2], str(data[3])), Quantity(data[4], str(data[5])), Timeout(data[7]),
-                    Timestamp(data[8]), bool(data[9]))
+                    Timestamp(data[8]), bool(data[10]))
         order._traded_quantity = Quantity(data[6], str(data[5]))
         return order
 
