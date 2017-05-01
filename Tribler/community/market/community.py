@@ -438,6 +438,9 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(ask.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
+            if ask.order_id.trader_id == TraderId(self.mid):
+                return  # We don't process ticks originating from ourself
+
             if not str(ask.order_id) in self.relayed_asks and not self.order_book.tick_exists(ask.order_id):
                 self.relayed_asks.append(str(ask.order_id))
                 self.order_book.insert_ask(ask).addCallback(self.on_ask_timeout)
@@ -541,6 +544,9 @@ class MarketCommunity(Community):
 
             # Update the pubkey register with the current address
             self.update_ip(bid.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
+
+            if bid.order_id.trader_id == TraderId(self.mid):
+                return  # We don't process ticks originating from ourself
 
             if not str(bid.order_id) in self.relayed_bids and not self.order_book.tick_exists(bid.order_id):
                 self.relayed_bids.append(str(bid.order_id))
@@ -922,7 +928,6 @@ class MarketCommunity(Community):
                 incoming_address, outgoing_address = self.get_order_addresses(order)
                 self.send_wallet_info(transaction, incoming_address, outgoing_address)
             else:
-
                 self.send_payment(transaction)
 
     def send_payment(self, transaction):
