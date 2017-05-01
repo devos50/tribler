@@ -44,7 +44,7 @@ class BaseDummyWallet(Wallet):
         Monitor an incoming transaction with a specific ID.
         """
         def on_transaction_done():
-            self.balance -= float(str(transaction_id))  # txid = amount of money transferred
+            self.balance += float(str(transaction_id))  # txid = amount of money transferred
 
         return deferLater(reactor, 1, on_transaction_done)
 
