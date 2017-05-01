@@ -992,7 +992,7 @@ class MarketCommunity(Community):
                 monitor_amount = float(payment_message.transferee_quantity)
 
             wallet = self.wallets[wallet_id]
-            transaction_deferred = wallet.monitor_transaction(payment_message.payment_id)
+            transaction_deferred = wallet.monitor_transaction(str(payment_message.payment_id))
             transaction_deferred.addCallback(lambda _: self.received_payment(payment_message, transaction))
 
     def received_payment(self, payment, transaction):
