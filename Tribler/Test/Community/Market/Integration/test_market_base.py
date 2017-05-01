@@ -74,6 +74,9 @@ class TradeChainCommunityTests(TradeChainCommunity):
     def received_half_block(self, messages):
         super(TradeChainCommunityTests, self).received_half_block(messages)
 
+        if not self.expected_sig_response:
+            return
+
         self.expected_sig_response.callback(None)
         self.expected_sig_response = None
 
