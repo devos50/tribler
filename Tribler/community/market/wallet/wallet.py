@@ -1,4 +1,6 @@
 import logging
+import random
+import string
 
 from Tribler.dispersy.taskmanager import TaskManager
 
@@ -23,6 +25,12 @@ class Wallet(TaskManager):
         self.min_poll_interval = 1
         self.max_poll_interval = 10
         self.max_poll_duration = 180
+
+    def generate_txid(self, length=10):
+        """
+        Generate a random transaction ID
+        """
+        return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
 
     def get_identifier(self):
         raise NotImplementedError("Please implement this method.")

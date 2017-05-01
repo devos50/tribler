@@ -1,5 +1,5 @@
 from twisted.internet import reactor
-from twisted.internet.defer import succeed, Deferred, fail
+from twisted.internet.defer import succeed, Deferred, fail, inlineCallbacks, returnValue
 from twisted.internet.task import deferLater, LoopingCall
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
@@ -41,26 +41,28 @@ class PayPalWallet(Wallet):
             })
         return self.paypal_manager.get_balance()
 
+    @inlineCallbacks
     def transfer(self, quantity, address):
-        def on_balance(balance):
-            if balance['available'] < quantity:
-                return fail(InsufficientFunds())
-            else:
-                return self.paypal_manager.perform_payment(quantity, address, None)
-
-        return self.get_balance().addCallback(on_balance)
+        rand_transaction_id = self.generate_txid()
+        balance = yield self.get_balance()
+        if balance['available'] < quantity:
+            returnValue(fail(InsufficientFunds()))
+        else:
+            _ = yield self.paypal_manager.perform_payment(quantity, address, rand_transaction_id)
+            returnValue(rand_transaction_id)
 
     def monitor_transaction(self, transaction_id):
         """
         Monitor an incoming transaction with a specific id.
         """
+        print "will monitor for %s" % transaction_id
         monitor_deferred = Deferred()
 
         def monitor_loop():
             def on_transactions(transactions):
                 for transaction in transactions:
-                    print "ID: %s" % transaction['id']
-                    if transaction['id'] == transaction_id:
+                    print "DESCRIPTION of %s: %s" % (transaction['id'], transaction['description'])
+                    if transaction_id in transaction['description']:
                         monitor_deferred.callback(None)
                         monitor_lc.stop()
             return self.get_transactions().addCallback(on_transactions)
