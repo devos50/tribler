@@ -83,7 +83,7 @@ class MarketCommunity(Community):
         for trader in self.market_database.get_traders():
             self.update_ip(TraderId(str(trader[0])), (str(trader[1]), trader[2]))
 
-        order_repository = DatabaseOrderRepository(self.mid, self.market_database)
+        order_repository = MemoryOrderRepository(self.mid)  # DatabaseOrderRepository(self.mid, self.market_database)
         message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)
