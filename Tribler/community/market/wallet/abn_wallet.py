@@ -65,6 +65,7 @@ class ABNWallet(Wallet):
                     if transaction_id in transaction['description']:
                         monitor_deferred.callback(None)
                         monitor_lc.stop()
+                        break
             return self.get_transactions().addCallback(on_transactions)
 
         monitor_lc = LoopingCall(monitor_loop)
