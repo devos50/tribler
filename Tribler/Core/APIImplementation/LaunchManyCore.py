@@ -275,6 +275,11 @@ class TriblerLaunchMany(TaskManager):
                 paypal_wallet = PayPalWallet(self.iom_input_handler, iom_dir)
                 wallets[paypal_wallet.get_identifier()] = paypal_wallet
 
+                # ABN
+                from Tribler.community.market.wallet.abn_wallet import ABNWallet
+                abn_wallet = ABNWallet(self.iom_input_handler, iom_dir)
+                wallets[abn_wallet.get_identifier()] = abn_wallet
+
                 # Use custom root SSL certificate
                 os.environ['SSL_CERT_FILE'] = os.path.join(get_lib_path(), 'internetofmoney', 'root_certs.pem')
 
@@ -437,15 +442,16 @@ class TriblerLaunchMany(TaskManager):
 
         return d
 
-    def iom_input_handler(self, required_input):
+    def iom_input_handler(self, required_input, bank_name=''):
         """
         This method handles required input for the Internet-of-Money module.
         :param required_input: a RequiredInput object containing information about the fields the user has to provide
+        :param bank_name: an optional parameter with the name of the bank subject to this input
         :return: A deferred that fires when the input has been provided
         """
         input_deferred = Deferred()
         self.iom_input_deferreds[required_input.name] = input_deferred
-        self.session.notifier.notify(NTFY_MARKET_IOM_INPUT_REQUIRED, NTFY_UPDATE, None, required_input)
+        self.session.notifier.notify(NTFY_MARKET_IOM_INPUT_REQUIRED, NTFY_UPDATE, bank_name, required_input)
         return input_deferred
 
     def on_iom_input(self, name, user_input):

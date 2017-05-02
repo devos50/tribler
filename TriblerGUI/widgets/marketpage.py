@@ -122,7 +122,7 @@ class MarketPage(QWidget):
             balance_amount = wallet['balance']['available']
             balance_currency = None
 
-            if wallet_id == 'PP':
+            if wallet_id == 'PP' or wallet_id == 'ABN':
                 balance_currency = wallet['balance']['currency']
 
             self.wallet_widgets[wallet_id].update_with_amount(balance_amount, balance_currency)
@@ -221,8 +221,8 @@ class MarketPage(QWidget):
         # Reload wallets
         self.load_wallets()
 
-    def on_iom_input_required(self, required_input):
-        self.dialog = IomInputDialog(self.window().stackedWidget, required_input)
+    def on_iom_input_required(self, event_dict):
+        self.dialog = IomInputDialog(self.window().stackedWidget, event_dict['bank_name'], event_dict['input'])
         self.dialog.button_clicked.connect(self.on_iom_input)
         self.dialog.show()
 

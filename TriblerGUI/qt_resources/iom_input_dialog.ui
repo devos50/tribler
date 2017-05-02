@@ -70,7 +70,7 @@ color: white;
       <string notr="true">color: #ddd; font-weight: bold; font-size: 18px;</string>
      </property>
      <property name="text">
-      <string>PayPal</string>
+      <string>Wallet name</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

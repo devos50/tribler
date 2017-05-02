@@ -13,7 +13,7 @@ class IomInputDialog(DialogContainer):
 
     button_clicked = pyqtSignal(int)
 
-    def __init__(self, parent, required_input):
+    def __init__(self, parent, bank_name, required_input):
         DialogContainer.__init__(self, parent)
 
         self.required_input = required_input
@@ -27,6 +27,8 @@ class IomInputDialog(DialogContainer):
             self.dialog_widget.error_text_label.setText(required_input['error_text'])
         else:
             self.dialog_widget.error_text_label.hide()
+
+        self.dialog_widget.iom_input_title_label.setText(bank_name)
 
         vlayout = QVBoxLayout()
         self.dialog_widget.input_container.setLayout(vlayout)

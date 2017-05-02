@@ -199,7 +199,8 @@ class EventsEndpoint(resource.Resource):
         self.write_data({"type": "market_payment_sent", "event": args[0].to_dictionary()})
 
     def on_market_iom_input_required(self, subject, changetype, objectID, *args):
-        self.write_data({"type": "market_iom_input_required", "event": args[0].to_dictionary()})
+        event_dict = {'bank_name': objectID, 'input': args[0].to_dictionary()}
+        self.write_data({"type": "market_iom_input_required", "event": event_dict})
 
     def render_GET(self, request):
         """
