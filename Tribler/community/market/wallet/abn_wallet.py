@@ -43,7 +43,6 @@ class ABNWallet(Wallet):
 
     @inlineCallbacks
     def transfer(self, quantity, address):
-        # TODO test this!!
         rand_transaction_id = self.generate_txid()
         balance = yield self.get_balance()
         if balance['available'] < quantity:
