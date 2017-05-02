@@ -75,7 +75,7 @@ class ABNWallet(Wallet):
     def get_address(self):
         if not self.created:
             return ''
-        return str(self.abn_manager.persistent_storage['account_number'])
+        return str(self.abn_manager.persistent_storage['account_iban'])
 
     def get_transactions(self):
         return self.abn_manager.get_transactions()
