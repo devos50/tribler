@@ -86,7 +86,13 @@ class WalletBalanceEndpoint(resource.Resource):
         self.identifier = identifier
 
     def render_GET(self, request):
-        return json.dumps({"balance": self.session.lm.market_community.wallets[self.identifier].get_balance()})
+        def on_balance(balance):
+            request.write(json.dumps({"balance": balance}))
+            request.finish()
+
+        self.session.lm.market_community.wallets[self.identifier].get_balance().addCallback(on_balance)
+
+        return NOT_DONE_YET
 
 
 class WalletTransactionsEndpoint(resource.Resource):
