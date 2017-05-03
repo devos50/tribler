@@ -1,5 +1,10 @@
+from base64 import b64decode
+
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QImage
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QGraphicsScene
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QSizePolicy
@@ -28,20 +33,30 @@ class IomInputDialog(DialogContainer):
         else:
             self.dialog_widget.error_text_label.hide()
 
+        if 'image' in required_input['additional_data']:
+            qimg = QImage()
+            qimg.loadFromData(b64decode(required_input['additional_data']['image']))
+            image = QPixmap.fromImage(qimg)
+            scene = QGraphicsScene(self.dialog_widget.img_graphics_view)
+            scene.addPixmap(image)
+            self.dialog_widget.img_graphics_view.setScene(scene)
+        else:
+            self.dialog_widget.img_graphics_view.hide()
+
         self.dialog_widget.iom_input_title_label.setText(bank_name)
 
         vlayout = QVBoxLayout()
-        self.dialog_widget.input_container.setLayout(vlayout)
+        self.dialog_widget.user_input_container.setLayout(vlayout)
 
         self.input_widgets = {}
 
         for specific_input in self.required_input['required_fields']:
-            label_widget = QLabel(self.dialog_widget.input_container)
+            label_widget = QLabel(self.dialog_widget.user_input_container)
             label_widget.setText(specific_input['text'] + ":")
             label_widget.show()
             vlayout.addWidget(label_widget)
 
-            input_widget = QLineEdit(self.dialog_widget.input_container)
+            input_widget = QLineEdit(self.dialog_widget.user_input_container)
             input_widget.setPlaceholderText(specific_input['placeholder'])
             if specific_input['type'] == 'password':
                 input_widget.setEchoMode(QLineEdit.Password)

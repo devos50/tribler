@@ -280,6 +280,11 @@ class TriblerLaunchMany(TaskManager):
                 abn_wallet = ABNWallet(self.iom_input_handler, iom_dir)
                 wallets[abn_wallet.get_identifier()] = abn_wallet
 
+                # Rabobank
+                from Tribler.community.market.wallet.rabo_wallet import RaboWallet
+                rabo_wallet = RaboWallet(self.iom_input_handler, iom_dir)
+                wallets[rabo_wallet.get_identifier()] = rabo_wallet
+
                 # Use custom root SSL certificate
                 os.environ['SSL_CERT_FILE'] = os.path.join(get_lib_path(), 'internetofmoney', 'root_certs.pem')
 

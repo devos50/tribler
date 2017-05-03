@@ -31,10 +31,13 @@ class MarketWalletsPage(QWidget):
             self.window().wallet_mc_overview_button.clicked.connect(lambda: self.load_transactions('MC'))
             self.window().wallet_paypal_overview_button.clicked.connect(lambda: self.load_transactions('PP'))
             self.window().wallet_abn_overview_button.clicked.connect(lambda: self.load_transactions('ABN'))
+            self.window().wallet_rabo_overview_button.clicked.connect(lambda: self.load_transactions('RABO'))
             self.window().add_wallet_button.clicked.connect(self.on_add_wallet_clicked)
             self.window().wallet_mc_overview_button.hide()
             self.window().wallet_btc_overview_button.hide()
             self.window().wallet_paypal_overview_button.hide()
+            self.window().wallet_abn_overview_button.hide()
+            self.window().wallet_rabo_overview_button.hide()
 
             self.initialized = True
 
@@ -58,6 +61,9 @@ class MarketWalletsPage(QWidget):
 
         if 'ABN' in self.wallets and self.wallets["ABN"]["created"]:
             self.window().wallet_abn_overview_button.show()
+
+        if 'RABO' in self.wallets and self.wallets["RABO"]["created"]:
+            self.window().wallet_rabo_overview_button.show()
 
         # Find out which wallets we still can create
         self.wallets_to_create = []
