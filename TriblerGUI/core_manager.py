@@ -5,6 +5,7 @@ import keyring
 from twisted.internet.error import ReactorAlreadyInstalledError
 
 # We always use a selectreactor
+from Tribler.Core.Utilities.install_dir import get_lib_path
 from Tribler.community.market.wallet.btc_wallet import BitcoinWallet
 from TriblerGUI.defs import API_PORT
 
@@ -48,20 +49,44 @@ def start_tribler_core(base_path, child_pipe):
 
     sys.path.insert(0, base_path)
 
-    def get_wallet_password(_):
-        child_pipe.send(('get_btc_wallet_pw', None))
+    def get_keyring_password(service, username):
+        child_pipe.send(('get_keyring_password', {'service': service, 'username': username}))
         return child_pipe.recv()
 
-    def set_wallet_password(_, password):
-        child_pipe.send(('set_btc_wallet_pw', password))
+    def set_keyring_password(service, username, password):
+        child_pipe.send(('set_keyring_password', {'service': service, 'username': username, 'password': password}))
         child_pipe.recv()
 
     def patch_wallet_methods():
-        BitcoinWallet.get_wallet_password = get_wallet_password
-        BitcoinWallet.set_wallet_password = set_wallet_password
+        BitcoinWallet.get_wallet_password = lambda _: get_keyring_password('tribler', 'btc_wallet_password')
+        BitcoinWallet.set_wallet_password = lambda _, password: set_keyring_password('tribler',
+                                                                                     'btc_wallet_password', password)
+
+    def patch_iom_methods():
+        try:
+            sys.path.append(os.path.join(get_lib_path(), 'internetofmoney'))
+
+            get_symmetric_key = lambda _: get_keyring_password('internetofmoney', 'symmetric_key')
+            set_symmetric_key = lambda _, password: set_keyring_password('internetofmoney', 'symmetric_key', password)
+
+            from Tribler.internetofmoney.Managers.ABN.ABNManager import ABNManager
+            ABNManager.get_symmetric_key = get_symmetric_key
+            ABNManager.set_symmetric_key = set_symmetric_key
+
+            from Tribler.internetofmoney.Managers.PayPal.PayPalManager import PayPalManager
+            PayPalManager.get_symmetric_key = get_symmetric_key
+            PayPalManager.set_symmetric_key = set_symmetric_key
+
+            from Tribler.internetofmoney.Managers.Rabo.RaboManager import RaboManager
+            RaboManager.get_symmetric_key = get_symmetric_key
+            RaboManager.set_symmetric_key = set_symmetric_key
+        except ImportError:
+            pass
 
     def start_tribler():
         patch_wallet_methods()
+        patch_iom_methods()
+
         config = SessionStartupConfig().load()
         config.set_http_api_port(API_PORT)
         config.set_http_api_enabled(True)
@@ -129,10 +154,10 @@ class CoreManager(QObject):
         """
         while True:
             cmd, arg = child_conn.recv()
-            if cmd == "get_btc_wallet_pw":
-                child_conn.send(keyring.get_password('tribler', 'btc_wallet_password'))
-            elif cmd == "set_btc_wallet_pw":
-                keyring.set_password('tribler', 'btc_wallet_password', arg)
+            if cmd == "get_keyring_password":
+                child_conn.send(keyring.get_password('tribler', arg['username']))
+            elif cmd == "set_keyring_password":
+                keyring.set_password('tribler', arg['username'], arg['password'])
                 child_conn.send('done')
 
     def start_tribler_core(self):
