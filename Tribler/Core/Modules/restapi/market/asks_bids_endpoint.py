@@ -35,9 +35,61 @@ class AsksEndpoint(BaseAsksBidsEndpoint):
     """
 
     def render_GET(self, request):
+        """
+        .. http:get:: /market/asks
+
+        A GET request to this endpoint will return all ask ticks in the order book of the market community.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/market/asks
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "asks": [{
+                        "price_type": "BTC",
+                        "ticks": [{
+                            "trader_id": "12c406358ba05e5883a75da3f009477e4ca699a9",
+                            "timeout": 3600,
+                            "quantity_type": "MC",
+                            "price_type": "BTC",
+                            "timestamp": 1493905920.68573,
+                            "price": 10.0,
+                            "order_number": 1,
+                            "message_id": "12c406358ba05e5883a75da3f009477e4ca699a9.1",
+                            "quantity": 10.0}, ...],
+                        "quantity_type": "MC"
+                    }, ...]
+                }
+        """
         return json.dumps({"asks": self.get_market_community().order_book.asks.get_list_representation()})
 
     def render_PUT(self, request):
+        """
+        .. http:put:: /market/asks
+
+        A request to this endpoint will create a new ask order.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X PUT http://localhost:8085/market/asks --data
+                "price=10&quantity=10&price_type=BTC&quantity_type=MC"
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "created": True
+                }
+        """
         parameters = http.parse_qs(request.content.read(), 1)
 
         if not has_param(parameters, 'price') or not has_param(parameters, 'quantity'):
@@ -58,9 +110,61 @@ class BidsEndpoint(BaseAsksBidsEndpoint):
     """
 
     def render_GET(self, request):
+        """
+        .. http:get:: /market/bids
+
+        A GET request to this endpoint will return all bid ticks in the order book of the market community.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/market/bids
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "bids": [{
+                        "price_type": "BTC",
+                        "ticks": [{
+                            "trader_id": "12c406358ba05e5883a75da3f009477e4ca699a9",
+                            "timeout": 3600,
+                            "quantity_type": "MC",
+                            "price_type": "BTC",
+                            "timestamp": 1493905920.68573,
+                            "price": 10.0,
+                            "order_number": 1,
+                            "message_id": "12c406358ba05e5883a75da3f009477e4ca699a9.1",
+                            "quantity": 10.0}, ...],
+                        "quantity_type": "MC"
+                    }, ...]
+                }
+        """
         return json.dumps({"bids": self.get_market_community().order_book.bids.get_list_representation()})
 
     def render_PUT(self, request):
+        """
+        .. http:put:: /market/bids
+
+        A request to this endpoint will create a new bid order.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X PUT http://localhost:8085/market/bids --data
+                "price=10&quantity=10&price_type=BTC&quantity_type=MC"
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "created": True
+                }
+        """
         parameters = http.parse_qs(request.content.read(), 1)
 
         if not has_param(parameters, 'price') or not has_param(parameters, 'quantity'):

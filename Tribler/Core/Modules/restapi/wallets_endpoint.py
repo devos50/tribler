@@ -16,6 +16,35 @@ class WalletsEndpoint(resource.Resource):
         self.session = session
 
     def render_GET(self, request):
+        """
+        .. http:get:: /wallets
+
+        A GET request to this endpoint will return information about all available wallets in Tribler.
+        This includes information about the address, a human-readable wallet name and the balance.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/wallets
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "wallets": [{
+                        "created": True,
+                        "name": "Bitcoin",
+                        "address": "17AVS7n3zgBjPq1JT4uVmEXdcX3vgB2wAh",
+                        "balance": {
+                            "available": 0.000126,
+                            "pending": 0.0,
+                            "currency": "BTC"
+                        }
+                    }, ...]
+                }
+        """
         wallets = {}
         balance_deferreds = []
         for wallet_id in self.session.lm.market_community.wallets.keys():
@@ -54,6 +83,25 @@ class WalletEndpoint(resource.Resource):
             self.putChild(path, child_cls(self.session, self.identifier))
 
     def render_PUT(self, request):
+        """
+        .. http:put:: /wallets/(string:wallet identifier)
+
+        A request to this endpoint will create a new wallet.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X PUT http://localhost:8085/wallets/BTC --data "password=secret"
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "created": True
+                }
+        """
         if self.session.lm.market_community.wallets[self.identifier].created:
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": "this wallet already exists"})
@@ -86,6 +134,29 @@ class WalletBalanceEndpoint(resource.Resource):
         self.identifier = identifier
 
     def render_GET(self, request):
+        """
+        .. http:get:: /wallets/(string:wallet identifier)/balance
+
+        A GET request to this endpoint will return balance information of a specific wallet.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/wallets/BTC/balance
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "balance": {
+                        "available": 0.000126,
+                        "pending": 0.0,
+                        "currency": "BTC"
+                    }
+                }
+        """
         def on_balance(balance):
             request.write(json.dumps({"balance": balance}))
             request.finish()
@@ -106,6 +177,35 @@ class WalletTransactionsEndpoint(resource.Resource):
         self.identifier = identifier
 
     def render_GET(self, request):
+        """
+        .. http:get:: /wallets/(string:wallet identifier)/transactions
+
+        A GET request to this endpoint will return past transactions of a specific wallet.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/wallets/BTC/transactions
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "transactions": [{
+                        "currency": "BTC",
+                        "to": "17AVS7n3zgBjPq1JT4uVmEXdcX3vgB2wAh",
+                        "outgoing": false,
+                        "from": "",
+                        "description": "",
+                        "timestamp": "1489673696",
+                        "fee_amount": 0.0,
+                        "amount": 0.00395598,
+                        "id": "6f6c40d034d69c5113ad8cb3710c172955f84787b9313ede1c39cac85eeaaffe"
+                    }, ...]
+                }
+        """
         def on_transactions(transactions):
             request.write(json.dumps({"transactions": transactions}))
             request.finish()

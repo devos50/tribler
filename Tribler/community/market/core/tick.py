@@ -144,7 +144,7 @@ class Tick(Message):
             "price_type": self.price.wallet_id,
             "quantity": float(self.quantity),
             "quantity_type": self.quantity.wallet_id,
-            "timeout": str(self.timeout),
+            "timeout": float(self.timeout),
             "timestamp": float(self.timestamp)
         }
 
