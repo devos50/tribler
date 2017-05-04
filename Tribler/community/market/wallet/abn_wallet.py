@@ -30,7 +30,10 @@ class ABNWallet(Wallet):
         return 'ABN'
 
     def create_wallet(self, *args, **kwargs):
-        return self.abn_manager.register()
+        return self.abn_manager.register().addCallback(self.on_wallet_created)
+
+    def on_wallet_created(self, _):
+        self.created = True
 
     def get_balance(self):
         if not self.created:

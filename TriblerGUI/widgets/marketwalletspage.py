@@ -48,6 +48,7 @@ class MarketWalletsPage(QWidget):
         self.request_mgr.perform_request("wallets", self.on_wallets)
 
     def on_wallets(self, wallets):
+        print "wallets: %s" % wallets
         self.wallets = wallets["wallets"]
 
         if 'MC' in self.wallets and self.wallets["MC"]["created"]:
@@ -111,7 +112,8 @@ class MarketWalletsPage(QWidget):
             self.dialog.button_clicked.connect(self.on_create_btc_wallet_dialog_done)
             self.dialog.show()
         else:
-            self.request_mgr.perform_request("wallets/%s" % wallet_id, self.on_btc_wallet_created,
+            self.request_mgr = TriblerRequestManager()
+            self.request_mgr.perform_request("wallets/%s" % wallet_id, self.on_wallet_created,
                                              method='PUT', data='')
 
     def on_create_btc_wallet_dialog_done(self, action):
@@ -126,9 +128,10 @@ class MarketWalletsPage(QWidget):
             self.dialog.buttons[0].setText("CREATING...")
             self.request_mgr = TriblerRequestManager()
             post_data = str("password=%s" % password)
-            self.request_mgr.perform_request("wallets/btc", self.on_btc_wallet_created, method='PUT', data=post_data)
+            self.request_mgr.perform_request("wallets/btc", self.on_wallet_created, method='PUT', data=post_data)
 
-    def on_btc_wallet_created(self, response):
-        self.dialog.setParent(None)
-        self.dialog = None
-        self.window().wallet_btc_overview_button.show()
+    def on_wallet_created(self, response):
+        if self.dialog:
+            self.dialog.setParent(None)
+            self.dialog = None
+        self.load_wallets()
