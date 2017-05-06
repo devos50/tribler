@@ -19,10 +19,10 @@ class RaboWallet(Wallet):
         self.created = self.rabo_manager.registered_account()
 
     def get_name(self):
-        return 'Rabobank'
+        return self.rabo_manager.get_bank_name()
 
     def get_identifier(self):
-        return 'RABO'
+        return self.rabo_manager.get_bank_id()
 
     def create_wallet(self, *args, **kwargs):
         return self.rabo_manager.register().addCallback(self.on_wallet_created)

@@ -24,10 +24,10 @@ class PayPalWallet(Wallet):
             self.created = True
 
     def get_name(self):
-        return 'PayPal'
+        return self.paypal_manager.get_bank_name()
 
     def get_identifier(self):
-        return 'PP'
+        return self.paypal_manager.get_bank_id()
 
     def create_wallet(self, *args, **kwargs):
         # Creating a PayPal wallet is equivalent to logging in

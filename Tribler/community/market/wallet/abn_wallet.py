@@ -24,10 +24,10 @@ class ABNWallet(Wallet):
             self.created = True
 
     def get_name(self):
-        return 'ABN'
+        return self.abn_manager.get_bank_name()
 
     def get_identifier(self):
-        return 'ABN'
+        return self.abn_manager.get_bank_id()
 
     def create_wallet(self, *args, **kwargs):
         return self.abn_manager.register().addCallback(self.on_wallet_created)
