@@ -53,23 +53,7 @@ class RaboWallet(Wallet):
         """
         Monitor an incoming transaction with a specific id.
         """
-        print "will monitor for %s" % transaction_id
-        monitor_deferred = Deferred()
-
-        def monitor_loop():
-            def on_transactions(transactions):
-                for transaction in transactions:
-                    print "DESCRIPTION of %s: %s" % (transaction['id'], transaction['description'])
-                    if transaction_id in transaction['description']:
-                        monitor_deferred.callback(None)
-                        monitor_lc.stop()
-                        break
-            return self.get_transactions().addCallback(on_transactions)
-
-        monitor_lc = LoopingCall(monitor_loop)
-        monitor_lc.start(5)
-
-        return monitor_deferred
+        return self.rabo_manager.monitor_transactions(transaction_id)
 
     def get_address(self):
         if not self.created:
