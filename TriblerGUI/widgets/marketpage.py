@@ -122,7 +122,7 @@ class MarketPage(QWidget):
             balance_amount = wallet['balance']['available']
             balance_currency = None
 
-            if wallet_id == 'PP' or wallet_id == 'ABN' or wallet_id == 'RABO':
+            if wallet_id == 'PP' or wallet_id == 'ABNA' or wallet_id == 'RABO':
                 balance_currency = wallet['balance']['currency']
 
             self.wallet_widgets[wallet_id].update_with_amount(balance_amount, balance_currency)

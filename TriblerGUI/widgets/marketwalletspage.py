@@ -30,7 +30,7 @@ class MarketWalletsPage(QWidget):
             self.window().wallet_btc_overview_button.clicked.connect(lambda: self.load_transactions('BTC'))
             self.window().wallet_mc_overview_button.clicked.connect(lambda: self.load_transactions('MC'))
             self.window().wallet_paypal_overview_button.clicked.connect(lambda: self.load_transactions('PP'))
-            self.window().wallet_abn_overview_button.clicked.connect(lambda: self.load_transactions('ABN'))
+            self.window().wallet_abn_overview_button.clicked.connect(lambda: self.load_transactions('ABNA'))
             self.window().wallet_rabo_overview_button.clicked.connect(lambda: self.load_transactions('RABO'))
             self.window().add_wallet_button.clicked.connect(self.on_add_wallet_clicked)
             self.window().wallet_mc_overview_button.hide()
@@ -60,7 +60,7 @@ class MarketWalletsPage(QWidget):
         if 'PP' in self.wallets and self.wallets["PP"]["created"]:
             self.window().wallet_paypal_overview_button.show()
 
-        if 'ABN' in self.wallets and self.wallets["ABN"]["created"]:
+        if 'ABNA' in self.wallets and self.wallets["ABN"]["created"]:
             self.window().wallet_abn_overview_button.show()
 
         if 'RABO' in self.wallets and self.wallets["RABO"]["created"]:

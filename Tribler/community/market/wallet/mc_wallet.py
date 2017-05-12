@@ -28,8 +28,10 @@ class MultichainWallet(Wallet):
         pass
 
     def get_balance(self):
-        total = self.mc_community.persistence.get_total(self.mc_community._public_key)
-        return succeed({'available': total[0] - total[1], 'pending': 0, 'currency': self.get_identifier()})
+        latest_block = self.mc_community.persistence.get_latest(self.mc_community.my_member.public_key)
+        total_up = latest_block.total_up if latest_block else 0
+        total_down = latest_block.total_down if latest_block else 0
+        return succeed({'available': total_up - total_down, 'pending': 0, 'currency': self.get_identifier()})
 
     def transfer(self, quantity, candidate):
         if self.check_negative_balance and self.get_balance()['net'] < quantity:
@@ -48,7 +50,7 @@ class MultichainWallet(Wallet):
 
     def send_signature(self, candidate, quantity):
         self.mc_community.publish_signature_request_message(candidate, 0, int(quantity))
-        latest_block = self.mc_community.persistence.get_latest_block(self.mc_community._public_key)
+        latest_block = self.mc_community.persistence.get_latest_block(self.mc_community.my_member.public_key)
 
         return succeed(latest_block.previous_hash_requester)
 
@@ -66,7 +68,7 @@ class MultichainWallet(Wallet):
         return self.mc_community.wait_for_signature_request(str(block_hash))
 
     def get_address(self):
-        return b64encode(self.mc_community._public_key)
+        return b64encode(self.mc_community.my_member.public_key)
 
     def get_transactions(self):
         # TODO(Martijn): implement this
