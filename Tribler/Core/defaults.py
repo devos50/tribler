@@ -92,7 +92,7 @@ sessdefaults['multichain']['enabled'] = True
 
 # Market community section
 sessdefaults['market_community'] = OrderedDict()
-sessdefaults['market_community']['enabled'] = False
+sessdefaults['market_community']['enabled'] = True
 sessdefaults['market_community']['api_enabled'] = True
 sessdefaults['market_community']['api_port'] = 7386
 
