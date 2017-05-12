@@ -48,7 +48,6 @@ class MarketWalletsPage(QWidget):
         self.request_mgr.perform_request("wallets", self.on_wallets)
 
     def on_wallets(self, wallets):
-        print "wallets: %s" % wallets
         self.wallets = wallets["wallets"]
 
         if 'MC' in self.wallets and self.wallets["MC"]["created"]:

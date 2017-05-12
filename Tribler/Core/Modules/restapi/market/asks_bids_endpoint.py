@@ -53,6 +53,7 @@ class AsksEndpoint(BaseAsksBidsEndpoint):
                 {
                     "asks": [{
                         "price_type": "BTC",
+                        "quantity_type": "MC",
                         "ticks": [{
                             "trader_id": "12c406358ba05e5883a75da3f009477e4ca699a9",
                             "timeout": 3600,
@@ -62,8 +63,7 @@ class AsksEndpoint(BaseAsksBidsEndpoint):
                             "price": 10.0,
                             "order_number": 1,
                             "message_id": "12c406358ba05e5883a75da3f009477e4ca699a9.1",
-                            "quantity": 10.0}, ...],
-                        "quantity_type": "MC"
+                            "quantity": 10.0}, ...]
                     }, ...]
                 }
         """
@@ -128,6 +128,7 @@ class BidsEndpoint(BaseAsksBidsEndpoint):
                 {
                     "bids": [{
                         "price_type": "BTC",
+                        "quantity_type": "MC",
                         "ticks": [{
                             "trader_id": "12c406358ba05e5883a75da3f009477e4ca699a9",
                             "timeout": 3600,
@@ -137,8 +138,7 @@ class BidsEndpoint(BaseAsksBidsEndpoint):
                             "price": 10.0,
                             "order_number": 1,
                             "message_id": "12c406358ba05e5883a75da3f009477e4ca699a9.1",
-                            "quantity": 10.0}, ...],
-                        "quantity_type": "MC"
+                            "quantity": 10.0}, ...]
                     }, ...]
                 }
         """
