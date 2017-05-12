@@ -1,5 +1,8 @@
 import unittest
 
+from twisted.internet.defer import inlineCallbacks
+
+from Tribler.Test.test_as_server import AbstractServer
 from Tribler.community.market.core.matching_engine import MatchingEngine, PriceTimeStrategy, MatchingStrategy
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.message_repository import MemoryMessageRepository
@@ -10,6 +13,7 @@ from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.tick import Ask, Bid
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
+from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
 class MatchingStrategyTestSuite(unittest.TestCase):
@@ -26,10 +30,13 @@ class MatchingStrategyTestSuite(unittest.TestCase):
         self.assertEquals(NotImplemented, self.matching_strategy.match_order(self.order))
 
 
-class PriceTimeStrategyTestSuite(unittest.TestCase):
+class PriceTimeStrategyTestSuite(AbstractServer):
     """Price time strategy test cases."""
 
-    def setUp(self):
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def setUp(self, annotate=True):
+        yield super(PriceTimeStrategyTestSuite, self).setUp(annotate=annotate)
         # Object creation
         self.ask = Ask(MessageId(TraderId('0'), MessageNumber('1')), OrderId(TraderId('0'), OrderNumber(1)),
                        Price(100, 'BTC'), Quantity(30, 'MC'), Timeout(100), Timestamp.now())
@@ -64,6 +71,12 @@ class PriceTimeStrategyTestSuite(unittest.TestCase):
                                 Timeout(100), Timestamp.now(), False)
         self.order_book = OrderBook(MemoryMessageRepository('0'))
         self.price_time_strategy = PriceTimeStrategy(self.order_book)
+
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def tearDown(self, annotate=True):
+        self.order_book.cancel_all_pending_tasks()
+        yield super(PriceTimeStrategyTestSuite, self).tearDown(annotate=annotate)
 
     def test_empty_match_order(self):
         # Test for match order with an empty order book
@@ -168,10 +181,13 @@ class PriceTimeStrategyTestSuite(unittest.TestCase):
         self.assertEquals(Quantity(0, 'MC'), quantity_to_trade)
 
 
-class MatchingEngineTestSuite(unittest.TestCase):
+class MatchingEngineTestSuite(AbstractServer):
     """Matching engine test cases."""
 
-    def setUp(self):
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def setUp(self, annotate=True):
+        yield super(MatchingEngineTestSuite, self).setUp(annotate=annotate)
         # Object creation
         self.ask = Ask(MessageId(TraderId('1'), MessageNumber('message_number1')),
                        OrderId(TraderId('2'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
@@ -185,6 +201,12 @@ class MatchingEngineTestSuite(unittest.TestCase):
                                Timeout(30), Timestamp.now(), False)
         self.order_book = OrderBook(MemoryMessageRepository('0'))
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
+
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def tearDown(self, annotate=True):
+        self.order_book.cancel_all_pending_tasks()
+        yield super(MatchingEngineTestSuite, self).tearDown(annotate=annotate)
 
     def test_empty_match_order_empty(self):
         # Test for match order with an empty order book

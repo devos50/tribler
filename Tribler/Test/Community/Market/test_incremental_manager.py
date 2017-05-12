@@ -1,11 +1,12 @@
 import unittest
 
+from Tribler.Test.test_as_server import AbstractServer
 from Tribler.community.market.core.incremental_manager import IncrementalManager
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
 
 
-class IncrementalPaymentManagerTests(unittest.TestCase):
+class IncrementalPaymentManagerTests(AbstractServer):
     """Incremental payment manager test cases."""
 
     def test_ic_1(self):

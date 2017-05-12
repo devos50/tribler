@@ -66,8 +66,8 @@ class TestMarketSession(TestMarketBase):
         ask_community = self.market_communities[self.session]
         bid_community = self.market_communities[bid_session]
 
-        ask_community.create_ask(10, 2, 3600)
-        bid_community.create_bid(1, 2, 3600)  # Does not match the ask
+        ask_community.create_ask(10, 'DUM1', 2, 'DUM2', 3600)
+        bid_community.create_bid(1, 'DUM1', 2, 'DUM2', 3600)  # Does not match the ask
 
         ask_community.add_discovered_candidate(
             Candidate(bid_session.get_dispersy_instance().lan_address, tunnel=False))

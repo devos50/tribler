@@ -263,13 +263,14 @@ class OrderBook(TaskManager):
         return self.get_ask_price(price_wallet_id, quantity_wallet_id) - \
                self.get_bid_price(price_wallet_id, quantity_wallet_id)
 
-    @property
-    def mid_price(self):
+    def get_mid_price(self, price_wallet_id, quantity_wallet_id):
         """
         Return the price in between the bid and the ask price
         :rtype: Price
         """
-        return Price((int(self.ask_price) + int(self.bid_price)) / 2, self.ask_price.wallet_id)
+        ask_price = int(self.get_ask_price(price_wallet_id, quantity_wallet_id))
+        bid_price = int(self.get_bid_price(price_wallet_id, quantity_wallet_id))
+        return Price((ask_price + bid_price) / 2, price_wallet_id)
 
     def bid_side_depth(self, price):
         """
@@ -295,8 +296,7 @@ class OrderBook(TaskManager):
         assert isinstance(price, Price), type(price)
         return self._asks.get_price_level(price).depth
 
-    @property
-    def bid_side_depth_profile(self):
+    def get_bid_side_depth_profile(self, price_wallet_id, quantity_wallet_id):
         """
         format: [(<price>, <depth>), (<price>, <depth>), ...]
 
@@ -304,12 +304,11 @@ class OrderBook(TaskManager):
         :rtype: list
         """
         profile = []
-        for key, value in self._bids._price_level_list.items():
+        for key, value in self._bids.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
             profile.append((key, value.depth))
         return profile
 
-    @property
-    def ask_side_depth_profile(self):
+    def get_ask_side_depth_profile(self, price_wallet_id, quantity_wallet_id):
         """
         format: [(<price>, <depth>), (<price>, <depth>), ...]
 
@@ -317,7 +316,7 @@ class OrderBook(TaskManager):
         :rtype: list
         """
         profile = []
-        for key, value in self._asks._price_level_list.items():
+        for key, value in self._asks.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
             profile.append((key, value.depth))
         return profile
 
@@ -329,7 +328,7 @@ class OrderBook(TaskManager):
         :rtype: Price
         """
         assert isinstance(price, Price), type(price)
-        return self.bid_price - price
+        return self.get_bid_price('BTC', 'MC') - price
 
     def ask_relative_price(self, price):
         """
@@ -339,7 +338,7 @@ class OrderBook(TaskManager):
         :rtype: Price
         """
         assert isinstance(price, Price), type(price)
-        return self.ask_price - price
+        return self.get_ask_price('BTC', 'MC') - price
 
     def relative_tick_price(self, tick):
         """
@@ -395,11 +394,11 @@ class OrderBook(TaskManager):
         tempfile = StringIO()
         tempfile.write("------ Bids -------\n")
         if self._bids is not None and len(self._bids) > 0:
-            for key, value in self._bids._price_level_list.items(reverse=True):
+            for key, value in self._bids.get_price_level_list('BTC', 'MC').items(reverse=True):
                 tempfile.write('%s' % value)
         tempfile.write("\n------ Asks -------\n")
         if self._asks is not None and len(self._asks) > 0:
-            for key, value in self._asks._price_level_list.items():
+            for key, value in self._asks.get_price_level_list('BTC', 'MC').items():
                 tempfile.write('%s' % value)
         tempfile.write("\n------ Trades ------\n")
         if self._trades is not None and len(self._trades) > 0:

@@ -16,9 +16,9 @@ class TransactionRepositoryTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.transaction_repository = TransactionRepository()
-        self.transaction_id = TransactionId(TraderId("0"), TransactionNumber("1"))
+        self.transaction_id = TransactionId(TraderId("0"), TransactionNumber(1))
         self.transaction = Transaction(self.transaction_id, TraderId("1"), Price(100, 'BTC'), Quantity(30, 'MC'),
-                                       OrderId(TraderId("0"), OrderNumber("1")), Timeout(0.0), Timestamp(0.0))
+                                       OrderId(TraderId("0"), OrderNumber(1)), Timestamp(0.0))
 
     def test_abstraction(self):
         # Test for abstract functions
@@ -36,9 +36,9 @@ class MemoryTransactionRepositoryTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.memory_transaction_repository = MemoryTransactionRepository("0")
-        self.transaction_id = TransactionId(TraderId("0"), TransactionNumber("1"))
+        self.transaction_id = TransactionId(TraderId("0"), TransactionNumber(1))
         self.transaction = Transaction(self.transaction_id, TraderId("2"), Price(100, 'BTC'), Quantity(30, 'MC'),
-                                       OrderId(TraderId("0"), OrderNumber("1")), Timeout(0.0), Timestamp(0.0))
+                                       OrderId(TraderId("0"), OrderNumber(1)), Timestamp(0.0))
 
     def test_find_by_id(self):
         # Test for find by id
@@ -61,9 +61,9 @@ class MemoryTransactionRepositoryTestSuite(unittest.TestCase):
 
     def test_next_identity(self):
         # Test for next identity
-        self.assertEquals(TransactionId(TraderId("0"), TransactionNumber("1")),
+        self.assertEquals(TransactionId(TraderId("0"), TransactionNumber(1)),
                           self.memory_transaction_repository.next_identity())
-        self.assertEquals(TransactionId(TraderId("0"), TransactionNumber("2")),
+        self.assertEquals(TransactionId(TraderId("0"), TransactionNumber(2)),
                           self.memory_transaction_repository.next_identity())
 
     def test_update(self):
