@@ -24,7 +24,7 @@ class BaseDummyWallet(Wallet):
         return 'DUM'
 
     def create_wallet(self, *args, **kwargs):
-        pass
+        return succeed(None)
 
     def get_balance(self):
         return succeed({'available': self.balance, 'pending': 0, 'currency': self.get_identifier()})
