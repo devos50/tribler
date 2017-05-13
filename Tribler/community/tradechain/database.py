@@ -41,7 +41,7 @@ DROP TABLE IF EXISTS trade_chain;
 DROP TABLE IF EXISTS option;
 """
 
-_columns = u"asset1_type, asset1_amount, asset1_type, asset1_amount, public_key, sequence_number," \
+_columns = u"asset1_type, asset1_amount, asset2_type, asset2_amount, public_key, sequence_number," \
            u"link_public_key, link_sequence_number, previous_hash, signature, insert_time"
 _header = u"SELECT " + _columns + u" FROM trade_chain "
 
