@@ -849,7 +849,8 @@ class TriblerLaunchMany(TaskManager):
             now = timemod.time()
             try:
                 success = yield self.dispersy.stop()
-            except:
+            except Exception as e:
+                self._logger.exception("Dispersy failed to shutdown")
                 print_exc()
                 success = False
 
