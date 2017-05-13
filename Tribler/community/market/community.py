@@ -1032,21 +1032,16 @@ class MarketCommunity(Community):
         self.dispersy.store_update_forward([message], True, False, True)
         self.notify_transaction_complete(transaction)
 
-        def send_tradechain_request(_):
+        if self.tradechain_community:
+            member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))
+            candidate.associate(member)
+            self.tradechain_community.add_discovered_candidate(candidate)
+
             # TODO add a check that this transaction really happened
             quantity = transaction.total_quantity
             price = transaction.price
             self.tradechain_community.sign_block(candidate, price.int_wallet_id, float(price),
                                                  quantity.int_wallet_id, float(quantity))
-
-        if self.tradechain_community:
-            member = self.dispersy.get_member(mid=str(transaction.partner_trader_id).decode('hex'))
-            candidate.associate(member)
-            self.tradechain_community.add_discovered_candidate(candidate)
-            new_candidate = self.tradechain_community.get_candidate(candidate.sock_addr)
-
-            self.tradechain_community.create_introduction_request(new_candidate, False)
-            self.tradechain_community.wait_for_intro_of_candidate(new_candidate).addCallback(send_tradechain_request)
 
     def on_end_transaction(self, messages):
         for message in messages:
