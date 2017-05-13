@@ -292,18 +292,15 @@ class TriblerLaunchMany(TaskManager):
                 self._logger.info("Internet of Money API not found")
 
             from Tribler.community.market.community import MarketCommunity
-            if self.session.get_enable_multichain():
-                keypair = self.session.multichain_keypair
-                dispersy_member = self.dispersy.get_member(private_key=keypair.key_to_bin())
-            else:
-                dispersy_member = self.session.dispersy_member
+            keypair = self.session.tradechain_keypair
+            dispersy_member = self.dispersy.get_member(private_key=keypair.key_to_bin())
 
-            self.tradechain_community = self.dispersy.define_auto_load(TradeChainCommunity,
-                                                                       dispersy_member, load=True,
-                                                                       kargs=default_kwargs)[0]
+            tradechain_community = self.dispersy.define_auto_load(TradeChainCommunity,
+                                                                  dispersy_member, load=True,
+                                                                  kargs=default_kwargs)[0]
             market_kwargs = {'tribler_session': self.session, 'wallets': wallets,
-                             'tradechain_community': self.tradechain_community}
-            self.market_community = self.dispersy.define_auto_load(MarketCommunity, self.session.dispersy_member,
+                             'tradechain_community': tradechain_community}
+            self.market_community = self.dispersy.define_auto_load(MarketCommunity, dispersy_member,
                                                                    load=True, kargs=market_kwargs)[0]
 
         self.session.set_anon_proxy_settings(2, ("127.0.0.1",
