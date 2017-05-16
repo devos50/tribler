@@ -59,7 +59,7 @@ class MarketWalletsPage(QWidget):
         if 'PP' in self.wallets and self.wallets["PP"]["created"]:
             self.window().wallet_paypal_overview_button.show()
 
-        if 'ABNA' in self.wallets and self.wallets["ABN"]["created"]:
+        if 'ABNA' in self.wallets and self.wallets["ABNA"]["created"]:
             self.window().wallet_abn_overview_button.show()
 
         if 'RABO' in self.wallets and self.wallets["RABO"]["created"]:
