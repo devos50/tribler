@@ -38,7 +38,7 @@ from core.timestamp import Timestamp
 from core.trade import Trade, ProposedTrade, AcceptedTrade, DeclinedTrade, CounterTrade
 from core.transaction import StartTransaction, TransactionId, Transaction
 from core.transaction_manager import TransactionManager
-from core.transaction_repository import MemoryTransactionRepository
+from core.transaction_repository import MemoryTransactionRepository, DatabaseTransactionRepository
 from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTradePayload, StartTransactionPayload, \
     TransactionPayload, WalletInfoPayload, MarketIntroPayload, \
     OfferSyncPayload, PaymentPayload
@@ -89,7 +89,7 @@ class MarketCommunity(Community):
         self.tradechain_community = tradechain_community
         self.wallets = wallets
 
-        transaction_repository = MemoryTransactionRepository(self.mid)
+        transaction_repository = DatabaseTransactionRepository(self.mid, self.market_database)
         self.transaction_manager = TransactionManager(transaction_repository)
 
         self.history = {}  # List for received messages TODO: fix memory leak
@@ -919,6 +919,7 @@ class MarketCommunity(Community):
 
         self.dispersy.store_update_forward([message], True, False, True)
         transaction.sent_wallet_info = True
+        self.transaction_manager.transaction_repository.update(transaction)
 
     def on_wallet_info(self, messages):
         for message in messages:
@@ -935,6 +936,8 @@ class MarketCommunity(Community):
                 self.send_wallet_info(transaction, incoming_address, outgoing_address)
             else:
                 self.send_payment(transaction)
+
+            self.transaction_manager.transaction_repository.update(transaction)
 
     def send_payment(self, transaction):
         transfer_quantity, transfer_price = transaction.next_payment()

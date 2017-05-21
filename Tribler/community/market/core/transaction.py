@@ -143,6 +143,39 @@ class Transaction(object):
         self._payment_list = []
         self._current_payment = 0
 
+    @classmethod
+    def from_database(cls, data):
+        """
+        Create a Transaction object based on information in the database.
+        """
+        transaction_id = TransactionId(TraderId(str(data[0])), TransactionNumber(data[2]))
+        transaction = cls(transaction_id, TraderId(str(data[1])), Price(data[5], str(data[6])),
+                          Quantity(data[7], str(data[8])), OrderId(TraderId(str(data[3])), OrderNumber(data[4])),
+                          Timestamp(float(data[9])))
+
+        transaction.sent_wallet_info = data[10]
+        transaction.received_wallet_info = data[11]
+        transaction.incoming_address = data[12]
+        transaction.outgoing_address = data[13]
+        transaction.partner_incoming_address = data[14]
+        transaction.partner_outgoing_address = data[15]
+
+        # TODO add payment data
+        return transaction
+
+    def to_database(self):
+        """
+        Returns a database representation of a Transaction object.
+        :rtype: tuple
+        """
+        return (unicode(self.transaction_id.trader_id), unicode(self.partner_trader_id),
+                int(self.transaction_id.transaction_number), unicode(self.order_id.trader_id),
+                int(self.order_id.order_number), float(self.price), unicode(self.price.wallet_id),
+                float(self.total_quantity), unicode(self.total_quantity.wallet_id), float(self.timestamp),
+                self.sent_wallet_info, self.received_wallet_info, unicode(self.incoming_address),
+                unicode(self.outgoing_address), unicode(self.partner_incoming_address),
+                unicode(self.partner_outgoing_address))
+
     def determine_payments(self, min_unit_price, min_unit_quantity):
         self._payment_list = IncrementalManager.determine_incremental_payments_list(self._price, self._quantity,
                                                                                     min_unit_price, min_unit_quantity)

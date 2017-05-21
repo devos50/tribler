@@ -111,3 +111,66 @@ class MemoryTransactionRepository(TransactionRepository):
         """
         self._next_id += 1
         return TransactionId(TraderId(self._mid), TransactionNumber(self._next_id))
+
+
+class DatabaseTransactionRepository(TransactionRepository):
+    """A repository for transactions in the transaction manager stored in a database"""
+
+    def __init__(self, mid, persistence):
+        """
+        :param mid: Hex encoded version of the member id of this node
+        :type mid: str
+        """
+        super(DatabaseTransactionRepository, self).__init__()
+
+        self._logger.info("Database transaction repository used")
+
+        self._mid = mid
+        self.persistence = persistence
+
+    def find_all(self):
+        """
+        :rtype: [Transaction]
+        """
+        return self.persistence.get_all_transactions()
+
+    def find_by_id(self, transaction_id):
+        """
+        :param transaction_id: The transaction id to look for
+        :type transaction_id: TransactionId
+        :return: The transaction or null if it cannot be found
+        :rtype: Transaction
+        """
+        assert isinstance(transaction_id, TransactionId), type(transaction_id)
+
+        self._logger.debug("Transaction with the id: %s was searched for in the transaction repository" %
+                           str(transaction_id))
+
+        return self.persistence.get_transaction(transaction_id)
+
+    def add(self, transaction):
+        """
+        :param transaction: The transaction to add to the database
+        :type transaction: Transaction
+        """
+        self.persistence.add_transaction(transaction)
+
+    def update(self, transaction):
+        """
+        :param transaction: The transaction to update
+        :type transaction: Transaction
+        """
+        self.delete_by_id(transaction.transaction_id)
+        self.add(transaction)
+
+    def delete_by_id(self, transaction_id):
+        """
+        :param transaction_id: The id of the transaction to remove
+        """
+        self.persistence.delete_transaction(transaction_id)
+
+    def next_identity(self):
+        """
+        :rtype: TransactionId
+        """
+        return TransactionId(TraderId(self._mid), TransactionNumber(self.persistence.get_next_transaction_number()))

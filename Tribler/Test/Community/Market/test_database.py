@@ -9,6 +9,7 @@ from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
+from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
 from Tribler.community.market.database import MarketDB
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
@@ -28,6 +29,10 @@ class TestDatabase(AbstractServer):
 
         self.order_id1 = OrderId(TraderId('3'), OrderNumber(4))
         self.order1 = Order(self.order_id1, Price(5, 'EUR'), Quantity(6, 'BTC'), Timeout(3600), Timestamp.now(), True)
+
+        self.transaction_id1 = TransactionId(TraderId("0"), TransactionNumber(4))
+        self.transaction1 = Transaction(self.transaction_id1, TraderId("1"), Price(100, 'BTC'), Quantity(30, 'MC'),
+                                       OrderId(TraderId("0"), OrderNumber(1)), Timestamp(20.0))
 
     @blocking_call_on_reactor_thread
     def test_add_get_order(self):
@@ -66,6 +71,44 @@ class TestDatabase(AbstractServer):
         self.assertEqual(self.database.get_next_order_number(), 1)
         self.database.add_order(self.order1)
         self.assertEqual(self.database.get_next_order_number(), 5)
+
+    @blocking_call_on_reactor_thread
+    def test_add_get_transaction(self):
+        """
+        Test the insertion and retrieval of a transaction in the database
+        """
+        self.database.add_transaction(self.transaction1)
+        transactions = self.database.get_all_transactions()
+        self.assertEqual(len(transactions), 1)
+
+    @blocking_call_on_reactor_thread
+    def test_get_specific_transaction(self):
+        """
+        Test the retrieval of a specific transaction
+        """
+        transaction_id = TransactionId(TraderId('0'), TransactionNumber(4))
+        self.assertIsNone(self.database.get_transaction(transaction_id))
+        self.database.add_transaction(self.transaction1)
+        self.assertIsNotNone(self.database.get_transaction(transaction_id))
+
+    @blocking_call_on_reactor_thread
+    def test_delete_transaction(self):
+        """
+        Test the deletion of a transaction from the database
+        """
+        self.database.add_transaction(self.transaction1)
+        self.assertEqual(len(self.database.get_all_transactions()), 1)
+        self.database.delete_transaction(self.transaction_id1)
+        self.assertEqual(len(self.database.get_all_transactions()), 0)
+
+    @blocking_call_on_reactor_thread
+    def test_get_next_transaction_number(self):
+        """
+        Test the retrieval of the next transaction number from the database
+        """
+        self.assertEqual(self.database.get_next_transaction_number(), 1)
+        self.database.add_transaction(self.transaction1)
+        self.assertEqual(self.database.get_next_transaction_number(), 5)
 
     @blocking_call_on_reactor_thread
     def test_add_get_trader_identity(self):
