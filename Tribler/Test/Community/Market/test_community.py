@@ -15,7 +15,7 @@ from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.trade import Trade
 from Tribler.community.market.ttl import Ttl
 from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
-from Tribler.dispersy.candidate import Candidate
+from Tribler.dispersy.candidate import Candidate, WalkCandidate
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
@@ -46,7 +46,7 @@ class CommunityTestSuite(AbstractTestCommunity):
                        Timeout(3600), Timestamp.now())
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             OrderId(TraderId('0'), OrderNumber(23)),
-                                            OrderId(TraderId('0'), OrderNumber(24)),
+                                            OrderId(TraderId(self.market_community.mid), OrderNumber(24)),
                                             Price(63400, 'DUM1'), Quantity(30, 'DUM2'), Timestamp.now())
 
     @blocking_call_on_reactor_thread
@@ -58,8 +58,10 @@ class CommunityTestSuite(AbstractTestCommunity):
     @blocking_call_on_reactor_thread
     def test_create_ask(self):
         # Test for create ask
+        self.assertRaises(RuntimeError, self.market_community.create_ask, 20, 'DUM2', 100, 'DUM2', 0.0)
         self.assertRaises(RuntimeError, self.market_community.create_ask, 20, 'NOTEXIST', 100, 'DUM2', 0.0)
-        self.market_community.create_ask(20, 'DUM1', 100, 'DUM2', 3600)
+        self.assertRaises(RuntimeError, self.market_community.create_ask, 20, 'DUM2', 100, 'NOTEXIST', 0.0)
+        self.assertTrue(self.market_community.create_ask(20, 'DUM1', 100, 'DUM2', 3600))
         self.assertEquals(1, len(self.market_community.order_book._asks))
         self.assertEquals(0, len(self.market_community.order_book._bids))
 
@@ -77,8 +79,10 @@ class CommunityTestSuite(AbstractTestCommunity):
 
     def test_create_bid(self):
         # Test for create bid
+        self.assertRaises(RuntimeError, self.market_community.create_bid, 20, 'DUM2', 100, 'DUM2', 0.0)
         self.assertRaises(RuntimeError, self.market_community.create_bid, 20, 'NOTEXIST', 100, 'DUM2', 0.0)
-        self.market_community.create_bid(20, 'DUM1', 100, 'DUM2', 3600)
+        self.assertRaises(RuntimeError, self.market_community.create_bid, 20, 'DUM2', 100, 'NOTEXIST', 0.0)
+        self.assertTrue(self.market_community.create_bid(20, 'DUM1', 100, 'DUM2', 3600))
         self.assertEquals(0, len(self.market_community.order_book._asks))
         self.assertEquals(1, len(self.market_community.order_book._bids))
 
@@ -101,7 +105,7 @@ class CommunityTestSuite(AbstractTestCommunity):
 
     def test_on_proposed_trade(self):  # TODO: Add assertions to test
         # Test for on proposed trade
-        self.market_community.update_ip(TraderId('0'), ('2.2.2.2', 2))
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
         destination, payload = self.proposed_trade.to_network()
         payload += ("127.0.0.1", 1234)
         candidate = Candidate(self.market_community.lookup_ip(destination), False)
