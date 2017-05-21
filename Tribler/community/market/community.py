@@ -64,10 +64,7 @@ class MarketCommunity(Community):
         # Y0kGmJOV02aIjQCPQRmtDn9Fudq3+z14oAZcX3qGa3jLjlm5p9BIzA1lDFqGvf2r
         # tDQ5bSOUXRI5+I3kk1RnQkx8wCtleeRfY+4=
         # -----END PUBLIC KEY-----
-        master_key = "3081a7301006072a8648ce3d020106052b8104002703819200040159af0c0925034bba3b4ea26661828e09247236059" \
-                     "c773dac29ac9fb84d50fa6bd8acc035127a6f5c11873915f9b9a460e116ecccccfc5db1b5d8ba86bd701886ea45d8db" \
-                     "bb634906989395d366888d008f4119ad0e7f45b9dab7fb3d78a0065c5f7a866b78cb8e59b9a7d048cc0d650c5a86bdf" \
-                     "dabb434396d23945d1239f88de4935467424c7cc02b6579e45f63ee".decode("HEX")
+        master_key = "3081a7301006072a8648ce3d020106052b81040027038192000403e6f247258f60430f570cb02f5d830426fefaec76a506db6e806ea0f10ee6061996f54fe6960e19978b32a0c92ece60dc0b85deaa07b7fd13fa6e54205154f78c1a294effb43801045fb17124a85e42a338275d109da989942337dbc6c3b06dc2c4c62d0c2b64f2cdfe02aad5c058be23027e4b99fc7271a94d176f020543e06da7a371f9794240dae44e9bc130a1a6".decode('hex')
         master = dispersy.get_member(public_key=master_key)
         return [master]
 
@@ -493,8 +490,8 @@ class MarketCommunity(Community):
         order = self.order_manager.create_bid_order(price, quantity, timeout)
 
         # Search for matches
-        proposed_trades = self.matching_engine.match_order(order)
-        self.send_proposed_trade_messages(proposed_trades)
+        #proposed_trades = self.matching_engine.match_order(order)
+        #self.send_proposed_trade_messages(proposed_trades)
 
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
