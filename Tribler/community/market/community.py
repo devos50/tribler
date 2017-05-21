@@ -80,7 +80,7 @@ class MarketCommunity(Community):
         for trader in self.market_database.get_traders():
             self.update_ip(TraderId(str(trader[0])), (str(trader[1]), trader[2]))
 
-        order_repository = MemoryOrderRepository(self.mid)  # DatabaseOrderRepository(self.mid, self.market_database)
+        order_repository = DatabaseOrderRepository(self.mid, self.market_database)
         message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)
@@ -384,6 +384,7 @@ class MarketCommunity(Community):
 
         # Search for matches
         proposed_trades = self.matching_engine.match_order(order)
+        self.order_manager.order_repository.update(order)
         self.send_proposed_trade_messages(proposed_trades)
 
         # Create the tick
@@ -556,6 +557,8 @@ class MarketCommunity(Community):
                 for order in self.order_manager.order_repository.find_all():
                     if order.is_ask() and order.is_valid():
                         proposed_trades = self.matching_engine.match_order(order)
+                        if proposed_trades:
+                            self.order_manager.order_repository.update(order)
                         self.send_proposed_trade_messages(proposed_trades)
 
                 # Check if message needs to be send on
@@ -669,6 +672,7 @@ class MarketCommunity(Community):
                             counter_trade = Trade.counter(self.order_book.message_repository.next_identity(),
                                                           order.available_quantity, Timestamp.now(), proposed_trade)
                             order.reserve_quantity_for_tick(proposed_trade.order_id, order.available_quantity)
+                            self.order_manager.order_repository.update(order)
                             self._logger.debug("Counter trade made with id: %s for proposed trade with id: %s",
                                                str(counter_trade.message_id), str(proposed_trade.message_id))
                             self.send_counter_trade(counter_trade)
@@ -750,6 +754,7 @@ class MarketCommunity(Community):
                 if order:
                     try:
                         order.release_quantity_for_tick(declined_trade.order_id)
+                        self.order_manager.order_repository.update(order)
                     except TickWasNotReserved:  # Nothing left to do
                         pass
 
@@ -757,6 +762,7 @@ class MarketCommunity(Community):
                 self._logger.debug("Received declined trade, trying to find a new match for this order")
                 self.order_book.remove_tick(declined_trade.order_id)
                 proposed_trades = self.matching_engine.match_order(order)
+                self.order_manager.order_repository.update(order)
                 self.send_proposed_trade_messages(proposed_trades)
 
     # Counter trade
@@ -794,6 +800,7 @@ class MarketCommunity(Community):
                 if order:
                     try:  # Accept trade
                         order.release_quantity_for_tick(counter_trade.order_id)
+                        self.order_manager.order_repository.update(order)
                         self.accept_trade(order, counter_trade)
                     except TickWasNotReserved:  # Send cancel
                         declined_trade = Trade.decline(self.order_book.message_repository.next_identity(),
@@ -813,6 +820,7 @@ class MarketCommunity(Community):
 
         self.order_book.insert_trade(accepted_trade)
         order.add_trade(accepted_trade.recipient_order_id, accepted_trade.quantity)
+        self.order_manager.order_repository.update(order)
         self.order_book.trade_tick(accepted_trade.order_id, accepted_trade.recipient_order_id, accepted_trade.quantity)
 
         self.send_accepted_trade(accepted_trade)
@@ -871,6 +879,7 @@ class MarketCommunity(Community):
 
                 try:
                     order.add_trade(start_transaction.order_id, start_transaction.quantity)
+                    self.order_manager.order_repository.update(order)
                 except TickWasNotReserved:  # Something went wrong
                     pass
 
