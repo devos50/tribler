@@ -32,11 +32,11 @@ class TransactionsEndpoint(BaseMarketEndpoint):
                         "transaction_number": 3,
                         "price": 10,
                         "price_type": "MC",
+                        "transferred_price": 5,
                         "quantity": 10,
                         "quantity_type": "BTC",
+                        "transferred_quantity": 4,
                         "timestamp": 1493906434.627721,
-                        "total_payments": 4,
-                        "current_payment": 2,
                         "payment_complete": False
                     ]
                 }

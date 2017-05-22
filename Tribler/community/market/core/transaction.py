@@ -1,4 +1,4 @@
-from Tribler.community.market.core.incremental_manager import IncrementalManager
+from Tribler.community.market.core.wallet_address import WalletAddress
 from message import TraderId, Message, MessageId, MessageNumber
 from order import OrderId, OrderNumber
 from price import Price
@@ -128,10 +128,11 @@ class Transaction(object):
         self._transaction_id = transaction_id
         self._partner_trader_id = partner_trader_id
         self._price = price
+        self._transferred_price = Price(0, price.wallet_id)
         self._quantity = quantity
+        self._transferred_quantity = Quantity(0, quantity.wallet_id)
         self._order_id = order_id
         self._timestamp = timestamp
-        self._payments = {}
 
         self.sent_wallet_info = False
         self.received_wallet_info = False
@@ -150,15 +151,17 @@ class Transaction(object):
         """
         transaction_id = TransactionId(TraderId(str(data[0])), TransactionNumber(data[2]))
         transaction = cls(transaction_id, TraderId(str(data[1])), Price(data[5], str(data[6])),
-                          Quantity(data[7], str(data[8])), OrderId(TraderId(str(data[3])), OrderNumber(data[4])),
-                          Timestamp(float(data[9])))
+                          Quantity(data[8], str(data[9])), OrderId(TraderId(str(data[3])), OrderNumber(data[4])),
+                          Timestamp(float(data[11])))
 
-        transaction.sent_wallet_info = data[10]
-        transaction.received_wallet_info = data[11]
-        transaction.incoming_address = data[12]
-        transaction.outgoing_address = data[13]
-        transaction.partner_incoming_address = data[14]
-        transaction.partner_outgoing_address = data[15]
+        transaction._transferred_price = Price(data[7], str(data[6]))
+        transaction._transferred_quantity = Quantity(data[10], str(data[9]))
+        transaction.sent_wallet_info = data[12]
+        transaction.received_wallet_info = data[13]
+        transaction.incoming_address = WalletAddress(str(data[14]))
+        transaction.outgoing_address = WalletAddress(str(data[15]))
+        transaction.partner_incoming_address = WalletAddress(str(data[16]))
+        transaction.partner_outgoing_address = WalletAddress(str(data[17]))
 
         # TODO add payment data
         return transaction
@@ -171,14 +174,10 @@ class Transaction(object):
         return (unicode(self.transaction_id.trader_id), unicode(self.partner_trader_id),
                 int(self.transaction_id.transaction_number), unicode(self.order_id.trader_id),
                 int(self.order_id.order_number), float(self.price), unicode(self.price.wallet_id),
-                float(self.total_quantity), unicode(self.total_quantity.wallet_id), float(self.timestamp),
-                self.sent_wallet_info, self.received_wallet_info, unicode(self.incoming_address),
-                unicode(self.outgoing_address), unicode(self.partner_incoming_address),
-                unicode(self.partner_outgoing_address))
-
-    def determine_payments(self, min_unit_price, min_unit_quantity):
-        self._payment_list = IncrementalManager.determine_incremental_payments_list(self._price, self._quantity,
-                                                                                    min_unit_price, min_unit_quantity)
+                float(self.transferred_price), float(self.total_quantity), unicode(self.total_quantity.wallet_id),
+                float(self.transferred_quantity), float(self.timestamp), self.sent_wallet_info,
+                self.received_wallet_info, unicode(self.incoming_address), unicode(self.outgoing_address),
+                unicode(self.partner_incoming_address), unicode(self.partner_outgoing_address))
 
     @classmethod
     def from_accepted_trade(cls, accepted_trade, transaction_id):
@@ -218,11 +217,25 @@ class Transaction(object):
         return self._price
 
     @property
+    def transferred_price(self):
+        """
+        :rtype: Price
+        """
+        return self._transferred_price
+
+    @property
     def total_quantity(self):
         """
         :rtype: Quantity
         """
         return self._quantity
+
+    @property
+    def transferred_quantity(self):
+        """
+        :rtype: Quantity
+        """
+        return self._transferred_quantity
 
     @property
     def order_id(self):
@@ -239,22 +252,61 @@ class Transaction(object):
         """
         return self._timestamp
 
+    def unitize(self, amount, min_unit):
+        """
+        Return an a amount that is a multiple of min_unit.
+        """
+        if amount % min_unit == 0:
+            return amount
+
+        return (int(amount / min_unit) + 1) * min_unit
+
     def add_payment(self, payment):
-        self._payments[payment.message_id] = payment
+        self._transferred_quantity += payment.transferee_quantity
+        self._transferred_price += payment.transferee_price
+        self._payment_list.append(payment)
 
-    def has_payment(self, message_id):
-        return self._payments.has_key(message_id)
+    def last_payment(self, is_ask):
+        for payment in reversed(self._payment_list):
+            if is_ask and float(payment.transferee_quantity) > 0:
+                return payment
+            elif not is_ask and float(payment.transferee_price) > 0:
+                return payment
+        return None
 
-    def next_payment(self):
-        if self._current_payment < len(self._payment_list):
-            payment = self._payment_list[self._current_payment]
-            self._current_payment += 1
-            return payment
+    def next_payment(self, order_is_ask, min_unit):
+        last_payment = self.last_payment(not order_is_ask)
+        if not last_payment:
+            # Just return the lowest unit possible
+            return Quantity(min_unit, self.total_quantity.wallet_id) if order_is_ask else \
+                Price(min_unit, self.price.wallet_id)
+
+        # We determine the percentage of the last payment of the total amount
+        if order_is_ask:
+            if self.transferred_price >= self.price:  # Complete the trade
+                return self.total_quantity - self.transferred_quantity
+
+            percentage = float(last_payment.transferee_price) / float(self.price)
+            transfer_amount = self.unitize(float(percentage * float(self.total_quantity)), min_unit)
+            if transfer_amount < min_unit:
+                transfer_amount = min_unit
+            elif transfer_amount > float(self.total_quantity - self.transferred_quantity):
+                transfer_amount = float(self.total_quantity - self.transferred_quantity)
+            return Quantity(transfer_amount, self.total_quantity.wallet_id)
         else:
-            return -1, -1
+            if self.transferred_quantity >= self.total_quantity:  # Complete the trade
+                return self.price - self.transferred_price
+
+            percentage = float(last_payment.transferee_quantity) / float(self.total_quantity)
+            transfer_amount = self.unitize(float(percentage * float(self.price)), min_unit)
+            if transfer_amount < min_unit:
+                transfer_amount = min_unit
+            elif transfer_amount > float(self.price - self.transferred_price):
+                transfer_amount = float(self.price - self.transferred_price)
+            return Price(transfer_amount, self.price.wallet_id)
 
     def is_payment_complete(self):
-        return len(self._payments.keys()) >= len(self._payment_list) * 2
+        return self.transferred_price >= self.price and self.transferred_quantity >= self.total_quantity
 
     def to_dictionary(self):
         """
@@ -267,11 +319,11 @@ class Transaction(object):
             "transaction_number": int(self.transaction_id.transaction_number),
             "price": float(self.price),
             "price_type": self.price.wallet_id,
+            "transferred_price": float(self.transferred_price),
             "quantity": float(self.total_quantity),
             "quantity_type": self.total_quantity.wallet_id,
+            "transferred_quantity": float(self.transferred_quantity),
             "timestamp": float(self.timestamp),
-            "total_payments": len(self._payment_list) * 2,
-            "current_payment": len(self._payments.keys()),
             "payment_complete": self.is_payment_complete()
         }
 

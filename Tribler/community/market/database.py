@@ -40,8 +40,10 @@ CREATE TABLE IF NOT EXISTS orders(
   order_number             INTEGER NOT NULL,
   price                    DOUBLE NOT NULL,
   price_type               TEXT NOT NULL,
+  transferred_price        DOUBLE NOT NULL,
   quantity                 DOUBLE NOT NULL,
   quantity_type            TEXT NOT NULL,
+  transferred_quantity     DOUBLE NOT NULL,
   transaction_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
   sent_wallet_info         INTEGER NOT NULL,
   received_wallet_info     INTEGER NOT NULL,
@@ -146,9 +148,10 @@ class MarketDB(Database):
         """
         self.execute(
             u"INSERT INTO transactions (trader_id, partner_trader_id, transaction_number, order_trader_id, order_number,"
-            u"price, price_type, quantity, quantity_type, transaction_timestamp, sent_wallet_info, received_wallet_info,"
+            u"price, price_type, transferred_price, quantity, quantity_type, transferred_quantity,"
+            u"transaction_timestamp, sent_wallet_info, received_wallet_info,"
             u"incoming_address, outgoing_address, partner_incoming_address, partner_outgoing_address) "
-            u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", transaction.to_database())
+            u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", transaction.to_database())
         self.commit()
 
     def delete_transaction(self, transaction_id):

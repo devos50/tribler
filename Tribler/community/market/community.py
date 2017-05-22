@@ -832,12 +832,6 @@ class MarketCommunity(Community):
 
         if order:
             transaction = self.transaction_manager.create_from_accepted_trade(accepted_trade)
-
-            price_wallet_id = accepted_trade.price.wallet_id
-            quantity_wallet_id = accepted_trade.quantity.wallet_id
-            transaction.determine_payments(self.wallets[price_wallet_id].min_unit(),
-                                           self.wallets[quantity_wallet_id].min_unit())
-
             start_transaction = StartTransaction(self.order_book.message_repository.next_identity(),
                                                  transaction.transaction_id, order.order_id,
                                                  accepted_trade.recipient_order_id, accepted_trade.price,
@@ -871,12 +865,6 @@ class MarketCommunity(Community):
 
             if order:
                 transaction = self.transaction_manager.create_from_start_transaction(start_transaction, order)
-
-                price_wallet_id = start_transaction.price.wallet_id
-                quantity_wallet_id = start_transaction.quantity.wallet_id
-                transaction.determine_payments(self.wallets[price_wallet_id].min_unit(),
-                                               self.wallets[quantity_wallet_id].min_unit())
-
                 try:
                     order.add_trade(start_transaction.order_id, start_transaction.quantity)
                     self.order_manager.order_repository.update(order)
@@ -940,19 +928,20 @@ class MarketCommunity(Community):
             self.transaction_manager.transaction_repository.update(transaction)
 
     def send_payment(self, transaction):
-        transfer_quantity, transfer_price = transaction.next_payment()
         order = self.order_manager.order_repository.find_by_id(transaction.order_id)
-
-        if order.is_ask():
-            wallet_id = transaction.total_quantity.wallet_id
-            transfer_amount = float(transfer_quantity)
-        else:
-            wallet_id = transaction.price.wallet_id
-            transfer_amount = float(transfer_price)
+        wallet_id = transaction.total_quantity.wallet_id if order.is_ask() else transaction.price.wallet_id
 
         wallet = self.wallets[wallet_id]
         if not wallet or not wallet.created:
             raise RuntimeError("No %s wallet present" % wallet_id)
+
+        transfer_amount = transaction.next_payment(order.is_ask(), wallet.min_unit())
+        if order.is_ask():
+            transfer_quantity = transfer_amount
+            transfer_price = Price(0.0, transaction.price.wallet_id)
+        else:
+            transfer_quantity = Quantity(0.0, transaction.total_quantity.wallet_id)
+            transfer_price = transfer_amount
 
         payment_tup = (transfer_quantity, transfer_price)
         # TODO this should be refactored to the MultichainWallet
