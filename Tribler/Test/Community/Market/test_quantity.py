@@ -13,9 +13,13 @@ class QuantityTestSuite(unittest.TestCase):
         self.quantity3 = Quantity(30, 'BTC')
 
     def test_init(self):
-        # Test for init validation
+        """
+        Test the initialization of a quantity
+        """
         with self.assertRaises(ValueError):
-            Quantity(-1, 'MC')
+            Quantity('1', 'MC')
+        with self.assertRaises(ValueError):
+            Quantity(1, 2)
 
     def test_conversion(self):
         # Test for conversions

@@ -65,6 +65,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.assertEquals(1, len(self.market_community.order_book._asks))
         self.assertEquals(0, len(self.market_community.order_book._bids))
 
+    @blocking_call_on_reactor_thread
     def test_on_ask(self):
         # Test for on ask
         meta = self.market_community.get_meta_message(u"ask")
@@ -77,6 +78,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.assertEquals(1, len(self.market_community.order_book._asks))
         self.assertEquals(0, len(self.market_community.order_book._bids))
 
+    @blocking_call_on_reactor_thread
     def test_create_bid(self):
         # Test for create bid
         self.assertRaises(RuntimeError, self.market_community.create_bid, 20, 'DUM2', 100, 'DUM2', 0.0)
@@ -86,6 +88,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.assertEquals(0, len(self.market_community.order_book._asks))
         self.assertEquals(1, len(self.market_community.order_book._bids))
 
+    @blocking_call_on_reactor_thread
     def test_on_bid(self):
         # Test for on bid
         meta = self.market_community.get_meta_message(u"bid")
@@ -103,6 +106,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.assertTrue(self.market_community.check_history(self.ask))
         self.assertFalse(self.market_community.check_history(self.ask))
 
+    @blocking_call_on_reactor_thread
     def test_on_proposed_trade(self):  # TODO: Add assertions to test
         # Test for on proposed trade
         self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))

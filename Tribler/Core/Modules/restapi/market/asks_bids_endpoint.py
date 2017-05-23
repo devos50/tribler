@@ -2,8 +2,8 @@ import json
 
 from twisted.web import http
 
+from Tribler.Core.Modules.restapi import has_param, get_param
 from Tribler.Core.Modules.restapi.market import BaseMarketEndpoint
-from Tribler.community.market.utils import has_param, get_param
 
 
 class BaseAsksBidsEndpoint(BaseMarketEndpoint):

@@ -31,6 +31,5 @@ class TimeoutTestSuite(unittest.TestCase):
         self.assertEqual(self.timeout1.__hash__(), Timeout(3600).__hash__())
         self.assertNotEqual(self.timeout1.__hash__(), self.timeout2.__hash__())
 
-
 if __name__ == '__main__':
     unittest.main()

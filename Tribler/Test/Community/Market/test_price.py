@@ -15,9 +15,13 @@ class PriceTestSuite(unittest.TestCase):
         self.price4 = Price(2.3, 'MC')
 
     def test_init(self):
-        # Test for init validation
+        """
+        Test the initialization of a price
+        """
         with self.assertRaises(ValueError):
-            Price(-1, 'BTC')
+            Price('1', 'MC')
+        with self.assertRaises(ValueError):
+            Price(1, 2)
 
     def test_conversion(self):
         # Test for conversions

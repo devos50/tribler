@@ -38,8 +38,5 @@ class Timeout(object):
     def __float__(self):
         return float(self._timeout)
 
-    def __str__(self):
-        return "%s" % datetime.datetime.fromtimestamp(self._timeout)
-
     def __hash__(self):
         return hash(self._timeout)

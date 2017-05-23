@@ -14,9 +14,10 @@ class TickTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
+        self.timestamp_now = Timestamp.now()
         self.tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
                          OrderId(TraderId('0'), OrderNumber(1)), Price(63400, 'BTC'), Quantity(30, 'MC'),
-                         Timeout(30), Timestamp.now(), True)
+                         Timeout(30), self.timestamp_now, True)
         self.tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
                           OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'), Quantity(30, 'MC'),
                           Timeout(0.0), Timestamp(0.0), False)
@@ -65,6 +66,22 @@ class TickTestSuite(unittest.TestCase):
         self.assertEqual(self.tick2.timestamp, bid.timestamp)
         self.assertEqual(self.tick2.order_id, bid.order_id)
         self.assertEqual(self.tick2.message_id, bid.message_id)
+
+    def test_to_dictionary(self):
+        """
+        Test the to dictionary method of a tick
+        """
+        self.assertDictEqual(self.tick.to_dictionary(), {
+            "trader_id": '0',
+            "message_id": "0.message_number",
+            "order_number": 1,
+            "price": 63400.0,
+            "price_type": "BTC",
+            "quantity": 30.0,
+            "quantity_type": "MC",
+            "timeout": 30.0,
+            "timestamp": float(self.timestamp_now),
+        })
 
 
 class AskTestSuite(unittest.TestCase):

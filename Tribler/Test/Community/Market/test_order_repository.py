@@ -1,12 +1,19 @@
+import os
 import unittest
 
+from twisted.internet.defer import inlineCallbacks
+
+from Tribler.Test.test_as_server import AbstractServer
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import Order, OrderId, OrderNumber
-from Tribler.community.market.core.order_repository import OrderRepository, MemoryOrderRepository
+from Tribler.community.market.core.order_repository import OrderRepository, MemoryOrderRepository, \
+    DatabaseOrderRepository
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
+from Tribler.community.market.database import MarketDB
+from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
 class OrderRepositoryTestSuite(unittest.TestCase):
@@ -33,6 +40,10 @@ class OrderRepositoryTestSuite(unittest.TestCase):
     def test_next_identity(self):
         # Test for next identity
         self.assertEquals(NotImplemented, self.order_repository.next_identity())
+
+    def test_delete_by_id(self):
+        # Test for delete by id
+        self.assertEquals(NotImplemented, self.order_repository.delete_by_id(self.order_id))
 
     def test_update(self):
         # Test for update
@@ -91,6 +102,26 @@ class MemoryOrderRepositoryTestSuite(unittest.TestCase):
         self.assertNotEquals(self.order, self.memory_order_repository.find_by_id(self.order_id))
         self.assertEquals(self.order2, self.memory_order_repository.find_by_id(self.order_id))
 
+
+class DatabaseOrderRepositoryTestSuite(AbstractServer):
+
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def setUp(self, annotate=True):
+        yield super(DatabaseOrderRepositoryTestSuite, self).setUp(annotate=annotate)
+
+        path = os.path.join(self.getStateDir(), 'sqlite')
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        database = MarketDB(self.getStateDir())
+        self.database_order_repo = DatabaseOrderRepository('a' * 10, database)
+
+    def test_init(self):
+        """
+        Test the initialization of the database order repository
+        """
+        self.assertRaises(ValueError, DatabaseOrderRepository, 'g' * 10, None)
 
 if __name__ == '__main__':
     unittest.main()

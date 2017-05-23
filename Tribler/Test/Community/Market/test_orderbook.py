@@ -1,6 +1,9 @@
 import unittest
 
+from twisted.internet.defer import Deferred
+
 from Tribler.Test.test_as_server import AbstractServer
+from Tribler.Test.twisted_thread import deferred
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.message_repository import MemoryMessageRepository
 from Tribler.community.market.core.order import OrderId, OrderNumber
@@ -23,12 +26,18 @@ class OrderBookTestSuite(AbstractServer):
         self.ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
                        OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
                        Timeout(1462224447.117), Timestamp(1462224447.117))
+        self.invalid_ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
+                       OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
+                       Timeout(0), Timestamp(0.0))
         self.ask2 = Ask(MessageId(TraderId('1'), MessageNumber('message_number')),
                         OrderId(TraderId('1'), OrderNumber(1)), Price(400, 'BTC'), Quantity(30, 'MC'),
                         Timeout(1462224447.117), Timestamp(1462224447.117))
         self.bid = Bid(MessageId(TraderId('2'), MessageNumber('message_number')),
                        OrderId(TraderId('2'), OrderNumber(1)), Price(200, 'BTC'), Quantity(30, 'MC'),
                        Timeout(1462224447.117), Timestamp(1462224447.117))
+        self.invalid_bid = Bid(MessageId(TraderId('0'), MessageNumber('message_number')),
+                               OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
+                               Timeout(0), Timestamp(0.0))
         self.bid2 = Bid(MessageId(TraderId('3'), MessageNumber('message_number')),
                         OrderId(TraderId('3'), OrderNumber(1)), Price(300, 'BTC'), Quantity(30, 'MC'),
                         Timeout(1462224447.117), Timestamp(1462224447.117))
@@ -42,6 +51,18 @@ class OrderBookTestSuite(AbstractServer):
         self.order_book.cancel_all_pending_tasks()
         super(OrderBookTestSuite, self).tearDown(annotate=annotate)
 
+    def test_timeouts(self):
+        """
+        Test the timeout functions of asks/bids
+        """
+        self.order_book.insert_ask(self.ask)
+        self.assertEqual(self.order_book.timeout_ask(self.ask.order_id), self.ask)
+
+        self.order_book.insert_bid(self.bid)
+        self.assertEqual(self.order_book.timeout_bid(self.bid.order_id), self.bid)
+
+        self.order_book.on_invalid_tick_insert(None)
+
     def test_ask_insertion(self):
         # Test for ask insertion
         self.order_book.insert_ask(self.ask2)
@@ -49,6 +70,20 @@ class OrderBookTestSuite(AbstractServer):
         self.assertTrue(self.order_book.ask_exists(self.ask2.order_id))
         self.assertFalse(self.order_book.bid_exists(self.ask2.order_id))
         self.assertEquals(self.ask2, self.order_book.get_ask(self.ask2.order_id)._tick)
+
+    @deferred(timeout=10)
+    def test_ask_insertion_invalid(self):
+        """
+        Test whether we get an error when we add an invalid ask to the order book
+        """
+        return self.order_book.insert_ask(self.invalid_ask)
+
+    @deferred(timeout=10)
+    def test_bid_insertion_invalid(self):
+        """
+        Test whether we get an error when we add an invalid bid to the order book
+        """
+        return self.order_book.insert_bid(self.invalid_bid)
 
     def test_ask_removal(self):
         # Test for ask removal
@@ -128,6 +163,42 @@ class OrderBookTestSuite(AbstractServer):
         self.assertFalse(self.order_book.tick_exists(self.ask2.order_id))
         self.order_book.remove_tick(self.bid2.order_id)
         self.assertFalse(self.order_book.tick_exists(self.bid2.order_id))
+
+    def test_trade_tick(self):
+        """
+        Test the trade tick method in an order book
+        """
+        self.order_book.insert_ask(self.ask)
+        self.order_book.insert_bid(self.bid)
+        self.order_book.insert_ask(self.ask2)
+        self.order_book.insert_bid(self.bid2)
+
+        # Trade self.ask <-> self.bid
+        self.order_book.trade_tick(self.ask.order_id, self.bid.order_id, Quantity(20, 'MC'))
+        self.assertTrue(self.order_book.tick_exists(self.ask.order_id))
+        self.assertTrue(self.order_book.tick_exists(self.bid.order_id))
+
+        self.order_book.trade_tick(self.ask.order_id, self.bid.order_id, Quantity(10, 'MC'))
+        self.assertFalse(self.order_book.tick_exists(self.ask.order_id))
+        self.assertFalse(self.order_book.tick_exists(self.bid.order_id))
+
+        # Trade self.bid2 <-> self.ask2
+        self.order_book.trade_tick(self.bid2.order_id, self.ask2.order_id, Quantity(20, 'MC'))
+        self.assertTrue(self.order_book.tick_exists(self.ask2.order_id))
+        self.assertTrue(self.order_book.tick_exists(self.bid2.order_id))
+
+        self.order_book.trade_tick(self.bid2.order_id, self.ask2.order_id, Quantity(10, 'MC'))
+        self.assertFalse(self.order_book.tick_exists(self.ask2.order_id))
+        self.assertFalse(self.order_book.tick_exists(self.bid2.order_id))
+
+    def test_get_order_ids(self):
+        """
+        Test the get order IDs function in order book
+        """
+        self.assertFalse(self.order_book.get_order_ids())
+        self.order_book.insert_ask(self.ask)
+        self.order_book.insert_bid(self.bid)
+        self.assertEqual(len(self.order_book.get_order_ids()), 2)
 
     def test_str(self):
         # Test for order book string representation

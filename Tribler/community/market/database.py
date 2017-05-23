@@ -1,16 +1,14 @@
 """
-This file contains everything related to persistence for TradeChain.
+This file contains everything related to persistence for the market community.
 """
 from os import path
 
-import time
 
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import Order
 from Tribler.community.market.core.payment import Payment
 from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
 from Tribler.dispersy.database import Database
-from Tribler.community.tradechain.block import TradeChainBlock
 
 
 DATABASE_DIRECTORY = path.join(u"sqlite")
@@ -180,7 +178,7 @@ class MarketDB(Database):
 
         self.delete_payments(transaction.transaction_id)
         for payment in transaction.payments:
-            self.add_payment(payment, transaction.payments)
+            self.add_payment(payment)
 
     def delete_transaction(self, transaction_id):
         """
@@ -199,7 +197,7 @@ class MarketDB(Database):
             return 1
         return highest_transaction_number[0] + 1
 
-    def add_payment(self, payment, payment_list):
+    def add_payment(self, payment):
         """
         Add a specific transaction to the database
         """
@@ -235,9 +233,6 @@ class MarketDB(Database):
 
     def open(self, initial_statements=True, prepare_visioning=True):
         return super(MarketDB, self).open(initial_statements, prepare_visioning)
-
-    def close(self, commit=True):
-        return super(MarketDB, self).close(commit)
 
     def check_database(self, database_version):
         """

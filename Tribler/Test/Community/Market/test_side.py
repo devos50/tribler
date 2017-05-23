@@ -67,6 +67,24 @@ class SideTestSuite(unittest.TestCase):
         self.side.remove_tick(OrderId(TraderId('1'), OrderNumber(2)))
         self.assertEquals(0, len(self.side))
 
+    def test_get_price_level_list_wallets(self):
+        """
+        Test the price level lists of wallets of a side
+        """
+        self.assertFalse(self.side.get_price_level_list_wallets())
+        self.side.insert_tick(self.tick)
+        self.assertTrue(self.side.get_price_level_list_wallets())
+
+    def test_get_list_representation(self):
+        """
+        Testing the list representation of a side
+        """
+        self.assertFalse(self.side.get_list_representation())
+        self.side.insert_tick(self.tick)
+
+        list_rep = self.side.get_list_representation()
+        self.assertTrue(list_rep)
+
 
 if __name__ == '__main__':
     unittest.main()

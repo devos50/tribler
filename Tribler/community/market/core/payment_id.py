@@ -20,8 +20,6 @@ class PaymentId(object):
     def __eq__(self, other):
         if not isinstance(other, PaymentId):
             return NotImplemented
-        elif self is other:
-            return True
         else:
             return self._payment_id == other._payment_id
 
@@ -30,4 +28,3 @@ class PaymentId(object):
 
     def __hash__(self):
         return hash(self._payment_id)
-

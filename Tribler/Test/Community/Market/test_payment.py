@@ -56,6 +56,23 @@ class PaymentTestSuite(unittest.TestCase):
         self.assertEquals(data[8], PaymentId('aaa')),
         self.assertEquals(data[9], Timestamp(4.0))
 
+    def test_to_dictionary(self):
+        """
+        Test the dictionary representation of a payment
+        """
+        self.assertDictEqual(self.payment.to_dictionary(), {
+            "trader_id": '2',
+            "transaction_number": 2,
+            "price": 2.0,
+            "price_type": 'BTC',
+            "quantity": 3.0,
+            "quantity_type": 'MC',
+            "payment_id": 'aaa',
+            "address_from": 'a',
+            "address_to": 'b',
+            "timestamp": 4.0
+        })
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -57,17 +57,11 @@ class Price(object):
         else:
             return NotImplemented
 
-    def __iadd__(self, other):
-        return self.__add__(other)
-
     def __sub__(self, other):
         if isinstance(other, Price) and self.wallet_id == other.wallet_id:
             return Price(self._price - other._price, self._wallet_id)
         else:
             return NotImplemented
-
-    def __isub__(self, other):
-        return self.__sub__(other)
 
     def __lt__(self, other):
         if isinstance(other, Price) and self.wallet_id == other.wallet_id:

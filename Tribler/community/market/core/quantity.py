@@ -55,17 +55,11 @@ class Quantity(object):
         else:
             return NotImplemented
 
-    def __iadd__(self, other):
-        return self.__add__(other)
-
     def __sub__(self, other):
         if isinstance(other, Quantity) and self.wallet_id == other.wallet_id:
             return Quantity(self._quantity - other._quantity, self._wallet_id)
         else:
             return NotImplemented
-
-    def __isub__(self, other):
-        return self.__sub__(other)
 
     def __lt__(self, other):
         if isinstance(other, Quantity) and self.wallet_id == other.wallet_id:

@@ -10,9 +10,26 @@ from Tribler.community.market.core.transaction import TransactionNumber
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.payload import AcceptedTradePayload, DeclinedTradePayload, TradePayload, \
-    OfferPayload, StartTransactionPayload, PaymentPayload
+    OfferPayload, StartTransactionPayload, PaymentPayload, WalletInfoPayload, MarketIntroPayload
 from Tribler.community.market.ttl import Ttl
 from Tribler.dispersy.meta import MetaObject
+
+
+class MarketIntroPayloadTestSuite(unittest.TestCase):
+    """Market intro payload test cases."""
+
+    def setUp(self):
+        # Object creation
+        self.market_intro_payload = MarketIntroPayload.Implementation(MetaObject(), ("a", 1324), ("b", 1234),
+                                                                      ("c", 1234), True, u"public", None, 3, "f")
+
+    def test_properties(self):
+        """
+        Test the market intro payload
+        """
+        self.assertEqual(self.market_intro_payload.orders_bloom_filter, "f")
+        self.market_intro_payload.set_orders_bloom_filter("g")
+        self.assertEqual(self.market_intro_payload.orders_bloom_filter, "g")
 
 
 class AcceptedTradePayloadTestSuite(unittest.TestCase):
@@ -123,10 +140,19 @@ class StartTransactionPayloadTestSuite(unittest.TestCase):
                                                                                 Quantity(3, 'MC'), Timestamp(0.0))
 
     def test_properties(self):
-        # Test for properties
+        """
+        Test the start transaction payload
+        """
         self.assertEquals(MessageNumber('1'), self.start_transaction_payload.message_number)
         self.assertEquals(TransactionNumber(2), self.start_transaction_payload.transaction_number)
         self.assertEquals(Timestamp(0.0), self.start_transaction_payload.timestamp)
+        self.assertEquals(TraderId('2'), self.start_transaction_payload.transaction_trader_id)
+        self.assertEquals(TraderId('2'), self.start_transaction_payload.order_trader_id)
+        self.assertEquals(OrderNumber(3), self.start_transaction_payload.order_number)
+        self.assertEquals(TraderId('0'), self.start_transaction_payload.recipient_trader_id)
+        self.assertEquals(OrderNumber(4), self.start_transaction_payload.recipient_order_number)
+        self.assertEquals(Price(2, 'BTC'), self.start_transaction_payload.price)
+        self.assertEquals(Quantity(3, 'MC'), self.start_transaction_payload.quantity)
 
 
 class PaymentPayloadTestSuite(unittest.TestCase):
@@ -146,12 +172,35 @@ class PaymentPayloadTestSuite(unittest.TestCase):
                                                                             Timestamp(0.0))
 
     def test_properties(self):
-        # Test for properties
+        """
+        Test the payment payload
+        """
         self.assertEquals(MessageNumber('1'), self.payment_payload.message_number)
         self.assertEquals(TransactionNumber(2), self.payment_payload.transaction_number)
-        self.assertEquals(10, int(self.payment_payload.transferee_price))
+        self.assertEquals(Price(10, 'BTC'), self.payment_payload.transferee_price)
+        self.assertEquals(Quantity(20, 'MC'), self.payment_payload.transferee_quantity)
         self.assertEquals('3', str(self.payment_payload.payment_id))
         self.assertEquals(Timestamp(0.0), self.payment_payload.timestamp)
+        self.assertEquals(WalletAddress('a'), self.payment_payload.address_from)
+        self.assertEquals(WalletAddress('b'), self.payment_payload.address_to)
+
+
+class WalletInfoPayloadTestSuite(unittest.TestCase):
+    """Wallet info payload test cases."""
+
+    def setUp(self):
+        # Object creation
+        self.wallet_info_payload = WalletInfoPayload.Implementation(MetaObject(), TraderId('0'), MessageNumber('1'),
+                                                                    TraderId('2'), TransactionNumber(2),
+                                                                    WalletAddress('a'), WalletAddress('b'),
+                                                                    Timestamp(3600.0))
+
+    def test_properties(self):
+        """
+        Test the wallet info payload
+        """
+        self.assertEquals(WalletAddress('a'), self.wallet_info_payload.incoming_address)
+        self.assertEquals(WalletAddress('b'), self.wallet_info_payload.outgoing_address)
 
 
 if __name__ == '__main__':

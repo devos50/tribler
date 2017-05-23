@@ -14,6 +14,7 @@ from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
 from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.database import MarketDB
+from Tribler.community.market.database import LATEST_DB_VERSION
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
@@ -40,6 +41,8 @@ class TestDatabase(AbstractServer):
         self.payment1 = Payment(MessageId(TraderId("0"), MessageNumber("4")), self.transaction_id1, Quantity(5, 'MC'),
                                 Price(6, 'BTC'), WalletAddress('abc'), WalletAddress('def'), PaymentId("abc"),
                                 Timestamp(20.0))
+
+        self.transaction1.add_payment(self.payment1)
 
     @blocking_call_on_reactor_thread
     def test_add_get_order(self):
@@ -87,6 +90,7 @@ class TestDatabase(AbstractServer):
         self.database.add_transaction(self.transaction1)
         transactions = self.database.get_all_transactions()
         self.assertEqual(len(transactions), 1)
+        self.assertEqual(len(self.database.get_payments(self.transaction1.transaction_id)), 1)
 
     @blocking_call_on_reactor_thread
     def test_get_specific_transaction(self):
@@ -136,3 +140,10 @@ class TestDatabase(AbstractServer):
         traders = self.database.get_traders()
         self.assertEqual(len(traders), 2)
         self.assertEqual(traders, [("a", "123", 1234), ("b", "124", 1235)])
+
+    @blocking_call_on_reactor_thread
+    def test_check_database(self):
+        """
+        Test the check of the database
+        """
+        self.assertEqual(self.database.check_database(unicode(LATEST_DB_VERSION)), LATEST_DB_VERSION)
