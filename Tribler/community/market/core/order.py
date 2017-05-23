@@ -152,6 +152,8 @@ class Order(object):
         order = cls(order_id, Price(data[2], str(data[3])), Quantity(data[4], str(data[5])), Timeout(data[7]),
                     Timestamp(data[8]), bool(data[10]))
         order._traded_quantity = Quantity(data[6], str(data[5]))
+        if data[9]:
+            order._completed_timestamp = Timestamp(data[9])
         return order
 
     def to_database(self):
@@ -322,7 +324,7 @@ class Order(object):
         """
         Return a dictionary representation of this dictionary.
         """
-        completed_timestamp = int(self.completed_timestamp) if self.completed_timestamp else None
+        completed_timestamp = float(self.completed_timestamp) if self.completed_timestamp else None
         return {
             "trader_id": str(self.order_id.trader_id),
             "order_number": int(self.order_id.order_number),
