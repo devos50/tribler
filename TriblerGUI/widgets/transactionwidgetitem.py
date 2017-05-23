@@ -18,5 +18,6 @@ class TransactionWidgetItem(QTreeWidgetItem):
         self.setText(0, "%d" % self.transaction["transaction_number"])
         self.setText(1, "%s %s" % (self.transaction["price"], self.transaction["price_type"]))
         self.setText(2, "%s %s" % (self.transaction["quantity"], self.transaction["quantity_type"]))
-        self.setText(3, transaction_time)
-        self.setText(4, "%d/%d" % (self.transaction["current_payment"], self.transaction["total_payments"]))
+        self.setText(3, "%s %s" % (self.transaction["transferred_price"], self.transaction["price_type"]))
+        self.setText(4, "%s %s" % (self.transaction["transferred_quantity"], self.transaction["quantity_type"]))
+        self.setText(5, transaction_time)

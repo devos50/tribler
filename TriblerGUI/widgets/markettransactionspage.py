@@ -41,7 +41,8 @@ class MarketTransactionsPage(QWidget):
     def on_payment(self, payment):
         item = self.get_widget_with_transaction(payment["trader_id"], payment["transaction_number"])
         if item:
-            item.transaction["current_payment"] += 1
+            item.transaction["transferred_price"] += payment["price"]
+            item.transaction["transferred_quantity"] += payment["quantity"]
             item.update_item()
 
     def on_received_transactions(self, transactions):
