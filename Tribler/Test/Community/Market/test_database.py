@@ -3,13 +3,16 @@ import os
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Test.test_as_server import AbstractServer
-from Tribler.community.market.core.message import TraderId
+from Tribler.community.market.core.message import TraderId, MessageId, MessageNumber
 from Tribler.community.market.core.order import Order, OrderId, OrderNumber
+from Tribler.community.market.core.payment import Payment
+from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
+from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.database import MarketDB
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
@@ -32,7 +35,11 @@ class TestDatabase(AbstractServer):
 
         self.transaction_id1 = TransactionId(TraderId("0"), TransactionNumber(4))
         self.transaction1 = Transaction(self.transaction_id1, TraderId("1"), Price(100, 'BTC'), Quantity(30, 'MC'),
-                                       OrderId(TraderId("0"), OrderNumber(1)), Timestamp(20.0))
+                                        OrderId(TraderId("0"), OrderNumber(1)), Timestamp(20.0))
+
+        self.payment1 = Payment(MessageId(TraderId("0"), MessageNumber("4")), self.transaction_id1, Quantity(5, 'MC'),
+                                Price(6, 'BTC'), WalletAddress('abc'), WalletAddress('def'), PaymentId("abc"),
+                                Timestamp(20.0))
 
     @blocking_call_on_reactor_thread
     def test_add_get_order(self):
@@ -109,6 +116,15 @@ class TestDatabase(AbstractServer):
         self.assertEqual(self.database.get_next_transaction_number(), 1)
         self.database.add_transaction(self.transaction1)
         self.assertEqual(self.database.get_next_transaction_number(), 5)
+
+    @blocking_call_on_reactor_thread
+    def test_add_get_payment(self):
+        """
+        Test the insertion and retrieval of a payment in the database
+        """
+        self.database.add_payment(self.payment1)
+        payments = self.database.get_payments(self.transaction_id1)
+        self.assertEqual(len(payments), 1)
 
     @blocking_call_on_reactor_thread
     def test_add_get_trader_identity(self):

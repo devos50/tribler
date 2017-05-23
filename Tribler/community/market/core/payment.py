@@ -27,6 +27,28 @@ class Payment(Message):
         self._address_to = address_to
         self._payment_id = payment_id
 
+    @classmethod
+    def from_database(cls, data):
+        """
+        Create a Payment object based on information in the database.
+        """
+        message_id = MessageId(TraderId(str(data[0])), MessageNumber(str(data[1])))
+        transaction_id = TransactionId(TraderId(str(data[2])), TransactionNumber(data[3]))
+        return cls(message_id, transaction_id, Quantity(data[5], str(data[6])), Price(data[7], str(data[8])),
+                   WalletAddress(str(data[9])), WalletAddress(str(data[10])), PaymentId(str(data[4])),
+                   Timestamp(float(data[11])))
+
+    def to_database(self):
+        """
+        Returns a database representation of a Payment object.
+        :rtype: tuple
+        """
+        return (unicode(self.message_id.trader_id), unicode(self.message_id.message_number),
+                unicode(self.transaction_id.trader_id), int(self.transaction_id.transaction_number),
+                unicode(self.payment_id), float(self.transferee_quantity),
+                unicode(self.transferee_quantity), float(self.transferee_price), unicode(self.transferee_price),
+                unicode(self.address_from), unicode(self.address_to), float(self.timestamp))
+
     @property
     def transaction_id(self):
         return self._transaction_id

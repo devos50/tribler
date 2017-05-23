@@ -3,8 +3,12 @@ This file contains everything related to persistence for TradeChain.
 """
 from os import path
 
+import time
+
+from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import Order
-from Tribler.community.market.core.transaction import Transaction
+from Tribler.community.market.core.payment import Payment
+from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
 from Tribler.dispersy.database import Database
 from Tribler.community.tradechain.block import TradeChainBlock
 
@@ -55,12 +59,29 @@ CREATE TABLE IF NOT EXISTS orders(
   PRIMARY KEY (trader_id, transaction_number)
  );
 
-CREATE TABLE IF NOT EXISTS traders(
- trader_id            TEXT NOT NULL,
- ip_address           TEXT NOT NULL,
- port                 INTEGER NOT NULL,
+ CREATE TABLE IF NOT EXISTS payments(
+  trader_id                TEXT NOT NULL,
+  message_number           TEXT NOT NULL,
+  transaction_trader_id    TEXT NOT NULL,
+  transaction_number       INTEGER NOT NULL,
+  payment_id               TEXT NOT NULL,
+  transferee_quantity      DOUBLE NOT NULL,
+  quantity_type            TEXT NOT NULL,
+  transferee_price         DOUBLE NOT NULL,
+  price_type               TEXT NOT NULL,
+  address_from             TEXT NOT NULL,
+  address_to               TEXT NOT NULL,
+  timestamp                TIMESTAMP NOT NULL,
 
- PRIMARY KEY(trader_id)
+  PRIMARY KEY (trader_id, message_number, transaction_trader_id, transaction_number)
+ );
+
+ CREATE TABLE IF NOT EXISTS traders(
+  trader_id            TEXT NOT NULL,
+  ip_address           TEXT NOT NULL,
+  port                 INTEGER NOT NULL,
+
+  PRIMARY KEY(trader_id)
  );
 
 CREATE TABLE option(key TEXT PRIMARY KEY, value BLOB);
@@ -131,7 +152,10 @@ class MarketDB(Database):
         Return all transactions in the database.
         """
         db_result = self.execute(u"SELECT * FROM transactions").fetchall()
-        return [Transaction.from_database(db_item) for db_item in db_result]
+        return [Transaction.from_database(db_item,
+                                          self.get_payments(TransactionId(TraderId(str(db_item[0])),
+                                                                          TransactionNumber(db_item[2]))))
+                for db_item in db_result]
 
     def get_transaction(self, transaction_id):
         """
@@ -140,7 +164,7 @@ class MarketDB(Database):
         db_result = self.execute(u"SELECT * FROM transactions WHERE trader_id = ? AND transaction_number = ?",
                                  (unicode(transaction_id.trader_id),
                                   unicode(transaction_id.transaction_number))).fetchone()
-        return Transaction.from_database(db_result) if db_result else None
+        return Transaction.from_database(db_result, self.get_payments(transaction_id)) if db_result else None
 
     def add_transaction(self, transaction):
         """
@@ -154,12 +178,17 @@ class MarketDB(Database):
             u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", transaction.to_database())
         self.commit()
 
+        self.delete_payments(transaction.transaction_id)
+        for payment in transaction.payments:
+            self.add_payment(payment, transaction.payments)
+
     def delete_transaction(self, transaction_id):
         """
         Delete a specific transaction from the database
         """
         self.execute(u"DELETE FROM transactions WHERE trader_id = ? AND transaction_number = ?",
                      (unicode(transaction_id.trader_id), unicode(transaction_id.transaction_number)))
+        self.delete_payments(transaction_id)
 
     def get_next_transaction_number(self):
         """
@@ -169,6 +198,33 @@ class MarketDB(Database):
         if not highest_transaction_number[0]:
             return 1
         return highest_transaction_number[0] + 1
+
+    def add_payment(self, payment, payment_list):
+        """
+        Add a specific transaction to the database
+        """
+        self.execute(
+            u"INSERT INTO payments (trader_id, message_number, transaction_trader_id, transaction_number, payment_id,"
+            u"transferee_quantity, quantity_type, transferee_price, price_type, address_from, address_to, timestamp) "
+            u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", payment.to_database())
+        self.commit()
+
+    def get_payments(self, transaction_id):
+        """
+        Return all payment tied to a specific transaction.
+        """
+        db_result = self.execute(u"SELECT * FROM payments WHERE transaction_trader_id = ? AND transaction_number = ?"
+                                 u"ORDER BY timestamp ASC",
+                                 (unicode(transaction_id.trader_id),
+                                  unicode(transaction_id.transaction_number))).fetchall()
+        return [Payment.from_database(db_item) for db_item in db_result]
+
+    def delete_payments(self, transaction_id):
+        """
+        Delete all payments that are associated with a specific transaction
+        """
+        self.execute(u"DELETE FROM payments WHERE transaction_trader_id = ? AND transaction_number = ?",
+                     (unicode(transaction_id.trader_id), unicode(transaction_id.transaction_number)))
 
     def add_trader_identity(self, trader_id, ip, port):
         self.execute(u"INSERT OR REPLACE INTO traders VALUES(?,?,?)", (unicode(trader_id), unicode(ip), port))

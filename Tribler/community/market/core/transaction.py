@@ -141,11 +141,11 @@ class Transaction(object):
         self.partner_incoming_address = None
         self.partner_outgoing_address = None
 
-        self._payment_list = []
+        self._payments = []
         self._current_payment = 0
 
     @classmethod
-    def from_database(cls, data):
+    def from_database(cls, data, payments):
         """
         Create a Transaction object based on information in the database.
         """
@@ -162,8 +162,8 @@ class Transaction(object):
         transaction.outgoing_address = WalletAddress(str(data[15]))
         transaction.partner_incoming_address = WalletAddress(str(data[16]))
         transaction.partner_outgoing_address = WalletAddress(str(data[17]))
+        transaction._payments = payments
 
-        # TODO add payment data
         return transaction
 
     def to_database(self):
@@ -246,6 +246,13 @@ class Transaction(object):
         return self._order_id
 
     @property
+    def payments(self):
+        """
+        :rtype: [Payment]
+        """
+        return self._payments
+
+    @property
     def timestamp(self):
         """
         :rtype: Timestamp
@@ -264,10 +271,10 @@ class Transaction(object):
     def add_payment(self, payment):
         self._transferred_quantity += payment.transferee_quantity
         self._transferred_price += payment.transferee_price
-        self._payment_list.append(payment)
+        self._payments.append(payment)
 
     def last_payment(self, is_ask):
-        for payment in reversed(self._payment_list):
+        for payment in reversed(self._payments):
             if is_ask and float(payment.transferee_quantity) > 0:
                 return payment
             elif not is_ask and float(payment.transferee_price) > 0:
@@ -298,7 +305,7 @@ class Transaction(object):
                 return self.price - self.transferred_price
 
             percentage = float(last_payment.transferee_quantity) / float(self.total_quantity)
-            transfer_amount = self.unitize(float(percentage * float(self.price)), min_unit)
+            transfer_amount = self.unitize(float(percentage * float(self.price)), min_unit) * 2
             if transfer_amount < min_unit:
                 transfer_amount = min_unit
             elif transfer_amount > float(self.price - self.transferred_price):
