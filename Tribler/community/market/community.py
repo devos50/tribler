@@ -10,7 +10,6 @@ from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.database import MarketDB
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
-from Tribler.community.market.wallet.wallet import InsufficientFunds
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.candidate import Candidate, WalkCandidate
@@ -19,7 +18,7 @@ from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.dispersy.destination import CommunityDestination, CandidateDestination
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.message import Message, DelayMessageByProof, DropMessage
-from Tribler.dispersy.requestcache import IntroductionRequestCache
+from Tribler.dispersy.requestcache import IntroductionRequestCache, NumberCache
 from Tribler.dispersy.resolution import PublicResolution
 from conversion import MarketConversion
 from core.matching_engine import MatchingEngine, PriceTimeStrategy
@@ -27,7 +26,7 @@ from core.message import TraderId
 from core.message_repository import MemoryMessageRepository
 from core.order import TickWasNotReserved, OrderId
 from core.order_manager import OrderManager
-from core.order_repository import MemoryOrderRepository, DatabaseOrderRepository
+from core.order_repository import DatabaseOrderRepository
 from core.orderbook import OrderBook
 from core.payment import Payment
 from core.price import Price
@@ -38,11 +37,36 @@ from core.timestamp import Timestamp
 from core.trade import Trade, ProposedTrade, AcceptedTrade, DeclinedTrade, CounterTrade
 from core.transaction import StartTransaction, TransactionId, Transaction
 from core.transaction_manager import TransactionManager
-from core.transaction_repository import MemoryTransactionRepository, DatabaseTransactionRepository
+from core.transaction_repository import DatabaseTransactionRepository
 from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTradePayload, StartTransactionPayload, \
     TransactionPayload, WalletInfoPayload, MarketIntroPayload, \
     OfferSyncPayload, PaymentPayload
 from ttl import Ttl
+
+
+# TODO this class is currently unused
+class ProposedTradeRequestCache(NumberCache):
+    """
+    This cache keeps track of outstanding proposed trade messages.
+    """
+    def __init__(self, community, proposed_trade):
+        super(ProposedTradeRequestCache, self).__init__(community.request_cache, u"proposed-trade",
+                                                        proposed_trade.message_id.message_number)
+        self.community = community
+        self.proposed_trade = proposed_trade
+
+    def on_timeout(self):
+        # Just remove the reserved quantity from the order
+        order = self.community.order_manager.order_repository.find_by_id(self.proposed_trade.order_id)
+        try:
+            order.release_quantity_for_tick(self.proposed_trade.recipient_order_id)
+            self.community.order_manager.order_repository.update(order)
+        except TickWasNotReserved:  # Nothing left to do
+            pass
+
+        self._logger.debug("Proposed trade timed out, trying to find a new match for this order")
+        self.community.order_book.remove_tick(self.proposed_trade.recipient_order_id)
+        self.community.match(order)
 
 
 class MarketCommunity(Community):
@@ -301,6 +325,16 @@ class MarketCommunity(Community):
             return WalletAddress(self.wallets[order.total_quantity.wallet_id].get_address()), \
                    WalletAddress(self.wallets[order.price.wallet_id].get_address())
 
+    def match(self, order):
+        """
+        Try to find a match for a specific order and send proposed trade messages if there is a match
+        :param order: The order to match
+        """
+        proposed_trades = self.matching_engine.match_order(order)
+        if proposed_trades:
+            self.order_manager.order_repository.update(order)
+        self.send_proposed_trade_messages(proposed_trades)
+
     def check_history(self, message):
         """
         Check if the message is already in the history, meaning it has already been received before
@@ -395,9 +429,7 @@ class MarketCommunity(Community):
         order = self.order_manager.create_ask_order(price, quantity, timeout)
 
         # Search for matches
-        proposed_trades = self.matching_engine.match_order(order)
-        self.order_manager.order_repository.update(order)
-        self.send_proposed_trade_messages(proposed_trades)
+        self.match(order)
 
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
@@ -496,10 +528,6 @@ class MarketCommunity(Community):
         # Create the order
         order = self.order_manager.create_bid_order(price, quantity, timeout)
 
-        # Search for matches
-        #proposed_trades = self.matching_engine.match_order(order)
-        #self.send_proposed_trade_messages(proposed_trades)
-
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Bid), type(tick)
@@ -553,10 +581,7 @@ class MarketCommunity(Community):
                 # Check for new matches against the orders of this node
                 for order in self.order_manager.order_repository.find_all():
                     if order.is_ask() and order.is_valid():
-                        proposed_trades = self.matching_engine.match_order(order)
-                        if proposed_trades:
-                            self.order_manager.order_repository.update(order)
-                        self.send_proposed_trade_messages(proposed_trades)
+                        self.match(order)
 
             if not str(bid.order_id) in self.relayed_bids:
                 self.relayed_bids.append(str(bid.order_id))
@@ -764,9 +789,7 @@ class MarketCommunity(Community):
             # Just remove the tick with the order id of the other party and try to find a new match
             self._logger.debug("Received declined trade, trying to find a new match for this order")
             self.order_book.remove_tick(declined_trade.order_id)
-            proposed_trades = self.matching_engine.match_order(order)
-            self.order_manager.order_repository.update(order)
-            self.send_proposed_trade_messages(proposed_trades)
+            self.match(order)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
