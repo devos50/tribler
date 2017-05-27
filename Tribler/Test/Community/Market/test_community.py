@@ -17,6 +17,7 @@ from Tribler.community.market.core.trade import Trade
 from Tribler.community.market.ttl import Ttl
 from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.dispersy.candidate import Candidate, WalkCandidate
+from Tribler.dispersy.message import DelayMessageByProof, Message
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
@@ -47,7 +48,7 @@ class CommunityTestSuite(AbstractTestCommunity):
                        OrderId(TraderId('1'), OrderNumber(1234)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
                        Timeout(3600), Timestamp.now())
         self.order = Order(OrderId(TraderId(self.market_community.mid), OrderNumber(24)), Price(20, 'DUM1'),
-                           Quantity(30, 'DUM2'), Timeout(0.0), Timestamp(10.0), False)
+                           Quantity(30, 'DUM2'), Timeout(3600.0), Timestamp.now(), False)
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             OrderId(TraderId('0'), OrderNumber(23)),
                                             OrderId(TraderId(self.market_community.mid), OrderNumber(24)),
@@ -59,6 +60,29 @@ class CommunityTestSuite(AbstractTestCommunity):
         Test retrieval of the master members of the Market community
         """
         self.assertTrue(MarketCommunity.get_master_members(self.dispersy))
+
+    @blocking_call_on_reactor_thread
+    def test_check_message(self):
+        """
+        Test the general check of the validity of a message in the market community
+        """
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        proposed_trade_msg = self.get_proposed_trade_msg()
+        self.market_community._timeline.check = lambda _: (True, None)
+        [self.assertIsInstance(msg, Message.Implementation) for msg in self.market_community.check_message([proposed_trade_msg])]
+
+        self.market_community._timeline.check = lambda _: (False, None)
+        [self.assertIsInstance(msg, DelayMessageByProof) for msg in self.market_community.check_message([proposed_trade_msg])]
+
+    @blocking_call_on_reactor_thread
+    def test_send_offer_sync(self):
+        """
+        Test sending an offer sync
+        """
+        self.market_community.update_ip(TraderId('0'), ("127.0.0.1", 1234))
+        self.market_community.update_ip(TraderId('1'), ("127.0.0.1", 1234))
+        candidate = WalkCandidate(("127.0.0.1", 1234), False, ("127.0.0.1", 1234), ("127.0.0.1", 1234), u"public")
+        self.assertTrue(self.market_community.send_offer_sync(candidate, self.ask))
 
     @blocking_call_on_reactor_thread
     def test_create_intro_request(self):
@@ -160,15 +184,13 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.assertEquals(1, len(self.market_community.order_book._bids))
 
     def test_check_history(self):
-        # Test for check history
+        """
+        Test the check history method in the market community
+        """
         self.assertTrue(self.market_community.check_history(self.ask))
         self.assertFalse(self.market_community.check_history(self.ask))
 
-    @blocking_call_on_reactor_thread
-    def test_on_proposed_trade(self):  # TODO: Add assertions to test
-        # Test for on proposed trade
-        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
-        self.market_community.order_manager.order_repository.add(self.order)
+    def get_proposed_trade_msg(self):
         destination, payload = self.proposed_trade.to_network()
         payload += ("127.0.0.1", 1234)
         candidate = Candidate(self.market_community.lookup_ip(destination), False)
@@ -179,7 +201,60 @@ class CommunityTestSuite(AbstractTestCommunity):
             destination=(candidate,),
             payload=payload
         )
-        self.market_community.on_proposed_trade([message])
+        return message
+
+    @blocking_call_on_reactor_thread
+    def test_on_proposed_trade_accept(self):
+        """
+        Test whether we accept a trade when we receive a correct proposed trade message
+        """
+        def mocked_accept_trade(*_):
+            mocked_accept_trade.called = True
+
+        mocked_accept_trade.called = False
+
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        self.market_community.accept_trade = mocked_accept_trade
+        self.market_community.order_manager.order_repository.add(self.order)
+
+        self.market_community.on_proposed_trade([self.get_proposed_trade_msg()])
+        self.assertTrue(mocked_accept_trade.called)
+
+    @blocking_call_on_reactor_thread
+    def test_on_proposed_trade_decline(self):
+        """
+        Test whether we decline a trade when we receive an invalid proposed trade message
+        """
+        def mocked_send_decline_trade(*_):
+            mocked_send_decline_trade.called = True
+
+        mocked_send_decline_trade.called = False
+
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        self.market_community.send_declined_trade = mocked_send_decline_trade
+        self.order._timeout = Timeout(0.0)
+        self.market_community.order_manager.order_repository.add(self.order)
+
+        self.market_community.on_proposed_trade([self.get_proposed_trade_msg()])
+        self.assertTrue(mocked_send_decline_trade.called)
+
+    @blocking_call_on_reactor_thread
+    def test_on_proposed_trade_counter(self):
+        """
+        Test whether we send a counter trade when we receive a proposed trade message
+        """
+        def mocked_send_counter_trade(*_):
+            mocked_send_counter_trade.called = True
+
+        mocked_send_counter_trade.called = False
+
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        self.market_community.send_counter_trade = mocked_send_counter_trade
+        self.market_community.order_manager.order_repository.add(self.order)
+
+        self.proposed_trade._quantity = Quantity(100000, 'DUM2')
+        self.market_community.on_proposed_trade([self.get_proposed_trade_msg()])
+        self.assertTrue(mocked_send_counter_trade.called)
 
 if __name__ == '__main__':
     unittest.main()

@@ -403,7 +403,7 @@ class MarketCommunity(Community):
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Ask), type(tick)
         self.order_book.insert_ask(tick).addCallback(self.on_ask_timeout)
-        self.send_ask_messages([tick])
+        self.send_ask(tick)
 
         self._logger.debug("Ask created with price %s and quantity %s" % (price, quantity))
 
@@ -433,10 +433,6 @@ class MarketCommunity(Community):
         )
 
         self.dispersy.store_update_forward([message], True, True, True)
-
-    def send_ask_messages(self, messages):
-        for message in messages:
-            self.send_ask(message)
 
     def on_ask(self, messages):
         for message in messages:
@@ -508,7 +504,7 @@ class MarketCommunity(Community):
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
         assert isinstance(tick, Bid), type(tick)
         self.order_book.insert_bid(tick).addCallback(self.on_bid_timeout)
-        self.send_bid_messages([tick])
+        self.send_bid(tick)
 
         self._logger.debug("Bid created with price %s and quantity %s" % (price, quantity))
 
@@ -538,10 +534,6 @@ class MarketCommunity(Community):
         )
 
         self.dispersy.store_update_forward([message], True, True, True)
-
-    def send_bid_messages(self, messages):
-        for message in messages:
-            self.send_bid(message)
 
     def on_bid(self, messages):
         for message in messages:
@@ -583,8 +575,8 @@ class MarketCommunity(Community):
 
         :param target_candidate: The candidate to send this message to
         :type: target_candidate: WalkCandidate
-        :param bid: The message to send
-        :type bid: Bid
+        :param tick: The tick to send
+        :type tick: Tick
         """
         assert isinstance(target_candidate, WalkCandidate), type(target_candidate)
         assert isinstance(tick, Tick), type(tick)
@@ -606,7 +598,7 @@ class MarketCommunity(Community):
             payload=payload
         )
 
-        self.dispersy.store_update_forward([message], True, False, True)
+        return self.dispersy.store_update_forward([message], True, False, True)
 
     def on_offer_sync(self, messages):
         for message in messages:
@@ -758,10 +750,6 @@ class MarketCommunity(Community):
 
         self.dispersy.store_update_forward([message], True, False, True)
 
-    def send_declined_trade_messages(self, messages):
-        for message in messages:
-            self.send_declined_trade(message)
-
     def on_declined_trade(self, messages):
         for message in messages:
             declined_trade = DeclinedTrade.from_network(message.payload)
@@ -800,10 +788,6 @@ class MarketCommunity(Community):
         )
 
         self.dispersy.store_update_forward([message], True, False, True)
-
-    def send_counter_trade_messages(self, messages):
-        for message in messages:
-            self.send_counter_trade(message)
 
     def on_counter_trade(self, messages):
         for message in messages:
