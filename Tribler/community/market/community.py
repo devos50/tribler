@@ -18,14 +18,14 @@ from Tribler.dispersy.community import Community
 from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.dispersy.destination import CommunityDestination, CandidateDestination
 from Tribler.dispersy.distribution import DirectDistribution
-from Tribler.dispersy.message import Message, DelayMessageByProof
+from Tribler.dispersy.message import Message, DelayMessageByProof, DropMessage
 from Tribler.dispersy.requestcache import IntroductionRequestCache
 from Tribler.dispersy.resolution import PublicResolution
 from conversion import MarketConversion
 from core.matching_engine import MatchingEngine, PriceTimeStrategy
 from core.message import TraderId
 from core.message_repository import MemoryMessageRepository
-from core.order import TickWasNotReserved
+from core.order import TickWasNotReserved, OrderId
 from core.order_manager import OrderManager
 from core.order_repository import MemoryOrderRepository, DatabaseOrderRepository
 from core.orderbook import OrderBook
@@ -92,6 +92,7 @@ class MarketCommunity(Community):
         transaction_repository = DatabaseTransactionRepository(self.mid, self.market_database)
         self.transaction_manager = TransactionManager(transaction_repository)
 
+        # TODO this history can be removed when we use a request cache to keep track of outstanding trade proposals
         self.history = {}  # List for received messages TODO: fix memory leak
         self.use_local_address = False
 
@@ -105,7 +106,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CommunityDestination(node_count=10),
                     OfferPayload(),
-                    self.check_message,
+                    self.check_tick_message,
                     self.on_ask),
             Message(self, u"bid",
                     MemberAuthentication(),
@@ -113,7 +114,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CommunityDestination(node_count=10),
                     OfferPayload(),
-                    self.check_message,
+                    self.check_tick_message,
                     self.on_bid),
             Message(self, u"offer-sync",
                     MemberAuthentication(),
@@ -129,7 +130,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     TradePayload(),
-                    self.check_message,
+                    self.check_trade_message,
                     self.on_proposed_trade),
             Message(self, u"accepted-trade",
                     MemberAuthentication(),
@@ -145,7 +146,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     DeclinedTradePayload(),
-                    self.check_message,
+                    self.check_trade_message,
                     self.on_declined_trade),
             Message(self, u"counter-trade",
                     MemberAuthentication(),
@@ -153,7 +154,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     TradePayload(),
-                    self.check_message,
+                    self.check_trade_message,
                     self.on_counter_trade),
             Message(self, u"start-transaction",
                     MemberAuthentication(),
@@ -169,7 +170,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     WalletInfoPayload(),
-                    self.check_message,
+                    self.check_transaction_message,
                     self.on_wallet_info),
             Message(self, u"payment",
                     MemberAuthentication(),
@@ -177,7 +178,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     PaymentPayload(),
-                    self.check_message,
+                    self.check_transaction_message,
                     self.on_payment_message),
             Message(self, u"end-transaction",
                     MemberAuthentication(),
@@ -185,7 +186,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     TransactionPayload(),
-                    self.check_message,
+                    self.check_transaction_message,
                     self.on_end_transaction)
         ]
 
@@ -248,6 +249,20 @@ class MarketCommunity(Community):
             else:
                 self._logger.debug("Delaying message %s" % message)
                 yield DelayMessageByProof(message)
+
+    def check_tick_message(self, messages):
+        for message in messages:
+            tick = Ask.from_network(message.payload) if message.name == u"ask" else Bid.from_network(message.payload)
+            allowed, _ = self._timeline.check(message)
+            if not allowed:
+                yield DelayMessageByProof(message)
+                continue
+
+            if tick.order_id.trader_id == TraderId(self.mid):
+                yield DropMessage(message, "We don't accept ticks originating from ourselves")
+                continue
+
+            yield message
 
     @inlineCallbacks
     def unload_community(self):
@@ -433,15 +448,13 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(ask.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
-            if ask.order_id.trader_id == TraderId(self.mid):
-                return  # We don't process ticks originating from ourself
-
-            if not str(ask.order_id) in self.relayed_asks and not self.order_book.tick_exists(ask.order_id):
-                self.relayed_asks.append(str(ask.order_id))
+            if not self.order_book.tick_exists(ask.order_id):
                 self.order_book.insert_ask(ask).addCallback(self.on_ask_timeout)
-
                 if self.tribler_session:
                     self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK, NTFY_UPDATE, None, ask)
+
+            if not str(ask.order_id) in self.relayed_asks:
+                self.relayed_asks.append(str(ask.order_id))
 
                 # Check if message needs to be send on
                 ttl = message.payload.ttl
@@ -540,13 +553,8 @@ class MarketCommunity(Community):
             # Update the pubkey register with the current address
             self.update_ip(bid.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
 
-            if bid.order_id.trader_id == TraderId(self.mid):
-                return  # We don't process ticks originating from ourself
-
-            if not str(bid.order_id) in self.relayed_bids and not self.order_book.tick_exists(bid.order_id):
-                self.relayed_bids.append(str(bid.order_id))
+            if not self.order_book.tick_exists(bid.order_id):
                 self.order_book.insert_bid(bid).addCallback(self.on_bid_timeout)
-
                 if self.tribler_session:
                     self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID, NTFY_UPDATE, None, bid)
 
@@ -557,6 +565,9 @@ class MarketCommunity(Community):
                         if proposed_trades:
                             self.order_manager.order_repository.update(order)
                         self.send_proposed_trade_messages(proposed_trades)
+
+            if not str(bid.order_id) in self.relayed_bids:
+                self.relayed_bids.append(str(bid.order_id))
 
                 # Check if message needs to be send on
                 ttl = message.payload.ttl
@@ -645,6 +656,25 @@ class MarketCommunity(Community):
         for message in messages:
             self.send_proposed_trade(message)
 
+    def check_trade_message(self, messages):
+        for message in messages:
+            order_id = OrderId(message.payload.recipient_trader_id, message.payload.recipient_order_number)
+
+            allowed, _ = self._timeline.check(message)
+            if not allowed:
+                yield DelayMessageByProof(message)
+                continue
+
+            if str(order_id.trader_id) != str(self.mid):
+                yield DropMessage(message, "%s not for this node" % message.name)
+                continue
+
+            if not self.order_manager.order_repository.find_by_id(order_id):
+                yield DropMessage(message, "Order in %s not valid" % message.name)
+                continue
+
+            yield message
+
     def on_proposed_trade(self, messages):
         for message in messages:
             proposed_trade = ProposedTrade.from_network(message.payload)
@@ -655,39 +685,30 @@ class MarketCommunity(Community):
             self.update_ip(proposed_trade.message_id.trader_id,
                            (message.payload.address.ip, message.payload.address.port))
 
-            if str(proposed_trade.recipient_order_id.trader_id) == str(self.mid):  # The message is for this node
-                order = self.order_manager.order_repository.find_by_id(proposed_trade.recipient_order_id)
+            order = self.order_manager.order_repository.find_by_id(proposed_trade.recipient_order_id)
+            if order.is_valid() and order.available_quantity > Quantity(0, order.available_quantity.wallet_id):
+                self._logger.debug("Proposed trade received with id: %s for order with id: %s",
+                                   str(proposed_trade.message_id), str(order.order_id))
 
-                if order:
-                    if order.is_valid() and order.available_quantity > Quantity(0, order.available_quantity.wallet_id):
-                        self._logger.debug("Proposed trade received with id: %s for order with id: %s",
-                                           str(proposed_trade.message_id), str(order.order_id))
-
-                        if order.available_quantity >= proposed_trade.quantity:  # Enough quantity left
-                            self.accept_trade(order, proposed_trade)
-                        else:  # Not enough quantity for trade
-                            counter_trade = Trade.counter(self.order_book.message_repository.next_identity(),
-                                                          order.available_quantity, Timestamp.now(), proposed_trade)
-                            order.reserve_quantity_for_tick(proposed_trade.order_id, order.available_quantity)
-                            self.order_manager.order_repository.update(order)
-                            self._logger.debug("Counter trade made with id: %s for proposed trade with id: %s",
-                                               str(counter_trade.message_id), str(proposed_trade.message_id))
-                            self.send_counter_trade(counter_trade)
-                    else:  # Order invalid send cancel
-                        declined_trade = Trade.decline(self.order_book.message_repository.next_identity(),
-                                                       Timestamp.now(), proposed_trade)
-                        self._logger.debug("Declined trade made with id: %s for proposed trade with id: %s "
-                                           "(valid? %s, available quantity of order: %s, reserved: %s, traded: %s)",
-                                           str(declined_trade.message_id), str(proposed_trade.message_id),
-                                           order.is_valid(), order.available_quantity, order.reserved_quantity,
-                                           order.traded_quantity)
-                        self.send_declined_trade(declined_trade)
-                else:  # We don't know about this order
-                    self._logger.warning("Unknown order with id %s", proposed_trade.recipient_order_id)
-            else:
-                self._logger.warning("Received proposed trade message that was not for this node "
-                                     "(my id: %s, message recipient id: %s", str(self.mid),
-                                     str(proposed_trade.recipient_order_id.trader_id))
+                if order.available_quantity >= proposed_trade.quantity:  # Enough quantity left
+                    self.accept_trade(order, proposed_trade)
+                else:  # Not enough quantity for trade
+                    counter_trade = Trade.counter(self.order_book.message_repository.next_identity(),
+                                                  order.available_quantity, Timestamp.now(), proposed_trade)
+                    order.reserve_quantity_for_tick(proposed_trade.order_id, order.available_quantity)
+                    self.order_manager.order_repository.update(order)
+                    self._logger.debug("Counter trade made with id: %s for proposed trade with id: %s",
+                                       str(counter_trade.message_id), str(proposed_trade.message_id))
+                    self.send_counter_trade(counter_trade)
+            else:  # Order invalid send cancel
+                declined_trade = Trade.decline(self.order_book.message_repository.next_identity(),
+                                               Timestamp.now(), proposed_trade)
+                self._logger.debug("Declined trade made with id: %s for proposed trade with id: %s "
+                                   "(valid? %s, available quantity of order: %s, reserved: %s, traded: %s)",
+                                   str(declined_trade.message_id), str(proposed_trade.message_id),
+                                   order.is_valid(), order.available_quantity, order.reserved_quantity,
+                                   order.traded_quantity)
+                self.send_declined_trade(declined_trade)
 
     # Accepted trade
     def send_accepted_trade(self, accepted_trade):
@@ -745,22 +766,19 @@ class MarketCommunity(Community):
         for message in messages:
             declined_trade = DeclinedTrade.from_network(message.payload)
 
-            if str(declined_trade.recipient_order_id.trader_id) == str(self.mid):  # The message is for this node
-                order = self.order_manager.order_repository.find_by_id(declined_trade.recipient_order_id)
-
-                if order:
-                    try:
-                        order.release_quantity_for_tick(declined_trade.order_id)
-                        self.order_manager.order_repository.update(order)
-                    except TickWasNotReserved:  # Nothing left to do
-                        pass
-
-                # Just remove the tick with the order id of the other party and try to find a new match
-                self._logger.debug("Received declined trade, trying to find a new match for this order")
-                self.order_book.remove_tick(declined_trade.order_id)
-                proposed_trades = self.matching_engine.match_order(order)
+            order = self.order_manager.order_repository.find_by_id(declined_trade.recipient_order_id)
+            try:
+                order.release_quantity_for_tick(declined_trade.order_id)
                 self.order_manager.order_repository.update(order)
-                self.send_proposed_trade_messages(proposed_trades)
+            except TickWasNotReserved:  # Nothing left to do
+                pass
+
+            # Just remove the tick with the order id of the other party and try to find a new match
+            self._logger.debug("Received declined trade, trying to find a new match for this order")
+            self.order_book.remove_tick(declined_trade.order_id)
+            proposed_trades = self.matching_engine.match_order(order)
+            self.order_manager.order_repository.update(order)
+            self.send_proposed_trade_messages(proposed_trades)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
@@ -791,20 +809,18 @@ class MarketCommunity(Community):
         for message in messages:
             counter_trade = CounterTrade.from_network(message.payload)
 
-            if str(counter_trade.recipient_order_id.trader_id) == str(self.mid):  # The message is for this node
-                order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
+            order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
 
-                if order:
-                    try:  # Accept trade
-                        order.release_quantity_for_tick(counter_trade.order_id)
-                        self.order_manager.order_repository.update(order)
-                        self.accept_trade(order, counter_trade)
-                    except TickWasNotReserved:  # Send cancel
-                        declined_trade = Trade.decline(self.order_book.message_repository.next_identity(),
-                                                       Timestamp.now(), counter_trade)
-                        self._logger.debug("Declined trade made with id: %s for counter trade with id: %s",
-                                           str(declined_trade.message_id), str(counter_trade.message_id))
-                        self.send_declined_trade(declined_trade)
+            try:  # Accept trade
+                order.release_quantity_for_tick(counter_trade.order_id)
+                self.order_manager.order_repository.update(order)
+                self.accept_trade(order, counter_trade)
+            except TickWasNotReserved:  # Send cancel
+                declined_trade = Trade.decline(self.order_book.message_repository.next_identity(),
+                                               Timestamp.now(), counter_trade)
+                self._logger.debug("Declined trade made with id: %s for counter trade with id: %s",
+                                   str(declined_trade.message_id), str(counter_trade.message_id))
+                self.send_declined_trade(declined_trade)
 
     def accept_trade(self, order, proposed_trade):
         accepted_trade = Trade.accept(self.order_book.message_repository.next_identity(), Timestamp.now(),
@@ -852,6 +868,21 @@ class MarketCommunity(Community):
         )
 
         self.dispersy.store_update_forward([message], True, False, True)
+
+    def check_transaction_message(self, messages):
+        for message in messages:
+            transaction_id = TransactionId(message.payload.transaction_trader_id, message.payload.transaction_number)
+
+            allowed, _ = self._timeline.check(message)
+            if not allowed:
+                yield DelayMessageByProof(message)
+                continue
+
+            if not self.transaction_manager.find_by_id(transaction_id):
+                yield DropMessage(message, "Unknown transaction in %s message" % message.name)
+                continue
+
+            yield message
 
     def on_start_transaction(self, messages):
         for message in messages:

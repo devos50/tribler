@@ -7,7 +7,7 @@ from Tribler.Test.Community.AbstractTestCommunity import AbstractTestCommunity
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.core.message import TraderId, MessageId, MessageNumber
-from Tribler.community.market.core.order import OrderId, OrderNumber
+from Tribler.community.market.core.order import OrderId, OrderNumber, Order
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.tick import Ask, Bid, Tick
@@ -46,10 +46,12 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.bid = Bid(MessageId(TraderId('1'), MessageNumber('message_number')),
                        OrderId(TraderId('1'), OrderNumber(1234)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
                        Timeout(3600), Timestamp.now())
+        self.order = Order(OrderId(TraderId(self.market_community.mid), OrderNumber(24)), Price(20, 'DUM1'),
+                           Quantity(30, 'DUM2'), Timeout(0.0), Timestamp(10.0), False)
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
                                             OrderId(TraderId('0'), OrderNumber(23)),
                                             OrderId(TraderId(self.market_community.mid), OrderNumber(24)),
-                                            Price(63400, 'DUM1'), Quantity(30, 'DUM2'), Timestamp.now())
+                                            Price(20, 'DUM1'), Quantity(30, 'DUM2'), Timestamp.now())
 
     @blocking_call_on_reactor_thread
     def test_get_master_members(self):
@@ -166,6 +168,7 @@ class CommunityTestSuite(AbstractTestCommunity):
     def test_on_proposed_trade(self):  # TODO: Add assertions to test
         # Test for on proposed trade
         self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        self.market_community.order_manager.order_repository.add(self.order)
         destination, payload = self.proposed_trade.to_network()
         payload += ("127.0.0.1", 1234)
         candidate = Candidate(self.market_community.lookup_ip(destination), False)

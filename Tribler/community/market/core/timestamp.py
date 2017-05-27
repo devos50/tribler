@@ -13,13 +13,13 @@ class Timestamp(object):
         """
         super(Timestamp, self).__init__()
 
-        if not isinstance(timestamp, float):
+        if not isinstance(timestamp, (float, int)):
             raise ValueError("Timestamp must be a float")
 
         if timestamp < 0:
             raise ValueError("Timestamp can not be negative")
 
-        self._timestamp = timestamp
+        self._timestamp = float(timestamp)
 
     @classmethod
     def now(cls):
