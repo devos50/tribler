@@ -20,6 +20,9 @@ class BaseDummyWallet(Wallet):
         self.created = True
         self.address = ''.join([choice(string.lowercase) for i in xrange(10)])
 
+    def get_name(self):
+        return 'Dummy'
+
     def get_identifier(self):
         return 'DUM'
 

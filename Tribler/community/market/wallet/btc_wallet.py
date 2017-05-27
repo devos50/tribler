@@ -140,7 +140,8 @@ class BitcoinWallet(Wallet):
             confirmed, unconfirmed, unmatured = self.wallet.get_balance()
             return succeed({
                 "available": float(confirmed) / divider,
-                "pending": float(unconfirmed + unmatured) / divider
+                "pending": float(unconfirmed + unmatured) / divider,
+                "currency": 'BTC'
             })
         else:
             return succeed({"available": 0, "pending": 0, "currency": 'BTC'})

@@ -1,6 +1,6 @@
 from base64 import b64encode
 
-from twisted.internet.defer import succeed
+from twisted.internet.defer import succeed, fail, inlineCallbacks
 
 from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
 from Tribler.dispersy.message import DelayPacketByMissingMember
@@ -34,23 +34,26 @@ class MultichainWallet(Wallet):
         return succeed({'available': total_up - total_down, 'pending': 0, 'currency': self.get_identifier()})
 
     def transfer(self, quantity, candidate):
-        if self.check_negative_balance and self.get_balance()['net'] < quantity:
-            raise InsufficientFunds()
+        def on_balance(balance):
+            if self.check_negative_balance and balance['available'] < quantity:
+                return fail(InsufficientFunds())
 
-        # Send the block
-        if not candidate.get_member():
-            return self.wait_for_intro_of_candidate(candidate).addCallback(
-                lambda _: self.send_signature(candidate, quantity))
-        else:
-            try:
-                return self.send_signature(candidate, quantity)
-            except DelayPacketByMissingMember:
+            # Send the block
+            if not candidate.get_member():
                 return self.wait_for_intro_of_candidate(candidate).addCallback(
                     lambda _: self.send_signature(candidate, quantity))
+            else:
+                try:
+                    return self.send_signature(candidate, quantity)
+                except DelayPacketByMissingMember:
+                    return self.wait_for_intro_of_candidate(candidate).addCallback(
+                        lambda _: self.send_signature(candidate, quantity))
+
+        return self.get_balance().addCallback(on_balance)
 
     def send_signature(self, candidate, quantity):
         self.mc_community.publish_signature_request_message(candidate, 0, int(quantity))
-        latest_block = self.mc_community.persistence.get_latest_block(self.mc_community.my_member.public_key)
+        latest_block = self.mc_community.persistence.get_latest(self.mc_community.my_member.public_key)
 
         return succeed(latest_block.previous_hash_requester)
 
