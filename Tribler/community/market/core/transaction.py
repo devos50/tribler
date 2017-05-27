@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from Tribler.community.market.core.wallet_address import WalletAddress
 from message import TraderId, Message, MessageId, MessageNumber
 from order import OrderId, OrderNumber
@@ -259,11 +261,12 @@ class Transaction(object):
         """
         return self._timestamp
 
-    def unitize(self, amount, min_unit):
+    @staticmethod
+    def unitize(amount, min_unit):
         """
         Return an a amount that is a multiple of min_unit.
         """
-        if amount % min_unit == 0:
+        if Decimal(str(amount)) % Decimal(str(min_unit)) == Decimal(0):
             return amount
 
         return (int(amount / min_unit) + 1) * min_unit
@@ -294,7 +297,7 @@ class Transaction(object):
                 return self.total_quantity - self.transferred_quantity
 
             percentage = float(last_payment.transferee_price) / float(self.price)
-            transfer_amount = self.unitize(float(percentage * float(self.total_quantity)), min_unit)
+            transfer_amount = Transaction.unitize(float(percentage * float(self.total_quantity)), min_unit) * 2
             if transfer_amount < min_unit:
                 transfer_amount = min_unit
             elif transfer_amount > float(self.total_quantity - self.transferred_quantity):
@@ -305,7 +308,7 @@ class Transaction(object):
                 return self.price - self.transferred_price
 
             percentage = float(last_payment.transferee_quantity) / float(self.total_quantity)
-            transfer_amount = self.unitize(float(percentage * float(self.price)), min_unit) * 2
+            transfer_amount = Transaction.unitize(float(percentage * float(self.price)), min_unit) * 2
             if transfer_amount < min_unit:
                 transfer_amount = min_unit
             elif transfer_amount > float(self.price - self.transferred_price):

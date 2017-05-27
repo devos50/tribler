@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from Tribler.community.market.wallet import ASSET_MAP
 
 

@@ -5,7 +5,7 @@ from math import ceil
 from Tribler.Core.Utilities.encoding import encode, decode
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
-from Tribler.community.market.wallet import ASSET_MAP, INV_ASSET_MAP
+from Tribler.community.market.wallet import INV_ASSET_MAP
 from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.conversion import BinaryConversion
 from Tribler.dispersy.message import DropPacket
@@ -90,11 +90,8 @@ class MarketConversion(BinaryConversion):
     def _decode_payload(self, placeholder, offset, data, types):
         try:
             offset, payload = decode(data, offset)
-        except ValueError:
+        except (ValueError, AssertionError, KeyError):
             raise DropPacket("Unable to decode the payload")
-
-        if not isinstance(payload, tuple):
-            raise DropPacket("Invalid payload type")
 
         args = []
         cur_ind = 0
@@ -109,7 +106,7 @@ class MarketConversion(BinaryConversion):
                 else:
                     args.append(arg_type(payload[cur_ind]))
                     cur_ind += 1
-            except ValueError:
+            except (ValueError, KeyError):
                 raise DropPacket("Invalid '" + arg_type.__name__ + "' type")
         return offset, placeholder.meta.payload.implement(*args)
 

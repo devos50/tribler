@@ -4,12 +4,13 @@ from mock import Mock, MagicMock
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Test.Community.AbstractTestCommunity import AbstractTestCommunity
+from Tribler.Test.Core.base_test import MockObject
 from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.core.message import TraderId, MessageId, MessageNumber
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
-from Tribler.community.market.core.tick import Ask
+from Tribler.community.market.core.tick import Ask, Bid, Tick
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.trade import Trade
@@ -35,13 +36,14 @@ class CommunityTestSuite(AbstractTestCommunity):
                                                   dummy2_wallet.get_identifier(): dummy2_wallet})
         self.market_community.use_local_address = True
         self.dispersy._lan_address = ("127.0.0.1", 1234)
+        self.dispersy._endpoint.open(self.dispersy)
 
         self.dispersy.attach_community(self.market_community)
 
         self.ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
                        OrderId(TraderId('0'), OrderNumber(1234)), Price(63400, 'DUM1'), Quantity(30, 'DUM2'),
                        Timeout(3600), Timestamp.now())
-        self.bid = Ask(MessageId(TraderId('1'), MessageNumber('message_number')),
+        self.bid = Bid(MessageId(TraderId('1'), MessageNumber('message_number')),
                        OrderId(TraderId('1'), OrderNumber(1234)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
                        Timeout(3600), Timestamp.now())
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
@@ -50,10 +52,64 @@ class CommunityTestSuite(AbstractTestCommunity):
                                             Price(63400, 'DUM1'), Quantity(30, 'DUM2'), Timestamp.now())
 
     @blocking_call_on_reactor_thread
+    def test_get_master_members(self):
+        """
+        Test retrieval of the master members of the Market community
+        """
+        self.assertTrue(MarketCommunity.get_master_members(self.dispersy))
+
+    @blocking_call_on_reactor_thread
+    def test_create_intro_request(self):
+        """
+        Test the creation of an introduction request
+        """
+        self.market_community.order_book.insert_ask(self.ask)
+        self.market_community.order_book.insert_bid(self.bid)
+        candidate = WalkCandidate(("127.0.0.1", 1234), False, ("127.0.0.1", 1234), ("127.0.0.1", 1234), u"public")
+        request = self.market_community.create_introduction_request(candidate, True)
+        self.assertTrue(request)
+        self.assertTrue(request.payload.orders_bloom_filter)
+
+    @blocking_call_on_reactor_thread
+    def test_on_introduction_request(self):
+        """
+        Test that when we receive an intro request with a orders bloom filter, we send an order sync back
+        """
+        def on_send_offer_sync(_, tick):
+            self.assertIsInstance(tick, Tick)
+            on_send_offer_sync.called = True
+
+        on_send_offer_sync.called = False
+
+        candidate = WalkCandidate(("127.0.0.1", 1234), False, ("127.0.0.1", 1234), ("127.0.0.1", 1234), u"public")
+        candidate.associate(self.market_community.my_member)
+        payload = self.market_community.create_introduction_request(candidate, True).payload
+
+        self.market_community.order_book.insert_ask(self.ask)
+        self.market_community.order_book.insert_bid(self.bid)
+        self.market_community.update_ip(TraderId('0'), ("127.0.0.1", 1234))
+        self.market_community.update_ip(TraderId('1'), ("127.0.0.1", 1234))
+        self.market_community.send_offer_sync = on_send_offer_sync
+
+        message = MockObject()
+        message.payload = payload
+        message.candidate = candidate
+        self.market_community.on_introduction_request([message])
+        self.assertTrue(on_send_offer_sync.called)
+
+    @blocking_call_on_reactor_thread
     def test_lookup_ip(self):
         # Test for lookup ip
         self.market_community.update_ip(TraderId('0'), ("1.1.1.1", 0))
         self.assertEquals(("1.1.1.1", 0), self.market_community.lookup_ip(TraderId('0')))
+
+    @blocking_call_on_reactor_thread
+    def test_get_wallet_address(self):
+        """
+        Test the retrieval of a wallet address
+        """
+        self.assertRaises(ValueError, self.market_community.get_wallet_address, 'ABCD')
+        self.assertTrue(self.market_community.get_wallet_address('DUM1'))
 
     @blocking_call_on_reactor_thread
     def test_create_ask(self):

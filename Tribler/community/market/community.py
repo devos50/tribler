@@ -239,9 +239,6 @@ class MarketCommunity(Community):
                     entry = self.order_book.get_ask(order_id) if is_ask else self.order_book.get_bid(order_id)
                     self.send_offer_sync(message.candidate, entry.tick)
 
-    def on_introduction_response(self, messages):
-        super(MarketCommunity, self).on_introduction_response(messages)
-
     def check_message(self, messages):
         for message in messages:
             allowed, _ = self._timeline.check(message)

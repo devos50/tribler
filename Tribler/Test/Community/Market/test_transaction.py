@@ -1,13 +1,15 @@
 import unittest
 
+from Tribler.community.market.core.payment import Payment
+from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.transaction import TransactionNumber, TransactionId, Transaction, StartTransaction
 from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.price import Price
-from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.trade import Trade
+from Tribler.community.market.core.wallet_address import WalletAddress
 
 
 class TransactionNumberTestSuite(unittest.TestCase):
@@ -87,6 +89,11 @@ class TransactionTestSuite(unittest.TestCase):
                                        Price(100, 'BTC'), Quantity(30, 'MC'), Timestamp(0.0))
         self.accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('1')),
                                            Timestamp(0.0), proposed_trade)
+        self.payment = Payment(MessageId(TraderId("0"), MessageNumber("1")),
+                               TransactionId(TraderId('2'), TransactionNumber(2)),
+                               Quantity(3, 'MC'), Price(2, 'BTC'),
+                               WalletAddress('a'), WalletAddress('b'),
+                               PaymentId('aaa'), Timestamp(4.0))
 
     def test_from_accepted_trade(self):
         # Test from accepted trade
@@ -94,6 +101,80 @@ class TransactionTestSuite(unittest.TestCase):
         self.assertEqual(transaction.price, self.transaction.price)
         self.assertEqual(transaction.total_quantity, self.transaction.total_quantity)
         self.assertEqual(transaction.timestamp, self.transaction.timestamp)
+
+    def test_unitize(self):
+        """
+        Test the unitize method of a Transaction
+        """
+        self.assertEqual(Transaction.unitize(1, 1), 1)
+        self.assertEqual(Transaction.unitize(0.03, 0.02), 0.04)
+        self.assertEqual(Transaction.unitize(50, 0.05), 50)
+        self.assertEqual(Transaction.unitize(50.1818, 25), 75)
+
+    def test_add_payment(self):
+        """
+        Test the addition of a payment to a transaction
+        """
+        self.transaction.add_payment(self.payment)
+        self.assertEqual(self.transaction.transferred_price, Price(2, 'BTC'))
+        self.assertEqual(self.transaction.transferred_quantity, Quantity(3, 'MC'))
+        self.assertTrue(self.transaction.payments)
+
+    def test_last_payment(self):
+        """
+        Test the retrieval of the last payment
+        """
+        self.assertIsNone(self.transaction.last_payment(True))
+        self.assertIsNone(self.transaction.last_payment(False))
+
+        self.transaction.add_payment(self.payment)
+        self.assertEqual(self.transaction.last_payment(True), self.payment)
+        self.assertEqual(self.transaction.last_payment(False), self.payment)
+
+    def test_next_payment(self):
+        """
+        Test the process of determining the next payment details during a transaction
+        """
+        def set_transaction_data(trans_price, trans_quantity, payment_price, payment_quantity):
+            self.transaction._transferred_price = trans_price
+            self.transaction._transferred_quantity = trans_quantity
+            self.payment._transferee_price = payment_price
+            self.payment._transferee_quantity = payment_quantity
+            self.transaction._payments = [self.payment]
+
+        self.assertEqual(self.transaction.next_payment(True, 1), Quantity(1, 'MC'))
+        self.assertEqual(self.transaction.next_payment(False, 2), Price(2, 'BTC'))
+
+        set_transaction_data(Price(100, 'BTC'), Quantity(0, 'MC'), Price(100, 'BTC'), Quantity(0, 'MC'))
+        self.assertEqual(self.transaction.next_payment(True, 1), Quantity(30, 'MC'))
+
+        set_transaction_data(Price(0, 'BTC'), Quantity(30, 'MC'), Price(0, 'BTC'), Quantity(30, 'MC'))
+        self.assertEqual(self.transaction.next_payment(False, 1), Price(100, 'BTC'))
+
+        set_transaction_data(Price(10, 'BTC'), Quantity(0, 'MC'), Price(10, 'BTC'), Quantity(0, 'MC'))
+        self.assertEqual(self.transaction.next_payment(True, 1), Quantity(6, 'MC'))
+
+        set_transaction_data(Price(0, 'BTC'), Quantity(3, 'MC'), Price(0, 'BTC'), Quantity(3, 'MC'))
+        self.assertEqual(self.transaction.next_payment(False, 1), Price(20, 'BTC'))
+
+    def test_to_dictionary(self):
+        """
+        Test the to dictionary method of a transaction
+        """
+        self.assertDictEqual(self.transaction.to_dictionary(), {
+            'trader_id': '0',
+            'transaction_number': 1,
+            'order_number': 2,
+            'partner_trader_id': '2',
+            'payment_complete': False,
+            'price': 100.0,
+            'price_type': 'BTC',
+            'quantity': 30.0,
+            'quantity_type': 'MC',
+            'transferred_price': 0.0,
+            'transferred_quantity': 0.0,
+            'timestamp': 0.0
+        })
 
 
 class StartTransactionTestSuite(unittest.TestCase):
@@ -125,7 +206,18 @@ class StartTransactionTestSuite(unittest.TestCase):
         self.assertEquals(MessageId(TraderId("0"), MessageNumber("1")), data.message_id)
         self.assertEquals(TransactionId(TraderId("0"), TransactionNumber(1)), data.transaction_id)
         self.assertEquals(OrderId(TraderId('0'), OrderNumber(1)), data.order_id)
+        self.assertEquals(OrderId(TraderId('1'), OrderNumber(2)), data.recipient_order_id)
         self.assertEquals(Timestamp(0.0), data.timestamp)
+
+    def test_to_network(self):
+        """
+        Test the conversion of a StartTransaction object to the network
+        """
+        data = self.start_transaction.to_network()
+        self.assertEqual(data[0], self.start_transaction.message_id.trader_id)
+        self.assertEqual(data[1], self.start_transaction.message_id.message_number)
+        self.assertEqual(data[2], self.start_transaction.transaction_id.trader_id)
+        self.assertEqual(data[3], self.start_transaction.transaction_id.transaction_number)
 
     if __name__ == '__main__':
         unittest.main()
