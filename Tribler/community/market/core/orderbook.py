@@ -393,12 +393,12 @@ class OrderBook(TaskManager):
 
         tempfile = StringIO()
         tempfile.write("------ Bids -------\n")
-        if self._bids is not None and len(self._bids) > 0:
-            for key, value in self._bids.get_price_level_list('BTC', 'MC').items(reverse=True):
+        for price_wallet_id, quantity_wallet_id in self.bids.get_price_level_list_wallets():
+            for key, value in self._bids.get_price_level_list(price_wallet_id, quantity_wallet_id).items(reverse=True):
                 tempfile.write('%s' % value)
         tempfile.write("\n------ Asks -------\n")
-        if self._asks is not None and len(self._asks) > 0:
-            for key, value in self._asks.get_price_level_list('BTC', 'MC').items():
+        for price_wallet_id, quantity_wallet_id in self.asks.get_price_level_list_wallets():
+            for key, value in self._asks.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
                 tempfile.write('%s' % value)
         tempfile.write("\n------ Trades ------\n")
         if self._trades is not None and len(self._trades) > 0:
