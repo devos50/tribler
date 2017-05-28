@@ -2,6 +2,7 @@ import time
 from base64 import b64decode
 
 from twisted.internet.defer import inlineCallbacks
+from twisted.internet.task import LoopingCall
 
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE, \
     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT, NTFY_MARKET_ON_PAYMENT_RECEIVED, NTFY_MARKET_ON_PAYMENT_SENT
@@ -9,6 +10,7 @@ from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.database import MarketDB
+from Tribler.community.market.reputation.pagerank_manager import PagerankReputationManager
 from Tribler.community.market.wallet.mc_wallet import MultichainWallet
 from Tribler.dispersy.authentication import MemberAuthentication
 from Tribler.dispersy.bloomfilter import BloomFilter
@@ -112,6 +114,7 @@ class MarketCommunity(Community):
         self.tribler_session = tribler_session
         self.tradechain_community = tradechain_community
         self.wallets = wallets
+        self.reputation_dict = {}
 
         transaction_repository = DatabaseTransactionRepository(self.mid, self.market_database)
         self.transaction_manager = TransactionManager(transaction_repository)
@@ -119,6 +122,9 @@ class MarketCommunity(Community):
         # TODO this history can be removed when we use a request cache to keep track of outstanding trade proposals
         self.history = {}  # List for received messages TODO: fix memory leak
         self.use_local_address = False
+
+        # Determine the reputation of peers every five minutes
+        self.register_task("calculate_reputation", LoopingCall(self.compute_reputation)).start(300.0, now=False)
 
         self._logger.info("Market community initialized with mid %s" % self.mid)
 
@@ -1084,3 +1090,11 @@ class MarketCommunity(Community):
     def notify_transaction_complete(self, transaction):
         if self.tribler_session:
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_TRANSACTION_COMPLETE, NTFY_UPDATE, None, transaction)
+
+    def compute_reputation(self):
+        """
+        Compute the reputation of peers in the community
+        """
+        if self.tradechain_community:
+            rep_manager = PagerankReputationManager(self.tradechain_community.persistence.get_all_blocks())
+            self.reputation_dict = rep_manager.compute(self.my_member.public_key)
