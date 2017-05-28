@@ -17,7 +17,7 @@ from Tribler.community.market.core.trade import Trade
 from Tribler.community.market.ttl import Ttl
 from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.dispersy.candidate import Candidate, WalkCandidate
-from Tribler.dispersy.message import DelayMessageByProof, Message
+from Tribler.dispersy.message import DelayMessageByProof, Message, DropMessage
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
@@ -61,6 +61,14 @@ class CommunityTestSuite(AbstractTestCommunity):
         """
         self.assertTrue(MarketCommunity.get_master_members(self.dispersy))
 
+    def get_ask_message(self):
+        meta = self.market_community.get_meta_message(u"ask")
+        return meta.impl(
+            authentication=(self.market_community.my_member,),
+            distribution=(self.market_community.claim_global_time(),),
+            payload=self.ask.to_network() + (Ttl.default(), "127.0.0.1", 1234)
+        )
+
     @blocking_call_on_reactor_thread
     def test_check_message(self):
         """
@@ -75,6 +83,23 @@ class CommunityTestSuite(AbstractTestCommunity):
         [self.assertIsInstance(msg, DelayMessageByProof) for msg in self.market_community.check_message([proposed_trade_msg])]
 
     @blocking_call_on_reactor_thread
+    def test_check_tick_message(self):
+        """
+        Test the general check of the validity of a tick message in the market community
+        """
+        self.market_community._timeline.check = lambda _: (False, None)
+        [self.assertIsInstance(msg, DelayMessageByProof) for msg in
+         self.market_community.check_tick_message([self.get_ask_message()])]
+
+        self.market_community._timeline.check = lambda _: (True, None)
+        [self.assertIsInstance(msg, Message.Implementation) for msg in
+         self.market_community.check_tick_message([self.get_ask_message()])]
+
+        self.ask.order_id._trader_id = TraderId(self.market_community.mid)
+        [self.assertIsInstance(msg, DropMessage) for msg in
+         self.market_community.check_tick_message([self.get_ask_message()])]
+
+    @blocking_call_on_reactor_thread
     def test_send_offer_sync(self):
         """
         Test sending an offer sync
@@ -83,6 +108,23 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.market_community.update_ip(TraderId('1'), ("127.0.0.1", 1234))
         candidate = WalkCandidate(("127.0.0.1", 1234), False, ("127.0.0.1", 1234), ("127.0.0.1", 1234), u"public")
         self.assertTrue(self.market_community.send_offer_sync(candidate, self.ask))
+
+    @blocking_call_on_reactor_thread
+    def test_send_proposed_trade(self):
+        """
+        Test sending a proposed trade
+        """
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('127.0.0.1', 1234))
+        self.assertEqual(self.market_community.send_proposed_trade_messages([self.proposed_trade]), [True])
+
+    @blocking_call_on_reactor_thread
+    def test_accept_trade(self):
+        """
+        Test the accept trade method
+        """
+        self.market_community.update_ip(TraderId('0'), ("127.0.0.1", 1234))
+        self.market_community.accept_trade(self.order, self.proposed_trade)
+        self.assertEqual(len(self.market_community.transaction_manager.find_all()), 1)
 
     @blocking_call_on_reactor_thread
     def test_create_intro_request(self):
@@ -150,13 +192,7 @@ class CommunityTestSuite(AbstractTestCommunity):
     @blocking_call_on_reactor_thread
     def test_on_ask(self):
         # Test for on ask
-        meta = self.market_community.get_meta_message(u"ask")
-        message = meta.impl(
-            authentication=(self.market_community.my_member,),
-            distribution=(self.market_community.claim_global_time(),),
-            payload=self.ask.to_network() + (Ttl.default(), "127.0.0.1", 1234)
-        )
-        self.market_community.on_ask([message])
+        self.market_community.on_ask([self.get_ask_message()])
         self.assertEquals(1, len(self.market_community.order_book._asks))
         self.assertEquals(0, len(self.market_community.order_book._bids))
 
