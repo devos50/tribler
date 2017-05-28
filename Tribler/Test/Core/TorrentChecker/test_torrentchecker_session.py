@@ -494,7 +494,9 @@ udp://zer0day.ch:1337
 udp://zer0day.ch:1377
 udp://zer0day.to:1337"""
         c = 0
-        for tracker in trackers.split('\n'):
+        tracker_list = [tracker for tracker in trackers.split('\n')]
+        while True:
+            tracker = tracker_list[c % len(tracker_list)]
             print "Creating session for %s" % tracker
             session = create_tracker_session(tracker, 15)
             session.connect_to_tracker()
