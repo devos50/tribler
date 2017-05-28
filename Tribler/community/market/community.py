@@ -487,6 +487,11 @@ class MarketCommunity(Community):
                 if self.tribler_session:
                     self.tribler_session.notifier.notify(NTFY_MARKET_ON_ASK, NTFY_UPDATE, None, ask)
 
+                # Check for new matches against the orders of this node
+                for order in self.order_manager.order_repository.find_all():
+                    if order.is_bid() and order.is_valid():
+                        self.match(order)
+
             if not str(ask.order_id) in self.relayed_asks:
                 self.relayed_asks.append(str(ask.order_id))
 
@@ -533,6 +538,9 @@ class MarketCommunity(Community):
 
         # Create the order
         order = self.order_manager.create_bid_order(price, quantity, timeout)
+
+        # Search for matches
+        self.match(order)
 
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
