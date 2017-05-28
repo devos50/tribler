@@ -162,7 +162,6 @@ udp://9.rarbg.com:2710
 udp://9.rarbg.com:2730
 udp://9.rarbg.com:2750
 udp://9.rarbg.com:2770
-udp://9.rarbg.com:5764663
 udp://9.rarbg.me:2710
 udp://9.rarbg.me:2720
 udp://9.rarbg.me:2730
