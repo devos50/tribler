@@ -321,9 +321,9 @@ class CommunityTestSuite(AbstractTestCommunity):
 
         self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
         self.market_community.send_declined_trade = mocked_send_decline_trade
-        self.order._timeout = Timeout(0.0)
         self.market_community.order_manager.order_repository.add(self.order)
 
+        self.proposed_trade._price = Price(900, 'DUM1')
         self.market_community.on_proposed_trade([self.get_proposed_trade_msg()])
         self.assertTrue(mocked_send_decline_trade.called)
 

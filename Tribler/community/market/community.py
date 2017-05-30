@@ -723,7 +723,10 @@ class MarketCommunity(Community):
                            (message.payload.address.ip, message.payload.address.port))
 
             order = self.order_manager.order_repository.find_by_id(proposed_trade.recipient_order_id)
-            if order.is_valid() and order.available_quantity > Quantity(0, order.available_quantity.wallet_id):
+            good_price = (order.is_ask() and proposed_trade.price >= order.price) or \
+                         (not order.is_ask() and proposed_trade.price <= order.price)
+            if order.is_valid() and order.available_quantity > Quantity(0, order.available_quantity.wallet_id) \
+                    and good_price:
                 self._logger.debug("Proposed trade received with id: %s for order with id: %s",
                                    str(proposed_trade.message_id), str(order.order_id))
 
