@@ -46,14 +46,13 @@ from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTr
 from ttl import Ttl
 
 
-# TODO this class is currently unused
 class ProposedTradeRequestCache(NumberCache):
     """
     This cache keeps track of outstanding proposed trade messages.
     """
     def __init__(self, community, proposed_trade):
         super(ProposedTradeRequestCache, self).__init__(community.request_cache, u"proposed-trade",
-                                                        proposed_trade.message_id.message_number)
+                                                        int(proposed_trade.recipient_order_id))
         self.community = community
         self.proposed_trade = proposed_trade
 
@@ -192,7 +191,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     StartTransactionPayload(),
-                    self.check_message,
+                    self.check_transaction_message,
                     self.on_start_transaction),
             Message(self, u"wallet-info",
                     MemberAuthentication(),
@@ -489,7 +488,7 @@ class MarketCommunity(Community):
 
                 # Check for new matches against the orders of this node
                 for order in self.order_manager.order_repository.find_all():
-                    if order.is_bid() and order.is_valid():
+                    if not order.is_ask() and order.is_valid():
                         self.match(order)
 
             if not str(ask.order_id) in self.relayed_asks:
@@ -664,6 +663,8 @@ class MarketCommunity(Community):
         assert isinstance(proposed_trade, ProposedTrade), type(proposed_trade)
         destination, payload = proposed_trade.to_network()
 
+        self.request_cache.add(ProposedTradeRequestCache(self, proposed_trade))
+
         # Add the local address to the payload
         payload += self.get_dispersy_address()
 
@@ -684,23 +685,29 @@ class MarketCommunity(Community):
         return self.dispersy.store_update_forward([message], True, False, True)
 
     def send_proposed_trade_messages(self, messages):
-            return [self.send_proposed_trade(message) for message in messages]
+        return [self.send_proposed_trade(message) for message in messages]
 
     def check_trade_message(self, messages):
         for message in messages:
-            order_id = OrderId(message.payload.recipient_trader_id, message.payload.recipient_order_number)
+            my_order_id = OrderId(message.payload.recipient_trader_id, message.payload.recipient_order_number)
+            other_order_id = OrderId(message.payload.trader_id, message.payload.order_number)
 
             allowed, _ = self._timeline.check(message)
             if not allowed:
                 yield DelayMessageByProof(message)
                 continue
 
-            if str(order_id.trader_id) != str(self.mid):
+            if str(my_order_id.trader_id) != str(self.mid):
                 yield DropMessage(message, "%s not for this node" % message.name)
                 continue
 
-            if not self.order_manager.order_repository.find_by_id(order_id):
+            if not self.order_manager.order_repository.find_by_id(my_order_id):
                 yield DropMessage(message, "Order in %s does not exist" % message.name)
+                continue
+
+            if (message.name == 'declined-trade' or message.name == 'counter-trade') \
+                    and not self.request_cache.get(u'proposed-trade', int(other_order_id)):
+                yield DropMessage(message, "Unexpected %s message" % message.name)
                 continue
 
             yield message
@@ -792,6 +799,8 @@ class MarketCommunity(Community):
         for message in messages:
             declined_trade = DeclinedTrade.from_network(message.payload)
 
+            self.request_cache.pop(u"proposed-trade", str(declined_trade.order_id))
+
             order = self.order_manager.order_repository.find_by_id(declined_trade.recipient_order_id)
             try:
                 order.release_quantity_for_tick(declined_trade.order_id)
@@ -828,6 +837,8 @@ class MarketCommunity(Community):
     def on_counter_trade(self, messages):
         for message in messages:
             counter_trade = CounterTrade.from_network(message.payload)
+
+            self.request_cache.pop(u"proposed-trade", str(counter_trade.order_id))
 
             order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
 
@@ -898,7 +909,13 @@ class MarketCommunity(Community):
                 yield DelayMessageByProof(message)
                 continue
 
-            if not self.transaction_manager.find_by_id(transaction_id):
+            if message.name == 'start-transaction' and \
+                    not self.request_cache.get(u'proposed-trade',
+                                               int(OrderId(message.payload.trader_id, message.payload.order_number))):
+                yield DropMessage(message, "Unexpected %s message" % message.name)
+                continue
+
+            if not message.name == 'start-transaction' and not self.transaction_manager.find_by_id(transaction_id):
                 yield DropMessage(message, "Unknown transaction in %s message" % message.name)
                 continue
 
@@ -907,6 +924,8 @@ class MarketCommunity(Community):
     def on_start_transaction(self, messages):
         for message in messages:
             start_transaction = StartTransaction.from_network(message.payload)
+
+            self.request_cache.pop(u"proposed-trade", int(start_transaction.order_id))
 
             # The receipient_order_id in the start_transaction message is our own order
             order = self.order_manager.order_repository.find_by_id(start_transaction.recipient_order_id)

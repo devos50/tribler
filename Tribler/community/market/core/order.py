@@ -88,6 +88,13 @@ class OrderId(object):
         """
         return "%s.%s" % (self._trader_id, self._order_number)
 
+    def __int__(self):
+        """
+        Return an integer representation of the order id, used in request caches
+        :rtype: int
+        """
+        return int(str(self.trader_id) + str(self.order_number), 16)
+
     def __eq__(self, other):
         if not isinstance(other, OrderId):
             return NotImplemented

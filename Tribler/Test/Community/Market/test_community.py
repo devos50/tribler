@@ -5,7 +5,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Test.Community.AbstractTestCommunity import AbstractTestCommunity
 from Tribler.Test.Core.base_test import MockObject
-from Tribler.community.market.community import MarketCommunity
+from Tribler.community.market.community import MarketCommunity, ProposedTradeRequestCache
 from Tribler.community.market.core.message import TraderId, MessageId, MessageNumber
 from Tribler.community.market.core.order import OrderId, OrderNumber, Order
 from Tribler.community.market.core.price import Price
@@ -60,6 +60,23 @@ class CommunityTestSuite(AbstractTestCommunity):
         Test retrieval of the master members of the Market community
         """
         self.assertTrue(MarketCommunity.get_master_members(self.dispersy))
+
+    @blocking_call_on_reactor_thread
+    def test_proposed_trade_cache_timeout(self):
+        """
+        Test the timeout method of a proposed trade request in the cache
+        """
+        ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
+                  OrderId(TraderId(self.market_community.mid), OrderNumber(24)),
+                  Price(63400, 'DUM1'), Quantity(30, 'DUM2'), Timeout(3600), Timestamp.now())
+        order = Order(OrderId(TraderId("0"), OrderNumber(23)), Price(20, 'DUM1'), Quantity(30, 'DUM2'),
+                      Timeout(3600.0), Timestamp.now(), False)
+        self.market_community.order_book.insert_ask(ask)
+        self.assertEqual(len(self.market_community.order_book.asks), 1)
+        self.market_community.order_manager.order_repository.add(order)
+        cache = ProposedTradeRequestCache(self.market_community, self.proposed_trade)
+        cache.on_timeout()
+        self.assertEqual(len(self.market_community.order_book.asks), 0)
 
     def get_ask_message(self):
         meta = self.market_community.get_meta_message(u"ask")
