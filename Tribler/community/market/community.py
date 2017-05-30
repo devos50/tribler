@@ -700,7 +700,7 @@ class MarketCommunity(Community):
                 continue
 
             if not self.order_manager.order_repository.find_by_id(order_id):
-                yield DropMessage(message, "Order in %s not valid" % message.name)
+                yield DropMessage(message, "Order in %s does not exist" % message.name)
                 continue
 
             yield message

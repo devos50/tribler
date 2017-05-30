@@ -69,6 +69,16 @@ class CommunityTestSuite(AbstractTestCommunity):
             payload=self.ask.to_network() + (Ttl.default(), "127.0.0.1", 1234)
         )
 
+    def get_offer_sync(self, tick):
+        meta = self.market_community.get_meta_message(u"offer-sync")
+        candidate = Candidate(self.market_community.lookup_ip(TraderId(self.market_community.mid)), False)
+        return meta.impl(
+            authentication=(self.market_community.my_member,),
+            distribution=(self.market_community.claim_global_time(),),
+            destination=(candidate,),
+            payload=tick.to_network() + (Ttl(1),) + ("127.0.0.1", 1234) + (isinstance(tick, Ask),)
+        )
+
     @blocking_call_on_reactor_thread
     def test_check_message(self):
         """
@@ -98,6 +108,32 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.ask.order_id._trader_id = TraderId(self.market_community.mid)
         [self.assertIsInstance(msg, DropMessage) for msg in
          self.market_community.check_tick_message([self.get_ask_message()])]
+
+    @blocking_call_on_reactor_thread
+    def test_check_trade_message(self):
+        """
+        Test the general check of the validity of a trade message in the market community
+        """
+        self.proposed_trade._recipient_order_id._trader_id = TraderId("abcdef")
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        self.market_community.update_ip(TraderId("abcdef"), ('2.2.2.2', 2))
+        self.market_community._timeline.check = lambda _: (False, None)
+        [self.assertIsInstance(msg, DelayMessageByProof) for msg in
+         self.market_community.check_trade_message([self.get_proposed_trade_msg()])]
+
+        self.market_community._timeline.check = lambda _: (True, None)
+        [self.assertIsInstance(msg, DropMessage) for msg in
+         self.market_community.check_trade_message([self.get_proposed_trade_msg()])]
+
+        self.proposed_trade._recipient_order_id._trader_id = TraderId(self.market_community.mid)
+        self.market_community._timeline.check = lambda _: (True, None)
+        [self.assertIsInstance(msg, DropMessage) for msg in
+         self.market_community.check_trade_message([self.get_proposed_trade_msg()])]
+
+        self.market_community.order_manager.order_repository.add(self.order)
+        self.market_community._timeline.check = lambda _: (True, None)
+        [self.assertIsInstance(msg, Message.Implementation) for msg in
+         self.market_community.check_trade_message([self.get_proposed_trade_msg()])]
 
     @blocking_call_on_reactor_thread
     def test_send_offer_sync(self):
@@ -291,6 +327,20 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.proposed_trade._quantity = Quantity(100000, 'DUM2')
         self.market_community.on_proposed_trade([self.get_proposed_trade_msg()])
         self.assertTrue(mocked_send_counter_trade.called)
+
+    @blocking_call_on_reactor_thread
+    def test_on_offer_sync(self):
+        """
+        Test whether the right operations happen when we receive an offer sync
+        """
+        self.assertEqual(len(self.market_community.order_book.asks), 0)
+        self.assertEqual(len(self.market_community.order_book.bids), 0)
+
+        self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
+        self.market_community.on_offer_sync([self.get_offer_sync(self.ask)])
+        self.assertEqual(len(self.market_community.order_book.asks), 1)
+        self.market_community.on_offer_sync([self.get_offer_sync(self.bid)])
+        self.assertEqual(len(self.market_community.order_book.bids), 1)
 
 if __name__ == '__main__':
     unittest.main()
