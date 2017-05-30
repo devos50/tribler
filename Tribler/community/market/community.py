@@ -808,7 +808,7 @@ class MarketCommunity(Community):
         for message in messages:
             declined_trade = DeclinedTrade.from_network(message.payload)
 
-            self.request_cache.pop(u"proposed-trade", str(declined_trade.order_id))
+            self.request_cache.pop(u"proposed-trade", int(declined_trade.order_id))
 
             order = self.order_manager.order_repository.find_by_id(declined_trade.recipient_order_id)
             try:
@@ -847,7 +847,7 @@ class MarketCommunity(Community):
         for message in messages:
             counter_trade = CounterTrade.from_network(message.payload)
 
-            self.request_cache.pop(u"proposed-trade", str(counter_trade.order_id))
+            self.request_cache.pop(u"proposed-trade", int(counter_trade.order_id))
 
             order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
 
