@@ -111,7 +111,7 @@ class OfferPayloadTestSuite(unittest.TestCase):
         self.offer_payload = OfferPayload.Implementation(MetaObject(), TraderId('0'), MessageNumber('message_number'),
                                                          OrderNumber(1), Price(63400, 'BTC'),
                                                          Quantity(30, 'MC'), Timeout(1470004447.117),
-                                                         Timestamp(1462224447.117), Ttl(2), "1.1.1.1", 1)
+                                                         Timestamp(1462224447.117), 'a', 'b', Ttl(2), "1.1.1.1", 1)
 
     def test_properties(self):
         # Test for properties
@@ -121,6 +121,8 @@ class OfferPayloadTestSuite(unittest.TestCase):
         self.assertEquals(OrderNumber(1), self.offer_payload.order_number)
         self.assertEquals(1470004447.117, float(self.offer_payload.timeout))
         self.assertEquals(Timestamp(1462224447.117), self.offer_payload.timestamp)
+        self.assertEquals('a', self.offer_payload.public_key)
+        self.assertEquals('b', self.offer_payload.signature)
         self.assertEquals(2, int(self.offer_payload.ttl))
         self.assertEquals(TraderId('0'), self.offer_payload.trader_id)
         self.assertEquals(1, self.offer_payload.address.port)

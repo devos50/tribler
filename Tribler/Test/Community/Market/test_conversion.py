@@ -105,7 +105,7 @@ class TestMarketConversion(AbstractTestCommunity):
 
         offer_payload = OfferPayload.Implementation(meta_msg, TraderId('abc'), MessageNumber('3'), OrderNumber(4),
                                                     Price(5, 'BTC'), Quantity(6, 'MC'), Timeout(3600), Timestamp.now(),
-                                                    Ttl(3), "1.2.3.4", 1234)
+                                                    'a', 'b', Ttl(3), "1.2.3.4", 1234)
         message.payload = offer_payload
         packet, = self.conversion._encode_offer(message)
         self.assertTrue(packet)
@@ -125,7 +125,7 @@ class TestMarketConversion(AbstractTestCommunity):
 
         offer_payload = OfferSyncPayload.Implementation(meta_msg, TraderId('abc'), MessageNumber('3'), OrderNumber(4),
                                                         Price(5, 'BTC'), Quantity(6, 'MC'), Timeout(3600),
-                                                        Timestamp.now(), Ttl(3), "1.2.3.4", 1234, True)
+                                                        Timestamp.now(), 'a', 'b', Ttl(3), "1.2.3.4", 1234, True)
         message.payload = offer_payload
         packet, = self.conversion._encode_offer_sync(message)
         self.assertTrue(packet)

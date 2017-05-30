@@ -291,6 +291,10 @@ class MarketCommunity(Community):
                 yield DropMessage(message, "We don't accept ticks originating from ourselves")
                 continue
 
+            if not tick.has_valid_signature():
+                yield DropMessage(message, "Invalid signature of %s message" % message.name)
+                continue
+
             yield message
 
     @inlineCallbacks
@@ -438,6 +442,7 @@ class MarketCommunity(Community):
 
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
+        tick.sign(self.my_member)
         assert isinstance(tick, Ask), type(tick)
         self.order_book.insert_ask(tick).addCallback(self.on_ask_timeout)
         self.send_ask(tick)
@@ -543,6 +548,7 @@ class MarketCommunity(Community):
 
         # Create the tick
         tick = Tick.from_order(order, self.order_book.message_repository.next_identity())
+        tick.sign(self.my_member)
         assert isinstance(tick, Bid), type(tick)
         self.order_book.insert_bid(tick).addCallback(self.on_bid_timeout)
         self.send_bid(tick)

@@ -115,30 +115,30 @@ class MarketConversion(BinaryConversion):
         packet = encode((
             str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.price),
             int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
-            float(payload.timeout), float(payload.timestamp), int(payload.ttl), str(payload.address.ip),
-            int(payload.address.port)
+            float(payload.timeout), float(payload.timestamp), str(payload.public_key), str(payload.signature),
+            int(payload.ttl), str(payload.address.ip), int(payload.address.port)
         ))
         return packet,
 
     def _decode_offer(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp, Ttl,
-                                     str, int])
+                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp,
+                                     str, str, Ttl, str, int])
 
     def _encode_offer_sync(self, message):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.price),
             int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
-            float(payload.timeout), float(payload.timestamp), int(payload.ttl), str(payload.address.ip),
-            int(payload.address.port), bool(payload.is_ask)
+            float(payload.timeout), float(payload.timestamp), str(payload.public_key), str(payload.signature),
+            int(payload.ttl), str(payload.address.ip), int(payload.address.port), bool(payload.is_ask)
         ))
         return packet,
 
     def _decode_offer_sync(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp, Ttl,
-                                     str, int, bool])
+                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp,
+                                     str, str, Ttl, str, int, bool])
 
     def _encode_proposed_trade(self, message):
         payload = message.payload

@@ -17,10 +17,10 @@ class TickTestSuite(unittest.TestCase):
         self.timestamp_now = Timestamp.now()
         self.tick = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
                          OrderId(TraderId('0'), OrderNumber(1)), Price(63400, 'BTC'), Quantity(30, 'MC'),
-                         Timeout(30), self.timestamp_now, True)
+                         Timeout(30), self.timestamp_now, True, 'a', 'b')
         self.tick2 = Tick(MessageId(TraderId('0'), MessageNumber('message_number')),
                           OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'), Quantity(30, 'MC'),
-                          Timeout(0.0), Timestamp(0.0), False)
+                          Timeout(0.0), Timestamp(0.0), False, 'a', 'b')
         self.order_ask = Order(OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'),
                                Quantity(30, 'MC'), Timeout(0.0), Timestamp(0.0), True)
         self.order_bid = Order(OrderId(TraderId('0'), OrderNumber(2)), Price(63400, 'BTC'),
@@ -39,7 +39,7 @@ class TickTestSuite(unittest.TestCase):
     def test_to_network(self):
         # Test for to network
         self.assertEquals((TraderId('0'), MessageNumber('message_number'), OrderNumber(1),
-                           Price(63400, 'BTC'), Quantity(30, 'MC'), self.tick.timeout, self.tick.timestamp),
+                           Price(63400, 'BTC'), Quantity(30, 'MC'), self.tick.timeout, self.tick.timestamp, 'a', 'b'),
                           self.tick.to_network())
 
     def test_quantity_setter(self):
@@ -96,13 +96,17 @@ class AskTestSuite(unittest.TestCase):
                                                          "price": Price(63400, 'BTC'),
                                                          "quantity": Quantity(30, 'MC'),
                                                          "timeout": Timeout(30),
-                                                         "timestamp": now}))
+                                                         "timestamp": now,
+                                                         "public_key": 'a',
+                                                         "signature": 'b'}))
 
         self.assertEquals(MessageId(TraderId('0'), MessageNumber('message_number')), data.message_id)
         self.assertEquals(Price(63400, 'BTC'), data.price)
         self.assertEquals(Quantity(30, 'MC'), data.quantity)
         self.assertEquals(float(Timeout(30)), float(data.timeout))
         self.assertEquals(now, data.timestamp)
+        self.assertEquals('a', data._public_key)
+        self.assertEquals('b', data._signature)
 
 
 class BidTestSuite(unittest.TestCase):
@@ -117,13 +121,17 @@ class BidTestSuite(unittest.TestCase):
                                                          "price": Price(63400, 'BTC'),
                                                          "quantity": Quantity(40, 'MC'),
                                                          "timeout": Timeout(30),
-                                                         "timestamp": now}))
+                                                         "timestamp": now,
+                                                         "public_key": 'a',
+                                                         "signature": 'b'}))
 
         self.assertEquals(MessageId(TraderId('0'), MessageNumber('message_number')), data.message_id)
         self.assertEquals(Price(63400, 'BTC'), data.price)
         self.assertEquals(Quantity(40, 'MC'), data.quantity)
         self.assertEquals(float(Timeout(30)), float(data.timeout))
         self.assertEquals(now, data.timestamp)
+        self.assertEquals('a', data._public_key)
+        self.assertEquals('b', data._signature)
 
 
 if __name__ == '__main__':

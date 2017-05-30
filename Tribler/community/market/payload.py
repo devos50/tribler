@@ -56,12 +56,14 @@ class MessagePayload(Payload):
 
 class OfferPayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp, ttl,
-                     ip, port):
+        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,
+                     public_key, signature, ttl, ip, port):
             assert isinstance(order_number, OrderNumber), type(order_number)
             assert isinstance(price, Price), type(price)
             assert isinstance(quantity, Quantity), type(quantity)
             assert isinstance(timeout, Timeout), type(timeout)
+            assert isinstance(public_key, str), type(public_key)
+            assert isinstance(signature, str), type(signature)
             assert isinstance(ttl, Ttl), type(ttl)
             assert isinstance(ip, str), type(ip)
             assert isinstance(port, int), type(port)
@@ -70,6 +72,8 @@ class OfferPayload(MessagePayload):
             self._price = price
             self._quantity = quantity
             self._timeout = timeout
+            self._public_key = public_key
+            self._signature = signature
             self._ttl = ttl
             self._ip = ip
             self._port = port
@@ -91,6 +95,14 @@ class OfferPayload(MessagePayload):
             return self._timeout
 
         @property
+        def public_key(self):
+            return self._public_key
+
+        @property
+        def signature(self):
+            return self._signature
+
+        @property
         def ttl(self):
             return self._ttl
 
@@ -101,11 +113,12 @@ class OfferPayload(MessagePayload):
 
 class OfferSyncPayload(OfferPayload):
     class Implementation(OfferPayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp, ttl,
-                     ip, port, is_ask):
+        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,
+                     public_key, signature, ttl, ip, port, is_ask):
             assert isinstance(is_ask, bool), type(is_ask)
             super(OfferSyncPayload.Implementation, self).__init__(meta, trader_id, message_number, order_number, price,
-                                                                  quantity, timeout, timestamp, ttl, ip, port)
+                                                                  quantity, timeout, timestamp, public_key, signature,
+                                                                  ttl, ip, port)
             self._is_ask = is_ask
 
         @property
