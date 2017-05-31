@@ -6,6 +6,9 @@ from Tribler.community.market.wallet.wallet import Wallet, InsufficientFunds
 from Tribler.dispersy.message import DelayPacketByMissingMember
 
 
+MEGA_DIV = 1024 * 1024
+
+
 class MultichainWallet(Wallet):
     """
     This class is responsible for handling your wallet of MultiChain credits.
@@ -29,8 +32,8 @@ class MultichainWallet(Wallet):
 
     def get_balance(self):
         latest_block = self.mc_community.persistence.get_latest(self.mc_community.my_member.public_key)
-        total_up = latest_block.total_up if latest_block else 0
-        total_down = latest_block.total_down if latest_block else 0
+        total_up = latest_block.total_up / MEGA_DIV if latest_block else 0
+        total_down = latest_block.total_down / MEGA_DIV if latest_block else 0
         return succeed({'available': total_up - total_down, 'pending': 0, 'currency': self.get_identifier()})
 
     def transfer(self, quantity, candidate):
@@ -52,7 +55,7 @@ class MultichainWallet(Wallet):
         return self.get_balance().addCallback(on_balance)
 
     def send_signature(self, candidate, quantity):
-        self.mc_community.publish_signature_request_message(candidate, 0, int(quantity))
+        self.mc_community.publish_signature_request_message(candidate, 0, int(quantity * MEGA_DIV))
         latest_block = self.mc_community.persistence.get_latest(self.mc_community.my_member.public_key)
 
         return succeed(latest_block.previous_hash_requester)
