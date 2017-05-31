@@ -1,3 +1,4 @@
+import hashlib
 import time
 
 from Tribler.Core.Utilities.encoding import encode
@@ -150,8 +151,10 @@ class Tick(Message):
 
     def has_valid_signature(self):
         crypto = ECCrypto()
+
+        mid_match = hashlib.sha1(self._public_key).digest().encode('hex') == str(self.order_id.trader_id)
         return crypto.is_valid_signature(
-            crypto.key_from_public_bin(self._public_key), self.get_sign_data(), self._signature)
+            crypto.key_from_public_bin(self._public_key), self.get_sign_data(), self._signature) and mid_match
 
     def to_network(self):
         """
