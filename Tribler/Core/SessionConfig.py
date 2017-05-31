@@ -300,6 +300,18 @@ class SessionConfigInterface(object):
         return self.sessconfig.get(u'market_community', u'api_port')
 
     #
+    # Wallets settings
+    #
+
+    def set_btc_testnet(self, value):
+        self.sessconfig.set(u'wallets', u'btc_testnet', value)
+
+    def get_btc_testnet(self):
+        """ Returns whether the testnet implementation of Bitcoin is enabled
+        @return Boolean. """
+        return self.sessconfig.get(u'wallets', u'btc_testnet')
+
+    #
     # Network settings
     #
 

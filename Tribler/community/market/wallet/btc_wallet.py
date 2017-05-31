@@ -16,6 +16,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(Tribler.__file__)),
 import imp
 imp.load_module('electrum', *imp.find_module('lib'))
 
+from electrum import bitcoin, network
 from electrum import SimpleConfig
 from electrum import WalletStorage
 from electrum import daemon
@@ -29,11 +30,15 @@ class BitcoinWallet(Wallet):
     This class is responsible for handling your wallet of bitcoins.
     """
 
-    def __init__(self, wallet_dir):
+    def __init__(self, wallet_dir, testnet=False):
         super(BitcoinWallet, self).__init__()
 
+        if testnet:
+            bitcoin.set_testnet()
+            network.set_testnet()
+
         self.wallet_dir = wallet_dir
-        self.wallet_file = 'btc_wallet'
+        self.wallet_file = 'tbtc_wallet' if testnet else 'btc_wallet'
         self.min_confirmations = 0
         self.created = False
         self.daemon = None
@@ -41,6 +46,7 @@ class BitcoinWallet(Wallet):
         self.wallet_password = keychain_pw if keychain_pw else None  # Convert empty passwords to None
         self.storage = None
         self.wallet = None
+        self.testnet = testnet
         self.load_wallet(self.wallet_dir, self.wallet_file)
 
     def load_wallet(self, wallet_dir, wallet_file):
@@ -49,7 +55,8 @@ class BitcoinWallet(Wallet):
 
         config = SimpleConfig(options={'cwd': self.wallet_dir, 'wallet_path': self.wallet_file})
         self.storage = WalletStorage(config.get_wallet_path())
-        self.storage.read(self.wallet_password)
+        if self.storage.is_encrypted():
+            self.storage.decrypt(self.wallet_password)
 
         if os.path.exists(config.get_wallet_path()):
             self.wallet = ElectrumWallet(self.storage)
@@ -64,9 +71,11 @@ class BitcoinWallet(Wallet):
         keyring.set_password('tribler', 'btc_wallet_password', password)
 
     def start_daemon(self):
-        options = {'verbose': False, 'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
+        options = {'verbose': False, 'cmd': 'daemon', 'testnet': self.testnet, 'oneserver': False, 'segwit': False,
                    'cwd': self.wallet_dir, 'portable': False, 'password': '',
-                   'wallet_path': os.path.join('wallet', 'btc_wallet')}
+                   'wallet_path': os.path.join('wallet', self.wallet_file)}
+        if self.testnet:
+            options['server'] = 'electrum.akinbo.org:51002:s'
         config = SimpleConfig(options)
         fd, server = daemon.get_fd_or_server(config)
 
@@ -77,8 +86,8 @@ class BitcoinWallet(Wallet):
         self.daemon.start()
 
     def open_wallet(self):
-        options = {'password': self.wallet_password, 'subcommand': 'open', 'verbose': False,
-                   'cmd': 'daemon', 'testnet': False, 'oneserver': False, 'segwit': False,
+        options = {'password': self.wallet_password, 'subcommand': 'load_wallet', 'verbose': False,
+                   'cmd': 'daemon', 'testnet': self.testnet, 'oneserver': False, 'segwit': False,
                    'cwd': self.wallet_dir, 'portable': False, 'wallet_path': self.wallet_file}
         config = SimpleConfig(options)
 
@@ -88,7 +97,7 @@ class BitcoinWallet(Wallet):
             server.daemon(options)
 
     def get_name(self):
-        return 'Bitcoin'
+        return 'Bitcoin' if not self.testnet else 'Testnet BTC'
 
     def get_identifier(self):
         return 'BTC'
@@ -152,7 +161,7 @@ class BitcoinWallet(Wallet):
             if balance['available'] >= amount:
                 options = {'tx_fee': '0.0001', 'password': self.wallet_password, 'verbose': False, 'nocheck': False,
                            'cmd': 'payto', 'wallet_path': self.wallet_file, 'destination': address,
-                           'cwd': self.wallet_dir, 'testnet': False, 'rbf': False, 'amount': amount,
+                           'cwd': self.wallet_dir, 'testnet': self.testnet, 'rbf': False, 'amount': amount,
                            'segwit': False, 'unsigned': False, 'portable': False}
                 config = SimpleConfig(options)
 
@@ -161,7 +170,7 @@ class BitcoinWallet(Wallet):
                 transaction_hex = result['hex']
 
                 # Broadcast this transaction
-                options = {'password': None, 'verbose': False, 'tx': transaction_hex, 'cmd': 'broadcast', 'testnet': False,
+                options = {'password': None, 'verbose': False, 'tx': transaction_hex, 'cmd': 'broadcast', 'testnet': self.testnet,
                            'timeout': 30, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
                 config = SimpleConfig(options)
 
@@ -199,12 +208,13 @@ class BitcoinWallet(Wallet):
         return str(self.wallet.get_receiving_address())
 
     def get_transactions(self):
-        options = {'password': None, 'verbose': False, 'cmd': 'history', 'wallet_path': self.wallet_file,
-                   'testnet': False, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
+        options = {'nolnet': False, 'password': None, 'verbose': False, 'cmd': 'history',
+                   'wallet_path': self.wallet_file, 'testnet': self.testnet, 'segwit': False, 'cwd': self.wallet_dir,
+                   'portable': False}
         config = SimpleConfig(options)
 
         server = daemon.get_server(config)
-        result = server.run_cmdline(options)[:-10]  # Get last ten transactions
+        result = server.run_cmdline(options)
 
         # TODO we still need to add several fields here
         transactions = []

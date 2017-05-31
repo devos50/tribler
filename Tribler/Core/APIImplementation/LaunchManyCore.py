@@ -249,7 +249,8 @@ class TriblerLaunchMany(TaskManager):
         # Use the permanent multichain ID for Market community/TradeChain if it's available
         if self.session.get_market_community_enabled():
             wallets = {}
-            btc_wallet = BitcoinWallet(os.path.join(self.session.get_state_dir(), 'wallet'))
+            btc_wallet = BitcoinWallet(os.path.join(self.session.get_state_dir(), 'wallet'),
+                                       testnet=self.session.get_btc_testnet())
             wallets[btc_wallet.get_identifier()] = btc_wallet
 
             mc_wallet = MultichainWallet(mc_community)

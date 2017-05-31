@@ -1,5 +1,6 @@
 import json
 
+from Tribler.Core.Modules.restapi import has_param
 from twisted.internet.defer import DeferredList
 from twisted.web import http
 from twisted.web import resource
@@ -111,6 +112,10 @@ class WalletEndpoint(resource.Resource):
             request.finish()
 
         parameters = http.parse_qs(request.content.read(), 1)
+
+        if self.identifier == "BTC" and 'password' not in parameters:
+            request.setResponseCode(http.BAD_REQUEST)
+            return json.dumps({"error": "a password is required when creating a Bitcoin wallet"})
 
         if self.identifier == "BTC":  # get the password
             if parameters['password'] and len(parameters['password']) > 0:

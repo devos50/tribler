@@ -96,6 +96,10 @@ sessdefaults['market_community']['enabled'] = True
 sessdefaults['market_community']['api_enabled'] = True
 sessdefaults['market_community']['api_port'] = 7386
 
+# Wallets section
+sessdefaults['wallets'] = OrderedDict()
+sessdefaults['wallets']['btc_testnet'] = False
+
 # Metadata section
 sessdefaults['metadata'] = OrderedDict()
 sessdefaults['metadata']['enabled'] = True
