@@ -151,7 +151,7 @@ class MarketCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     OfferSyncPayload(),
-                    self.check_message,
+                    self.check_tick_message,
                     self.on_offer_sync),
             Message(self, u"proposed-trade",
                     MemberAuthentication(),
@@ -281,7 +281,12 @@ class MarketCommunity(Community):
 
     def check_tick_message(self, messages):
         for message in messages:
-            tick = Ask.from_network(message.payload) if message.name == u"ask" else Bid.from_network(message.payload)
+            if message.name == u"offer-sync":
+                tick = Ask.from_network(message.payload)\
+                    if message.payload.is_ask else Bid.from_network(message.payload)
+            else:
+                tick = Ask.from_network(message.payload)\
+                    if message.name == u"ask" else Bid.from_network(message.payload)
             allowed, _ = self._timeline.check(message)
             if not allowed:
                 yield DelayMessageByProof(message)
