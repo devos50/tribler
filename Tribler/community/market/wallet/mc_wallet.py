@@ -55,7 +55,7 @@ class MultichainWallet(Wallet):
         return self.get_balance().addCallback(on_balance)
 
     def send_signature(self, candidate, quantity):
-        self.mc_community.publish_signature_request_message(candidate, 0, int(quantity * MEGA_DIV))
+        self.mc_community.sign_block(candidate, candidate.get_member().public_key, 0, int(quantity * MEGA_DIV))
         latest_block = self.mc_community.persistence.get_latest(self.mc_community.my_member.public_key)
 
         return succeed(latest_block.previous_hash_requester)
