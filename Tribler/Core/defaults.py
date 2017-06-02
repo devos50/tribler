@@ -99,6 +99,7 @@ sessdefaults['market_community']['api_port'] = 7386
 # Wallets section
 sessdefaults['wallets'] = OrderedDict()
 sessdefaults['wallets']['btc_testnet'] = False
+sessdefaults['wallets']['enable_dummy_wallets'] = False
 
 # Metadata section
 sessdefaults['metadata'] = OrderedDict()

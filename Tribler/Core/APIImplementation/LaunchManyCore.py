@@ -256,12 +256,13 @@ class TriblerLaunchMany(TaskManager):
             mc_wallet = MultichainWallet(mc_community)
             wallets[mc_wallet.get_identifier()] = mc_wallet
 
-            # For debugging purposes, we create dummy wallets
-            dummy_wallet1 = DummyWallet1()
-            wallets[dummy_wallet1.get_identifier()] = dummy_wallet1
+            if self.session.get_enable_dummy_wallets():
+                # For debugging purposes, we create dummy wallets
+                dummy_wallet1 = DummyWallet1()
+                wallets[dummy_wallet1.get_identifier()] = dummy_wallet1
 
-            dummy_wallet2 = DummyWallet2()
-            wallets[dummy_wallet2.get_identifier()] = dummy_wallet2
+                dummy_wallet2 = DummyWallet2()
+                wallets[dummy_wallet2.get_identifier()] = dummy_wallet2
 
             # Internet of Money, check whether the API is available, if not, don't create these wallets
             try:

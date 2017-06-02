@@ -311,6 +311,14 @@ class SessionConfigInterface(object):
         @return Boolean. """
         return self.sessconfig.get(u'wallets', u'btc_testnet')
 
+    def set_enable_dummy_wallets(self, value):
+        self.sessconfig.set(u'wallets', u'enable_dummy_wallets', value)
+
+    def get_enable_dummy_wallets(self):
+        """ Returns whether dummy wallets are enabled
+        @return Boolean. """
+        return self.sessconfig.get(u'wallets', u'enable_dummy_wallets')
+
     #
     # Network settings
     #
