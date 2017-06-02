@@ -28,7 +28,7 @@ from core.message import TraderId
 from core.message_repository import MemoryMessageRepository
 from core.order import TickWasNotReserved, OrderId
 from core.order_manager import OrderManager
-from core.order_repository import DatabaseOrderRepository
+from core.order_repository import DatabaseOrderRepository, MemoryOrderRepository
 from core.orderbook import OrderBook
 from core.payment import Payment
 from core.price import Price
@@ -39,7 +39,7 @@ from core.timestamp import Timestamp
 from core.trade import Trade, ProposedTrade, AcceptedTrade, DeclinedTrade, CounterTrade
 from core.transaction import StartTransaction, TransactionId, Transaction
 from core.transaction_manager import TransactionManager
-from core.transaction_repository import DatabaseTransactionRepository
+from core.transaction_repository import DatabaseTransactionRepository, MemoryTransactionRepository
 from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTradePayload, StartTransactionPayload, \
     TransactionPayload, WalletInfoPayload, MarketIntroPayload, \
     OfferSyncPayload, PaymentPayload
@@ -93,7 +93,7 @@ class MarketCommunity(Community):
         master = dispersy.get_member(public_key=master_key)
         return [master]
 
-    def initialize(self, tribler_session=None, tradechain_community=None, wallets={}):
+    def initialize(self, tribler_session=None, tradechain_community=None, wallets={}, use_database=True):
         super(MarketCommunity, self).initialize()
 
         self.mid = self.my_member.mid.encode('hex')
@@ -105,7 +105,13 @@ class MarketCommunity(Community):
         for trader in self.market_database.get_traders():
             self.update_ip(TraderId(str(trader[0])), (str(trader[1]), trader[2]))
 
-        order_repository = DatabaseOrderRepository(self.mid, self.market_database)
+        if use_database:
+            order_repository = DatabaseOrderRepository(self.mid, self.market_database)
+            transaction_repository = DatabaseTransactionRepository(self.mid, self.market_database)
+        else:
+            order_repository = MemoryOrderRepository(self.mid)
+            transaction_repository = MemoryTransactionRepository(self.mid)
+
         message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
         self.order_book = OrderBook(message_repository)
@@ -114,8 +120,6 @@ class MarketCommunity(Community):
         self.tradechain_community = tradechain_community
         self.wallets = wallets
         self.reputation_dict = {}
-
-        transaction_repository = DatabaseTransactionRepository(self.mid, self.market_database)
         self.transaction_manager = TransactionManager(transaction_repository)
 
         # TODO this history can be removed when we use a request cache to keep track of outstanding trade proposals
