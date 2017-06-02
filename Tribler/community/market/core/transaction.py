@@ -131,6 +131,7 @@ class Transaction(object):
         self._partner_trader_id = partner_trader_id
         self._price = price
         self._transferred_price = Price(0, price.wallet_id)
+        self._total_price = Price(float(price) * float(quantity), price.wallet_id)
         self._quantity = quantity
         self._transferred_quantity = Quantity(0, quantity.wallet_id)
         self._order_id = order_id
@@ -219,6 +220,13 @@ class Transaction(object):
         return self._price
 
     @property
+    def total_price(self):
+        """
+        :rtype: Price
+        """
+        return self._total_price
+
+    @property
     def transferred_price(self):
         """
         :rtype: Price
@@ -289,14 +297,14 @@ class Transaction(object):
         if not last_payment:
             # Just return the lowest unit possible
             return Quantity(min_unit, self.total_quantity.wallet_id) if order_is_ask else \
-                Price(min_unit, self.price.wallet_id)
+                Price(min_unit, self.total_price.wallet_id)
 
         # We determine the percentage of the last payment of the total amount
         if order_is_ask:
-            if self.transferred_price >= self.price:  # Complete the trade
+            if self.transferred_price >= self.total_price:  # Complete the trade
                 return self.total_quantity - self.transferred_quantity
 
-            percentage = float(last_payment.transferee_price) / float(self.price)
+            percentage = float(last_payment.transferee_price) / float(self.total_price)
             transfer_amount = Transaction.unitize(float(percentage * float(self.total_quantity)), min_unit) * 2
             if transfer_amount < min_unit:
                 transfer_amount = min_unit
@@ -305,18 +313,18 @@ class Transaction(object):
             return Quantity(transfer_amount, self.total_quantity.wallet_id)
         else:
             if self.transferred_quantity >= self.total_quantity:  # Complete the trade
-                return self.price - self.transferred_price
+                return self.total_price - self.transferred_price
 
             percentage = float(last_payment.transferee_quantity) / float(self.total_quantity)
-            transfer_amount = Transaction.unitize(float(percentage * float(self.price)), min_unit) * 2
+            transfer_amount = Transaction.unitize(float(percentage * float(self.total_price)), min_unit) * 2
             if transfer_amount < min_unit:
                 transfer_amount = min_unit
-            elif transfer_amount > float(self.price - self.transferred_price):
-                transfer_amount = float(self.price - self.transferred_price)
-            return Price(transfer_amount, self.price.wallet_id)
+            elif transfer_amount > float(self.total_price - self.transferred_price):
+                transfer_amount = float(self.total_price - self.transferred_price)
+            return Price(transfer_amount, self.total_price.wallet_id)
 
     def is_payment_complete(self):
-        return self.transferred_price >= self.price and self.transferred_quantity >= self.total_quantity
+        return self.transferred_price >= self.total_price and self.transferred_quantity >= self.total_quantity
 
     def to_dictionary(self):
         """

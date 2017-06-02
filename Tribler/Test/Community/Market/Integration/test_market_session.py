@@ -28,8 +28,8 @@ class TestMarketSession(TestMarketBase):
             on_received_half_block.num_called += 1
 
             if on_received_half_block.num_called == 2:  # We received a block in both sessions
-                self.assertEqual(ask_community.wallets['DUM1'].balance, 1010)
-                self.assertEqual(bid_community.wallets['DUM1'].balance, 990)
+                self.assertEqual(ask_community.wallets['DUM1'].balance, 1100)
+                self.assertEqual(bid_community.wallets['DUM1'].balance, 900)
 
                 balance_ask = yield ask_community.wallets['MC'].get_balance()
                 balance_bid = yield bid_community.wallets['MC'].get_balance()
