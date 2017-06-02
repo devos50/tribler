@@ -423,7 +423,7 @@ class MarketCommunity(Community):
                                % price_min_unit)
 
         quantity_min_unit = self.wallets[quantity_wallet_id].min_unit()
-        if float(quantity) < quantity_wallet_id:
+        if float(quantity) < quantity_min_unit:
             raise RuntimeError("The quantity should be higher than or equal to the minimum unit of this currency (%f)."
                                % quantity_min_unit)
 
