@@ -3,7 +3,7 @@ import sys
 from threading import Thread
 
 import keyring
-from twisted.internet.defer import Deferred, succeed, fail
+from twisted.internet.defer import Deferred, succeed, fail, inlineCallbacks
 from twisted.internet.task import LoopingCall
 
 import Tribler
@@ -140,6 +140,14 @@ class BitcoinWallet(Wallet):
 
         return succeed(None)
 
+    def get_daemon_status(self):
+        options = {'nolnet': False, 'subcommand': 'status', 'verbose': False, 'cmd': 'daemon', 'testnet': False,
+                   'oneserver': False, 'segwit': False, 'cwd': self.wallet_dir, 'portable': False}
+        config = SimpleConfig(options)
+
+        server = daemon.get_server(config)
+        return server.run_cmdline(options)
+
     def get_balance(self):
         """
         Return the balance of the wallet.
@@ -157,6 +165,7 @@ class BitcoinWallet(Wallet):
 
     def transfer(self, amount, address):
         def on_balance(balance):
+            # TODO dynamic fee
             self._logger.info("Creating Bitcoin payment with amount %f to address %s", amount, address)
             if balance['available'] >= amount:
                 options = {'tx_fee': '0.0001', 'password': self.wallet_password, 'verbose': False, 'nocheck': False,
@@ -177,7 +186,9 @@ class BitcoinWallet(Wallet):
                 server = daemon.get_server(config)
                 result = server.run_cmdline(options)
 
-                # TODO(Martijn): check whether the broadcast has been successful
+                if not result[0]:  # Transaction failed
+                    return fail(RuntimeError(result[1]))
+
                 return succeed(str(result[1]))
             else:
                 return fail(InsufficientFunds())
@@ -190,13 +201,17 @@ class BitcoinWallet(Wallet):
         """
         monitor_deferred = Deferred()
 
+        @inlineCallbacks
         def monitor_loop():
-            transactions = self.get_transactions()
+            transactions = yield self.get_transactions()
             for transaction in transactions:
-                if transaction['txid'] == txid:
+                print transaction
+                if transaction['id'] == txid:
+                    self._logger.debug("Found transaction with id %s" % txid)
                     monitor_deferred.callback(None)
                     monitor_lc.stop()
 
+        self._logger.debug("Start polling for transaction %s" % txid)
         monitor_lc = LoopingCall(monitor_loop)
         monitor_lc.start(1)
 
