@@ -16,15 +16,16 @@ class TestMultichainWallet(AbstractServer):
         yield super(TestMultichainWallet, self).setUp(annotate=annotate)
 
         latest_block = MockObject()
-        latest_block.total_up = 10
-        latest_block.total_down = 5
+        latest_block.total_up = 10 * 1024 * 1024
+        latest_block.total_down = 5 * 1024 * 1024
         latest_block.previous_hash_requester = 'b' * 5
 
         self.mc_community = MockObject()
         self.mc_community.add_discovered_candidate = lambda _: None
         self.mc_community.create_introduction_request = lambda *_: None
         self.mc_community.wait_for_intro_of_candidate = lambda _: succeed(None)
-        self.mc_community.publish_signature_request_message = lambda *_: None
+        self.mc_community.received_payment_message = lambda *_: None
+        self.mc_community.sign_block = lambda *_: None
         self.mc_community.wait_for_signature_request = lambda _: succeed('a')
         self.mc_community.my_member = MockObject()
         self.mc_community.my_member.public_key = 'a' * 20
@@ -68,21 +69,6 @@ class TestMultichainWallet(AbstractServer):
 
         self.mc_wallet.transfer(200, None).addErrback(on_error)
         return test_deferred
-
-    @deferred(timeout=10)
-    def test_transfer_no_member(self):
-        """
-        Test the transfer method of a Multichain wallet when there's no member available
-        """
-        candidate = MockObject()
-        candidate.get_member = lambda: None
-        candidate.sock_addr = ("127.0.0.1", 1234)
-        self.mc_community.get_candidate = lambda _: candidate
-
-        def on_transfer(prev_hash):
-            self.assertEqual(prev_hash, 'b' * 5)
-
-        return self.mc_wallet.transfer(1, candidate).addCallback(on_transfer)
 
     @deferred(timeout=10)
     def test_monitor_transaction(self):

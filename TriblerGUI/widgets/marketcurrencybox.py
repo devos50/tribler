@@ -40,9 +40,9 @@ class MarketCurrencyBox(QWidget):
             currency_type = '€'
 
         if currency_type:
-            self.currency_amount_label.setText("%s %s" % (currency_type, amount))
+            self.currency_amount_label.setText("%s %g" % (currency_type, amount))
         else:
-            self.currency_amount_label.setText("%s" % amount)
+            self.currency_amount_label.setText("%g" % amount)
 
     def paintEvent(self, _):
         opt = QStyleOption()

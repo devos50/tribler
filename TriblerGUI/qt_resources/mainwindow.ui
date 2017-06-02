@@ -7782,8 +7782,8 @@ QTabBar::tab:selected {
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>653</width>
-                       <height>263</height>
+                       <width>131</width>
+                       <height>236</height>
                       </rect>
                      </property>
                      <layout class="QFormLayout" name="formLayout_4">
@@ -11105,6 +11105,16 @@ font-weight: bold;</string>
             <column>
              <property name="text">
               <string>Quantity</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Reserved Quantity</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Traded Quantity</string>
              </property>
             </column>
             <column>

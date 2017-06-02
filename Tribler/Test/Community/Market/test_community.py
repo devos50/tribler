@@ -1,5 +1,9 @@
+import hashlib
 import unittest
 import os
+
+from Tribler.dispersy.crypto import ECCrypto
+from Tribler.dispersy.member import Member
 from mock import Mock, MagicMock
 from twisted.internet.defer import inlineCallbacks
 
@@ -41,14 +45,19 @@ class CommunityTestSuite(AbstractTestCommunity):
 
         self.dispersy.attach_community(self.market_community)
 
+        eccrypto = ECCrypto()
+        ec = eccrypto.generate_key(u"curve25519")
+        member = Member(self.dispersy, ec, 1)
+
+        trader_id = hashlib.sha1(member.public_key).digest().encode('hex')
         self.ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
-                       OrderId(TraderId('0'), OrderNumber(1234)), Price(63400, 'DUM1'), Quantity(30, 'DUM2'),
+                       OrderId(TraderId(trader_id), OrderNumber(1234)), Price(63400, 'DUM1'), Quantity(30, 'DUM2'),
                        Timeout(3600), Timestamp.now())
-        self.ask.sign(self.market_community.my_member)
+        self.ask.sign(member)
         self.bid = Bid(MessageId(TraderId('1'), MessageNumber('message_number')),
-                       OrderId(TraderId('1'), OrderNumber(1234)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
+                       OrderId(TraderId(trader_id), OrderNumber(1234)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
                        Timeout(3600), Timestamp.now())
-        self.bid.sign(self.market_community.my_member)
+        self.bid.sign(member)
         self.order = Order(OrderId(TraderId(self.market_community.mid), OrderNumber(24)), Price(20, 'DUM1'),
                            Quantity(30, 'DUM2'), Timeout(3600.0), Timestamp.now(), False)
         self.proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
@@ -161,6 +170,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         """
         self.market_community.update_ip(TraderId('0'), ("127.0.0.1", 1234))
         self.market_community.update_ip(TraderId('1'), ("127.0.0.1", 1234))
+        self.market_community.update_ip(self.ask.order_id.trader_id, ("127.0.0.1", 1234))
         candidate = WalkCandidate(("127.0.0.1", 1234), False, ("127.0.0.1", 1234), ("127.0.0.1", 1234), u"public")
         self.assertTrue(self.market_community.send_offer_sync(candidate, self.ask))
 
@@ -358,6 +368,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.market_community.update_ip(TraderId(self.market_community.mid), ('2.2.2.2', 2))
         self.market_community.on_offer_sync([self.get_offer_sync(self.ask)])
         self.assertEqual(len(self.market_community.order_book.asks), 1)
+        self.market_community.order_book.remove_tick(self.ask.order_id)
         self.market_community.on_offer_sync([self.get_offer_sync(self.bid)])
         self.assertEqual(len(self.market_community.order_book.bids), 1)
 
