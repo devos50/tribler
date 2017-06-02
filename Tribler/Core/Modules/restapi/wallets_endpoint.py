@@ -79,7 +79,8 @@ class WalletEndpoint(resource.Resource):
         self.session = session
         self.identifier = identifier.upper()
 
-        child_handler_dict = {"balance": WalletBalanceEndpoint, "transactions": WalletTransactionsEndpoint}
+        child_handler_dict = {"balance": WalletBalanceEndpoint, "transactions": WalletTransactionsEndpoint,
+                              "transfer": WalletTransferEndpoint}
         for path, child_cls in child_handler_dict.iteritems():
             self.putChild(path, child_cls(self.session, self.identifier))
 
@@ -216,5 +217,67 @@ class WalletTransactionsEndpoint(resource.Resource):
             request.finish()
 
         self.session.lm.market_community.wallets[self.identifier].get_transactions().addCallback(on_transactions)
+
+        return NOT_DONE_YET
+
+
+class WalletTransferEndpoint(resource.Resource):
+    """
+    This class handles requests regarding transferring money by a wallet.
+    """
+
+    def __init__(self, session, identifier):
+        resource.Resource.__init__(self)
+        self.session = session
+        self.identifier = identifier
+
+    def render_POST(self, request):
+        """
+        .. http:get:: /wallets/(string:wallet identifier)/transfer
+
+        A GET request to this endpoint will return past transactions of a specific wallet.
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/wallets/BTC/transfer
+                --data "amount=0.3&destination=mpC1DDgSP4PKc5HxJzQ5w9q6CGLBEQuLsN"
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "txid": "abcd"
+                }
+        """
+        parameters = http.parse_qs(request.content.read(), 1)
+
+        if self.identifier != "BTC":
+            request.setResponseCode(http.BAD_REQUEST)
+            return json.dumps({"error": "currently, currency transfers using the API is only supported for Bitcoin"})
+
+        wallet = self.session.lm.market_community.wallets[self.identifier]
+
+        if not wallet.created:
+            request.setResponseCode(http.BAD_REQUEST)
+            return json.dumps({"error": "this wallet is not created"})
+
+        if 'amount' not in parameters or 'destination' not in parameters:
+            request.setResponseCode(http.BAD_REQUEST)
+            return json.dumps({"error": "an amount and a destination address are required"})
+
+        def on_transferred(txid):
+            request.write(json.dumps({"txid": txid}))
+            request.finish()
+
+        def on_transfer_error(error):
+            request.setResponseCode(http.INTERNAL_SERVER_ERROR)
+            request.write(json.dumps({"txid": "", "error": error.getErrorMessage()}))
+            request.finish()
+
+        wallet.transfer(float(parameters['amount'][0]), parameters['destination'][0]).addCallback(on_transferred)\
+            .addErrback(on_transfer_error)
 
         return NOT_DONE_YET

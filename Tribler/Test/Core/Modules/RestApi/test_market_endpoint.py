@@ -1,5 +1,8 @@
 import json
 
+from Tribler.community.market.core.payment import Payment
+from Tribler.community.market.core.payment_id import PaymentId
+from Tribler.community.market.core.wallet_address import WalletAddress
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Test.Core.Modules.RestApi.base_api_test import AbstractApiTest
@@ -27,6 +30,26 @@ class TestWalletsEndpoint(AbstractApiTest):
 
         self.session.lm.market_community.wallets = {dummy1_wallet.get_identifier(): dummy1_wallet,
                                                     dummy2_wallet.get_identifier(): dummy2_wallet}
+
+    def add_transaction_and_payment(self):
+        """
+        Add a transaction and a payment to the market
+        """
+        proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
+                                       OrderId(TraderId('0'), OrderNumber(1)),
+                                       OrderId(TraderId('1'), OrderNumber(2)),
+                                       Price(63400, 'BTC'), Quantity(30, 'MC'), Timestamp(1462224447.117))
+        accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('message_number')),
+                                      Timestamp(1462224447.117), proposed_trade)
+        transaction = self.session.lm.market_community.transaction_manager.create_from_accepted_trade(accepted_trade)
+
+        payment = Payment(MessageId(TraderId("0"), MessageNumber("1")), transaction.transaction_id,
+                          Quantity(0, 'MC'), Price(20, 'BTC'), WalletAddress('a'), WalletAddress('b'),
+                          PaymentId('aaa'), Timestamp(4.0))
+        transaction.add_payment(payment)
+        self.session.lm.market_community.transaction_manager.transaction_repository.update(transaction)
+
+        return transaction
 
     @blocking_call_on_reactor_thread
     def setUpPreSession(self):
@@ -101,14 +124,7 @@ class TestWalletsEndpoint(AbstractApiTest):
             self.assertIn('transactions', json_response)
             self.assertEqual(len(json_response['transactions']), 1)
 
-        proposed_trade = Trade.propose(MessageId(TraderId('0'), MessageNumber('message_number')),
-                                       OrderId(TraderId('0'), OrderNumber(1)),
-                                       OrderId(TraderId('1'), OrderNumber(2)),
-                                       Price(63400, 'BTC'), Quantity(30, 'MC'), Timestamp(1462224447.117))
-        accepted_trade = Trade.accept(MessageId(TraderId('0'), MessageNumber('message_number')),
-                                      Timestamp(1462224447.117), proposed_trade)
-        self.session.lm.market_community.transaction_manager.create_from_accepted_trade(accepted_trade)
-
+        self.add_transaction_and_payment()
         self.should_check_equality = False
         return self.do_request('market/transactions', expected_code=200).addCallback(on_response)
 
@@ -127,3 +143,19 @@ class TestWalletsEndpoint(AbstractApiTest):
 
         self.should_check_equality = False
         return self.do_request('market/orders', expected_code=200).addCallback(on_response)
+
+    @deferred(timeout=10)
+    def test_get_payments(self):
+        """
+        Test whether the API returns the right payments when we perform a request
+        """
+        def on_response(response):
+            json_response = json.loads(response)
+            self.assertIn('payments', json_response)
+            self.assertEqual(len(json_response['payments']), 1)
+
+        transaction = self.add_transaction_and_payment()
+        self.should_check_equality = False
+        return self.do_request('market/transactions/%s/%s/payments' %
+                               (transaction.transaction_id.trader_id, transaction.transaction_id.transaction_number),
+                               expected_code=200).addCallback(on_response)

@@ -46,8 +46,9 @@ class Payment(Message):
         return (unicode(self.message_id.trader_id), unicode(self.message_id.message_number),
                 unicode(self.transaction_id.trader_id), int(self.transaction_id.transaction_number),
                 unicode(self.payment_id), float(self.transferee_quantity),
-                unicode(self.transferee_quantity), float(self.transferee_price), unicode(self.transferee_price),
-                unicode(self.address_from), unicode(self.address_to), float(self.timestamp))
+                unicode(self.transferee_quantity.wallet_id), float(self.transferee_price),
+                unicode(self.transferee_price.wallet_id), unicode(self.address_from),
+                unicode(self.address_to), float(self.timestamp))
 
     @property
     def transaction_id(self):
