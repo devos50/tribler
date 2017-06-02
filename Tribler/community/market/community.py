@@ -1040,6 +1040,8 @@ class MarketCommunity(Community):
     def send_payment_message(self, payment_id, transaction, payment):
         message_id = self.order_book.message_repository.next_identity()
         payment_message = self.transaction_manager.create_payment_message(message_id, payment_id, transaction, payment)
+        self._logger.debug("Sending payment with price %s and quantity %s",
+                           payment_message.transferee_price, payment_message.transferee_quantity)
 
         if self.tribler_session:
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_PAYMENT_SENT, NTFY_UPDATE, None, payment_message)

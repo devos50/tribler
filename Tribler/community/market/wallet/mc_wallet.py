@@ -57,8 +57,9 @@ class MultichainWallet(Wallet):
     def send_signature(self, candidate, quantity):
         self.mc_community.sign_block(candidate, candidate.get_member().public_key, 0, int(quantity * MEGA_DIV))
         latest_block = self.mc_community.persistence.get_latest(self.mc_community.my_member.public_key)
-
-        return succeed(latest_block.previous_hash_requester)
+        return succeed("%s.%s.%d.%d" %
+                       (latest_block.public_key.encode('hex'),
+                        latest_block.sequence_number, 0, int(quantity * MEGA_DIV)))
 
     def wait_for_intro_of_candidate(self, candidate):
         self._logger.info("Sending introduction request in multichain to candidate %s", candidate)
@@ -67,11 +68,12 @@ class MultichainWallet(Wallet):
         self.mc_community.create_introduction_request(new_candidate, False)
         return self.mc_community.wait_for_intro_of_candidate(new_candidate)
 
-    def monitor_transaction(self, block_hash):
+    def monitor_transaction(self, block_id):
         """
-        Monitor an incoming transaction with a specific hash.
+        Monitor an incoming transaction with a specific id.
         """
-        return self.mc_community.wait_for_signature_request(str(block_hash))
+        self.mc_community.received_payment_message(block_id)
+        return self.mc_community.wait_for_signature_request(str(block_id))
 
     def get_address(self):
         return b64encode(self.mc_community.my_member.public_key)

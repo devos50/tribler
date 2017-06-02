@@ -23,14 +23,18 @@ class TestMarketSession(TestMarketBase):
         ask_community = self.market_communities[self.session]
         bid_community = self.market_communities[bid_session]
 
+        @inlineCallbacks
         def on_received_half_block(_):
             on_received_half_block.num_called += 1
 
             if on_received_half_block.num_called == 2:  # We received a block in both sessions
                 self.assertEqual(ask_community.wallets['DUM1'].balance, 1010)
-                self.assertEqual(ask_community.wallets['DUM2'].balance, 990)
                 self.assertEqual(bid_community.wallets['DUM1'].balance, 990)
-                self.assertEqual(bid_community.wallets['DUM2'].balance, 1010)
+
+                balance_ask = yield ask_community.wallets['MC'].get_balance()
+                balance_bid = yield bid_community.wallets['MC'].get_balance()
+                self.assertEqual(balance_ask['available'], -10)
+                self.assertEqual(balance_bid['available'], 10)
 
                 test_deferred.callback(None)
 
@@ -41,9 +45,9 @@ class TestMarketSession(TestMarketBase):
         bid_community.add_discovered_candidate(
             Candidate(self.session.get_dispersy_instance().lan_address, tunnel=False))
         yield self.async_sleep(5)  # TODO(Martijn): make this event-based
-        bid_community.create_bid(10, 'DUM1', 10, 'DUM2', 3600)
+        bid_community.create_bid(10, 'DUM1', 10, 'MC', 3600)
         yield self.async_sleep(1)
-        ask_community.create_ask(10, 'DUM1', 10, 'DUM2', 3600)
+        ask_community.create_ask(10, 'DUM1', 10, 'MC', 3600)
 
         ask_community.tradechain_community.wait_for_signature_response().addCallback(on_received_half_block)
         bid_community.tradechain_community.wait_for_signature_response().addCallback(on_received_half_block)

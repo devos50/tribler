@@ -66,7 +66,10 @@ class MultiChainCommunity(Community):
 
         self.expected_intro_responses = {}
         self.expected_sig_requests = {}
-        self.received_hashes = set()
+        self.received_block_ids = set()
+
+        # Store invalid messages since one of these might contain a block that is bought on the market
+        self.pending_sign_messages = {}
 
         self.logger.debug("The multichain community started with Public Key: %s",
                           self.my_member.public_key.encode("hex"))
@@ -155,17 +158,41 @@ class MultiChainCommunity(Community):
         self.expected_intro_responses[candidate.sock_addr] = response_deferred
         return response_deferred
 
-    def wait_for_signature_request(self, block_hash):
+    def wait_for_signature_request(self, block_id):
         """
         Returns a Deferred that fires when we receive a signature request with a specific block hash.
         Used in the market community so we can monitor transactions.
         """
-        if block_hash in self.received_hashes:
+        if block_id in self.received_block_ids:
             return succeed(None)
 
         response_deferred = Deferred()
-        self.expected_sig_requests[block_hash] = response_deferred
+        self.expected_sig_requests[block_id] = response_deferred
         return response_deferred
+
+    def received_payment_message(self, block_id):
+        """
+        We received a payment message originating from the market community. We set pending bytes so the validator
+        passes when we receive the half block from the counterparty.
+
+        Note that it might also be possible that the half block has been received already. That's why we revalidate
+        the invalid messages again.
+        """
+        pub_key, seq_num, bytes_up, bytes_down = block_id.split('.')
+        pub_key = pub_key.decode('hex')
+        pend = self.pending_bytes.get(pub_key)
+        if not pend:
+            self.pending_bytes[pub_key] = PendingBytes(int(bytes_up),
+                                                       int(bytes_down),
+                                                       None)
+        else:
+            pend.add(int(bytes_up), int(bytes_down))
+
+        if block_id in self.pending_sign_messages:
+            self._logger.debug("Signing pending half block")
+            message = self.pending_sign_messages[block_id]
+            self.sign_block(message.candidate, linked=message.payload.block)
+            del self.pending_sign_messages[block_id]
 
     def sign_block(self, candidate, public_key=None, bytes_up=None, bytes_down=None, linked=None):
         """
@@ -219,6 +246,14 @@ class MultiChainCommunity(Community):
             else:
                 self.logger.debug("Received already known block (%s)", blk)
 
+            # Check if we are waiting for this block
+            block_id = "%s.%s.%d.%d" % (blk.public_key.encode('hex'), blk.sequence_number, blk.up, blk.down)
+            if block_id in self.expected_sig_requests:
+                self.expected_sig_requests[block_id].callback(block_id)
+                del self.expected_sig_requests[block_id]
+
+            self.received_block_ids.add(block_id)
+
             # Is this a request, addressed to us, and have we not signed it already?
             if blk.link_sequence_number != UNKNOWN_SEQ or \
                     blk.link_public_key != self.my_member.public_key or \
@@ -231,6 +266,11 @@ class MultiChainCommunity(Community):
             pend = self.pending_bytes.get(blk.public_key)
             if not pend or not pend.add(-blk.down, -blk.up):
                 self.logger.info("Request block counter party does not have enough bytes pending.")
+
+                # These bytes might have been bought on the market so we store this message and process it when we
+                # receive a payment message that confirms we have bought these bytes.
+                block_id = "%s.%s.%d.%d" % (blk.public_key.encode('hex'), blk.sequence_number, blk.up, blk.down)
+                self.pending_sign_messages[block_id] = message
                 continue
 
             crawl_task = "crawl_%s" % blk.hash
