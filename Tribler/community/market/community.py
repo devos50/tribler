@@ -406,6 +406,27 @@ class MarketCommunity(Community):
         if self.tribler_session:
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID_TIMEOUT, NTFY_UPDATE, None, bid)
 
+    def verify_offer_creation(self, price, price_wallet_id, quantity, quantity_wallet_id):
+        # TODO(Martijn): balance check?
+        if price_wallet_id == quantity_wallet_id:
+            raise RuntimeError("You cannot trade between the same wallet")
+
+        if price_wallet_id not in self.wallets or not self.wallets[price_wallet_id].created:
+            raise RuntimeError("Please create a %s wallet first" % price_wallet_id)
+
+        if quantity_wallet_id not in self.wallets or not self.wallets[quantity_wallet_id].created:
+            raise RuntimeError("Please create a %s wallet first" % quantity_wallet_id)
+
+        price_min_unit = self.wallets[price_wallet_id].min_unit()
+        if float(price) < price_min_unit:
+            raise RuntimeError("The price should be higher than or equal to the minimum unit of this currency (%f)."
+                               % price_min_unit)
+
+        quantity_min_unit = self.wallets[quantity_wallet_id].min_unit()
+        if float(quantity) < quantity_wallet_id:
+            raise RuntimeError("The quantity should be higher than or equal to the minimum unit of this currency (%f)."
+                               % quantity_min_unit)
+
     # Ask
     def create_ask(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
         """
@@ -424,15 +445,7 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
-        if price_wallet_id == quantity_wallet_id:
-            raise RuntimeError("You cannot trade between the same wallet")
-
-        # TODO(Martijn): balance check?
-        if price_wallet_id not in self.wallets or not self.wallets[price_wallet_id].created:
-            raise RuntimeError("Please create a %s wallet first" % price_wallet_id)
-
-        if quantity_wallet_id not in self.wallets or not self.wallets[quantity_wallet_id].created:
-            raise RuntimeError("Please create a %s wallet first" % quantity_wallet_id)
+        self.verify_offer_creation(price, price_wallet_id, quantity, quantity_wallet_id)
 
         # Convert values to value objects
         price = Price(price, price_wallet_id)
@@ -530,15 +543,7 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
-        if price_wallet_id == quantity_wallet_id:
-            raise RuntimeError("You cannot trade between the same wallet")
-
-        # TODO(Martijn): balance check?
-        if price_wallet_id not in self.wallets or not self.wallets[price_wallet_id].created:
-            raise RuntimeError("Please create a %s wallet first" % price_wallet_id)
-
-        if quantity_wallet_id not in self.wallets or not self.wallets[quantity_wallet_id].created:
-            raise RuntimeError("Please create a %s wallet first" % quantity_wallet_id)
+        self.verify_offer_creation(price, price_wallet_id, quantity, quantity_wallet_id)
 
         # Convert values to value objects
         price = Price(price, price_wallet_id)
