@@ -1015,7 +1015,7 @@ background-color: #e67300;
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>14</number>
+         <number>16</number>
         </property>
         <widget class="HomePage" name="home_page">
          <layout class="QVBoxLayout" name="verticalLayout">
@@ -11085,7 +11085,7 @@ font-weight: bold;</string>
              <number>0</number>
             </property>
             <property name="sortingEnabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <column>
              <property name="text">

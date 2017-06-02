@@ -85,8 +85,8 @@ class MarketTransactionsPage(QWidget):
     def add_payment_to_list(self, payment):
         payment_time = datetime.datetime.fromtimestamp(int(payment["timestamp"])).strftime('%Y-%m-%d %H:%M:%S')
         item = QTreeWidgetItem(self.window().market_payments_list)
-        item.setText(0, "%f %s" % (payment['price'], payment['price_type']))
-        item.setText(1, "%f %s" % (payment['quantity'], payment['quantity_type']))
+        item.setText(0, "%g %s" % (payment['price'], payment['price_type']))
+        item.setText(1, "%g %s" % (payment['quantity'], payment['quantity_type']))
         item.setText(2, payment['address_from'])
         item.setText(3, payment['address_to'])
         item.setText(4, payment_time)

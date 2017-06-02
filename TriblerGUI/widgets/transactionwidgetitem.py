@@ -16,10 +16,10 @@ class TransactionWidgetItem(QTreeWidgetItem):
             int(self.transaction["timestamp"])).strftime('%Y-%m-%d %H:%M:%S')
 
         self.setText(0, "%s.%d" % (self.transaction["trader_id"][:10], self.transaction["transaction_number"]))
-        self.setText(1, "%s %s" % (self.transaction["price"], self.transaction["price_type"]))
-        self.setText(2, "%s %s" % (self.transaction["quantity"], self.transaction["quantity_type"]))
-        self.setText(3, "%s %s" % (self.transaction["transferred_price"], self.transaction["price_type"]))
-        self.setText(4, "%s %s" % (self.transaction["transferred_quantity"], self.transaction["quantity_type"]))
+        self.setText(1, "%g %s" % (self.transaction["price"], self.transaction["price_type"]))
+        self.setText(2, "%g %s" % (self.transaction["quantity"], self.transaction["quantity_type"]))
+        self.setText(3, "%g %s" % (self.transaction["transferred_price"], self.transaction["price_type"]))
+        self.setText(4, "%g %s" % (self.transaction["transferred_quantity"], self.transaction["quantity_type"]))
         self.setText(5, transaction_time)
 
     def __lt__(self, other):

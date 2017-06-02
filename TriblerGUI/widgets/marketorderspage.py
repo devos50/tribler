@@ -1,10 +1,13 @@
 import datetime
+
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
 
 from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
+from TriblerGUI.widgets.orderwidgetitem import OrderWidgetItem
 
 
 class MarketOrdersPage(QWidget):
@@ -20,6 +23,7 @@ class MarketOrdersPage(QWidget):
     def initialize_orders_page(self):
         if not self.initialized:
             self.window().orders_back_button.setIcon(QIcon(get_image_path('page_back.png')))
+            self.window().market_orders_list.sortItems(0, Qt.AscendingOrder)
             self.initialized = True
 
         self.load_orders()
@@ -32,13 +36,5 @@ class MarketOrdersPage(QWidget):
 
     def on_received_orders(self, orders):
         for order in orders["orders"]:
-            order_time = datetime.datetime.fromtimestamp(int(order["timestamp"])).strftime('%Y-%m-%d %H:%M:%S')
-
-            item = QTreeWidgetItem(self.window().market_orders_list)
-            item.setText(0, "%s" % order["order_number"])
-            item.setText(1, order_time)
-            item.setText(2, "%g %s" % (order["price"], order["price_type"]))
-            item.setText(3, "%g %s" % (order["quantity"], order["quantity_type"]))
-            item.setText(4, "Sell" if order["is_ask"] else "Buy")
-            item.setText(5, "Yes" if order["completed_timestamp"] else "No")
+            item = OrderWidgetItem(self.window().market_orders_list, order)
             self.window().market_orders_list.addTopLevelItem(item)
