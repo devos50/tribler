@@ -7782,8 +7782,8 @@ QTabBar::tab:selected {
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>131</width>
-                       <height>236</height>
+                       <width>653</width>
+                       <height>263</height>
                       </rect>
                      </property>
                      <layout class="QFormLayout" name="formLayout_4">
@@ -9718,7 +9718,7 @@ font-weight: bold;</string>
                       </column>
                       <column>
                        <property name="text">
-                        <string>Price</string>
+                        <string>Price per unit</string>
                        </property>
                       </column>
                      </widget>
@@ -9879,7 +9879,7 @@ font-weight: bold;</string>
                       </column>
                       <column>
                        <property name="text">
-                        <string>Price</string>
+                        <string>Price per unit</string>
                        </property>
                       </column>
                      </widget>
@@ -10052,7 +10052,7 @@ font-size: 12px;</string>
                        <item row="3" column="0">
                         <widget class="QLabel" name="label_55">
                          <property name="text">
-                          <string>Quantity</string>
+                          <string>Volume</string>
                          </property>
                         </widget>
                        </item>
@@ -11094,7 +11094,7 @@ font-weight: bold;</string>
             </column>
             <column>
              <property name="text">
-              <string>Date/Time</string>
+              <string>Time</string>
              </property>
             </column>
             <column>

@@ -29,8 +29,8 @@ class NewMarketOrderDialog(DialogContainer):
         else:
             self.dialog_widget.new_order_title_label.setText('Buy %s for %s' % (quantity_type, price_type))
 
-        self.dialog_widget.quantity_label.setText("Quantity (%s):" % quantity_type)
-        self.dialog_widget.price_label.setText("Price (%s):" % price_type)
+        self.dialog_widget.quantity_label.setText("Volume (%s):" % quantity_type)
+        self.dialog_widget.price_label.setText("Price per unit (%s):" % price_type)
 
         self.dialog_widget.create_button.clicked.connect(self.on_create_clicked)
         self.dialog_widget.cancel_button.clicked.connect(lambda: self.button_clicked.emit(0))
@@ -42,7 +42,7 @@ class NewMarketOrderDialog(DialogContainer):
         try:
             self.quantity = float(self.dialog_widget.order_quantity_input.text())
         except ValueError:
-            self.dialog_widget.error_text_label.setText("The quantity must be a valid number.")
+            self.dialog_widget.error_text_label.setText("The volume must be a valid number.")
             self.dialog_widget.error_text_label.show()
             return
 

@@ -1,4 +1,6 @@
 import datetime
+
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QWidget
@@ -26,6 +28,7 @@ class MarketTransactionsPage(QWidget):
 
             self.window().transactions_back_button.setIcon(QIcon(get_image_path('page_back.png')))
             self.window().market_transactions_list.itemSelectionChanged.connect(self.on_transaction_item_clicked)
+            self.window().market_transactions_list.sortItems(5, Qt.DescendingOrder)
             self.initialized = True
 
         self.window().market_payments_container.hide()
