@@ -28,23 +28,25 @@ class MarketConversion(BinaryConversion):
                                  self._encode_offer, self._decode_offer)
         self.define_meta_message(chr(2), community.get_meta_message(u"bid"),
                                  self._encode_offer, self._decode_offer)
-        self.define_meta_message(chr(3), community.get_meta_message(u"offer-sync"),
+        self.define_meta_message(chr(3), community.get_meta_message(u"cancel-order"),
+                                 self._encode_cancel_order, self._decode_cancel_order)
+        self.define_meta_message(chr(4), community.get_meta_message(u"offer-sync"),
                                  self._encode_offer_sync, self._decode_offer_sync)
-        self.define_meta_message(chr(4), community.get_meta_message(u"proposed-trade"),
+        self.define_meta_message(chr(5), community.get_meta_message(u"proposed-trade"),
                                  self._encode_proposed_trade, self._decode_proposed_trade)
-        self.define_meta_message(chr(5), community.get_meta_message(u"accepted-trade"),
+        self.define_meta_message(chr(6), community.get_meta_message(u"accepted-trade"),
                                  self._encode_accepted_trade, self._decode_accepted_trade)
-        self.define_meta_message(chr(6), community.get_meta_message(u"declined-trade"),
+        self.define_meta_message(chr(7), community.get_meta_message(u"declined-trade"),
                                  self._encode_declined_trade, self._decode_declined_trade)
-        self.define_meta_message(chr(7), community.get_meta_message(u"counter-trade"),
+        self.define_meta_message(chr(8), community.get_meta_message(u"counter-trade"),
                                  self._encode_proposed_trade, self._decode_proposed_trade)
-        self.define_meta_message(chr(8), community.get_meta_message(u"start-transaction"),
+        self.define_meta_message(chr(9), community.get_meta_message(u"start-transaction"),
                                  self._encode_start_transaction, self._decode_start_transaction)
-        self.define_meta_message(chr(9), community.get_meta_message(u"wallet-info"),
+        self.define_meta_message(chr(10), community.get_meta_message(u"wallet-info"),
                                  self._encode_wallet_info, self._decode_wallet_info)
-        self.define_meta_message(chr(10), community.get_meta_message(u"payment"),
+        self.define_meta_message(chr(11), community.get_meta_message(u"payment"),
                                  self._encode_payment, self._decode_payment)
-        self.define_meta_message(chr(11), community.get_meta_message(u"end-transaction"),
+        self.define_meta_message(chr(12), community.get_meta_message(u"end-transaction"),
                                  self._encode_transaction, self._decode_transaction)
 
     def _encode_introduction_request(self, message):
@@ -124,6 +126,15 @@ class MarketConversion(BinaryConversion):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp,
                                      str, str, Ttl, str, int])
+
+    def _encode_cancel_order(self, message):
+        payload = message.payload
+        packet = encode((str(payload.trader_id), str(payload.message_number), float(payload.timestamp),
+                         int(payload.order_number), int(payload.ttl)))
+        return packet,
+
+    def _decode_cancel_order(self, placeholder, offset, data):
+        return self._decode_payload(placeholder, offset, data, [TraderId, MessageNumber, Timestamp, OrderNumber, Ttl])
 
     def _encode_offer_sync(self, message):
         payload = message.payload

@@ -54,6 +54,24 @@ class MessagePayload(Payload):
             return self._timestamp
 
 
+class CancelOrderPayload(MessagePayload):
+    class Implementation(MessagePayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, timestamp, order_number, ttl):
+            assert isinstance(order_number, OrderNumber), type(order_number)
+            assert isinstance(ttl, Ttl), type(ttl)
+            super(CancelOrderPayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
+            self._order_number = order_number
+            self._ttl = ttl
+
+        @property
+        def order_number(self):
+            return self._order_number
+
+        @property
+        def ttl(self):
+            return self._ttl
+
+
 class OfferPayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,

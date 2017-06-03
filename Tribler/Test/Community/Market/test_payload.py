@@ -10,7 +10,7 @@ from Tribler.community.market.core.transaction import TransactionNumber
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.payload import AcceptedTradePayload, DeclinedTradePayload, TradePayload, \
-    OfferPayload, StartTransactionPayload, PaymentPayload, WalletInfoPayload, MarketIntroPayload
+    OfferPayload, StartTransactionPayload, PaymentPayload, WalletInfoPayload, MarketIntroPayload, CancelOrderPayload
 from Tribler.community.market.ttl import Ttl
 from Tribler.dispersy.meta import MetaObject
 
@@ -30,6 +30,21 @@ class MarketIntroPayloadTestSuite(unittest.TestCase):
         self.assertEqual(self.market_intro_payload.orders_bloom_filter, "f")
         self.market_intro_payload.set_orders_bloom_filter("g")
         self.assertEqual(self.market_intro_payload.orders_bloom_filter, "g")
+
+
+class CancelOrderPayloadTestSuite(unittest.TestCase):
+    """Cancel order payload test cases."""
+
+    def setUp(self):
+        # Object creation
+        self.cancel_order_payload = CancelOrderPayload.Implementation(MetaObject(), TraderId('0'),
+                                                                      MessageNumber('message_number'), Timestamp.now(),
+                                                                      OrderNumber(1), Ttl(2))
+
+    def test_properties(self):
+        # Test for properties
+        self.assertEquals(OrderNumber(1), self.cancel_order_payload.order_number)
+        self.assertEquals(2, int(self.cancel_order_payload.ttl))
 
 
 class AcceptedTradePayloadTestSuite(unittest.TestCase):

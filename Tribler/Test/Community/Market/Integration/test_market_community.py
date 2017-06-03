@@ -67,9 +67,10 @@ class TestMarketCommunity(DispersyTestFunc):
 
     @inlineCallbacks
     def create_send_ask(self, ask_node, bid_node):
-        ask_node.community.create_ask(10, 'DUM1', 10, 'DUM2', 3600)
+        order = ask_node.community.create_ask(10, 'DUM1', 10, 'DUM2', 3600)
         yield self.parse_assert_packets(bid_node)
         self.assertEqual(len(bid_node.community.order_book.asks), 1)
+        returnValue(order)
 
     def _create_node(self, dispersy, community_class, c_master_member):
         return DebugNode(self, dispersy, community_class, c_master_member, curve=u"curve25519")
@@ -141,3 +142,16 @@ class TestMarketCommunity(DispersyTestFunc):
         yield self.parse_assert_packets(self.node_a)
         yield self.parse_assert_packets(self.node_b)
         yield deferred
+
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def test_cancel_order(self):
+        """
+        Test whether a cancel-order message is sent between nodes if we cancel an order
+        """
+        yield self.introduce_nodes(self.node_a, self.node_b)
+        order = yield self.create_send_ask(self.node_a, self.node_b)
+
+        self.node_a.community.cancel_order(order.order_id)
+        yield self.parse_assert_packets(self.node_b)
+        self.assertEqual(len(self.node_b.community.order_book.asks), 0)

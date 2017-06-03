@@ -15,7 +15,8 @@ from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.transaction import TransactionNumber
 from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.payload import OfferPayload, OfferSyncPayload, AcceptedTradePayload, DeclinedTradePayload, \
-    MarketIntroPayload, WalletInfoPayload, TransactionPayload, PaymentPayload, StartTransactionPayload
+    MarketIntroPayload, WalletInfoPayload, TransactionPayload, PaymentPayload, StartTransactionPayload, \
+    CancelOrderPayload
 from Tribler.community.market.ttl import Ttl
 from Tribler.dispersy.bloomfilter import BloomFilter
 from Tribler.dispersy.message import DropPacket
@@ -115,6 +116,25 @@ class TestMarketConversion(AbstractTestCommunity):
         self.assertTrue(decoded)
         self.assertEqual(decoded.price, Price(5, 'BTC'))
         self.assertEqual(int(decoded.ttl), 3)
+
+    def test_encode_decode_cancel_order(self):
+        """
+        Test encoding and decoding of a cancel order
+        """
+        message = MockObject()
+        meta_msg = self.market_community.get_meta_message(u"cancel-order")
+
+        cancel_order_payload = CancelOrderPayload.Implementation(meta_msg, TraderId('abc'), MessageNumber('3'),
+                                                                 Timestamp.now(), OrderNumber(4), Ttl(2))
+        message.payload = cancel_order_payload
+        packet, = self.conversion._encode_cancel_order(message)
+        self.assertTrue(packet)
+
+        offset, decoded = self.conversion._decode_cancel_order(self.get_placeholder_msg(u"cancel-order"), 0, packet)
+
+        self.assertTrue(decoded)
+        self.assertEqual(decoded.order_number, OrderNumber(4))
+        self.assertEqual(int(decoded.ttl), 2)
 
     def test_encode_decode_offer_sync(self):
         """

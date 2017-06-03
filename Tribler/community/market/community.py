@@ -26,7 +26,7 @@ from conversion import MarketConversion
 from core.matching_engine import MatchingEngine, PriceTimeStrategy
 from core.message import TraderId
 from core.message_repository import MemoryMessageRepository
-from core.order import TickWasNotReserved, OrderId
+from core.order import TickWasNotReserved, OrderId, OrderNumber, Order
 from core.order_manager import OrderManager
 from core.order_repository import DatabaseOrderRepository, MemoryOrderRepository
 from core.orderbook import OrderBook, DatabaseOrderBook
@@ -42,7 +42,7 @@ from core.transaction_manager import TransactionManager
 from core.transaction_repository import DatabaseTransactionRepository, MemoryTransactionRepository
 from payload import OfferPayload, TradePayload, AcceptedTradePayload, DeclinedTradePayload, StartTransactionPayload, \
     TransactionPayload, WalletInfoPayload, MarketIntroPayload, \
-    OfferSyncPayload, PaymentPayload
+    OfferSyncPayload, PaymentPayload, CancelOrderPayload
 from ttl import Ttl
 
 
@@ -100,6 +100,7 @@ class MarketCommunity(Community):
         self.mid_register = {}  # TODO: fix memory leak
         self.relayed_asks = []
         self.relayed_bids = []
+        self.relayed_cancels = []
         message_repository = MemoryMessageRepository(self.mid)
         self.market_database = MarketDB(self.dispersy.working_directory)
         self.order_book = DatabaseOrderBook(message_repository, self.market_database)
@@ -150,6 +151,14 @@ class MarketCommunity(Community):
                     OfferPayload(),
                     self.check_tick_message,
                     self.on_bid),
+            Message(self, u"cancel-order",
+                    MemberAuthentication(),
+                    PublicResolution(),
+                    DirectDistribution(),
+                    CommunityDestination(node_count=10),
+                    CancelOrderPayload(),
+                    self.check_message,
+                    self.on_cancel_order),
             Message(self, u"offer-sync",
                     MemberAuthentication(),
                     PublicResolution(),
@@ -631,6 +640,41 @@ class MarketCommunity(Community):
                 if ttl.is_alive():  # The ttl is still alive and can be forwarded
                     self.dispersy.store_update_forward([message], True, True, True)
 
+    def send_cancel_order(self, order):
+        """
+        Send a cancel-order message to the community
+        """
+        assert isinstance(order, Order), type(order)
+
+        message_id = self.order_book.message_repository.next_identity()
+
+        meta = self.get_meta_message(u"cancel-order")
+        message = meta.impl(
+            authentication=(self.my_member,),
+            distribution=(self.claim_global_time(),),
+            payload=(message_id.trader_id, message_id.message_number, Timestamp.now(),
+                     order.order_id.order_number, Ttl.default())
+        )
+
+        self.dispersy.store_update_forward([message], True, False, True)
+
+    def on_cancel_order(self, messages):
+        for message in messages:
+            order_id = OrderId(message.payload.trader_id, message.payload.order_number)
+            if self.order_book.tick_exists(order_id):
+                self.order_book.remove_tick(order_id)
+
+            if not str(order_id) in self.relayed_cancels:
+                self.relayed_cancels.append(str(order_id))
+
+                # Check if message needs to be send on
+                ttl = message.payload.ttl
+
+                ttl.make_hop()  # Complete the hop from the previous node
+
+                if ttl.is_alive():  # The ttl is still alive and can be forwarded
+                    self.dispersy.store_update_forward([message], True, True, True)
+
     def send_offer_sync(self, target_candidate, tick):
         """
         Send an offer sync message
@@ -687,6 +731,7 @@ class MarketCommunity(Community):
         if order and order.status == "open":
             self.order_manager.cancel_order(order_id)
             self.order_book.remove_tick(order_id)
+            self.send_cancel_order(order)
 
     # Proposed trade
     def send_proposed_trade(self, proposed_trade):

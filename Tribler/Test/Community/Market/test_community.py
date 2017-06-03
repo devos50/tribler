@@ -55,7 +55,7 @@ class CommunityTestSuite(AbstractTestCommunity):
                        Timeout(3600), Timestamp.now())
         self.ask.sign(member)
         self.bid = Bid(MessageId(TraderId('1'), MessageNumber('message_number')),
-                       OrderId(TraderId(trader_id), OrderNumber(1234)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
+                       OrderId(TraderId(trader_id), OrderNumber(1235)), Price(343, 'DUM1'), Quantity(22, 'DUM2'),
                        Timeout(3600), Timestamp.now())
         self.bid.sign(member)
         self.order = Order(OrderId(TraderId(self.market_community.mid), OrderNumber(24)), Price(20, 'DUM1'),
