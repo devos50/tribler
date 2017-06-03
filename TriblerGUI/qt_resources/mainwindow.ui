@@ -11124,7 +11124,7 @@ font-weight: bold;</string>
             </column>
             <column>
              <property name="text">
-              <string>Completed?</string>
+              <string>Status</string>
              </property>
             </column>
            </widget>

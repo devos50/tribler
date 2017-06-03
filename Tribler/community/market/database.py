@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS orders(
  order_timestamp      TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
  completed_timestamp  TIMESTAMP,
  is_ask               INTEGER NOT NULL,
+ cancelled            INTEGER NOT NULL,
 
  PRIMARY KEY (trader_id, order_number)
  );
@@ -125,7 +126,8 @@ class MarketDB(Database):
         """
         self.execute(
             u"INSERT INTO orders (trader_id, order_number, price, price_type, quantity, quantity_type,"
-            u"traded_quantity, timeout, order_timestamp, completed_timestamp, is_ask) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            u"traded_quantity, timeout, order_timestamp, completed_timestamp, is_ask, cancelled) "
+            u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
             order.to_database())
         self.commit()
 

@@ -73,10 +73,7 @@ class OrderManager(object):
 
     def cancel_order(self, order_id):
         """
-        Cancel an order that was created by the user
-
-        It only marks it as timed out, because some quantity might already be sold or bought
-
+        Cancel an order that was created by the user.
         :return: The order that is created
         :rtype: Order
         """
@@ -88,4 +85,4 @@ class OrderManager(object):
             order.cancel()
             self.order_repository.update(order)
 
-        self._logger.info("Order canceled with id: " + str(order_id))
+        self._logger.info("Order cancelled with id: " + str(order_id))

@@ -149,6 +149,7 @@ class Order(object):
         self._completed_timestamp = None
         self._is_ask = is_ask
         self._reserved_ticks = {}
+        self._cancelled = False
 
     @classmethod
     def from_database(cls, data):
@@ -159,6 +160,7 @@ class Order(object):
         order = cls(order_id, Price(data[2], str(data[3])), Quantity(data[4], str(data[5])), Timeout(data[7]),
                     Timestamp(data[8]), bool(data[10]))
         order._traded_quantity = Quantity(data[6], str(data[5]))
+        order._cancelled = bool(data[11])
         if data[9]:
             order._completed_timestamp = Timestamp(data[9])
         return order
@@ -172,7 +174,7 @@ class Order(object):
         return (unicode(self.order_id.trader_id), unicode(self.order_id.order_number), float(self.price),
                 unicode(self.price.wallet_id), float(self.total_quantity), unicode(self.total_quantity.wallet_id),
                 float(self.traded_quantity), float(self.timeout), float(self.timestamp), completed_timestamp,
-                self.is_ask())
+                self.is_ask(), self._cancelled)
 
     @property
     def reserved_ticks(self):
@@ -258,12 +260,35 @@ class Order(object):
         """
         return self._is_ask
 
+    @property
+    def cancelled(self):
+        """
+        :return: whether the order has been cancelled or not.
+        :rtype: bool
+        """
+        return self._cancelled
+
     def is_complete(self):
         """
         :return: True if the order is completed.
         :rtype: bool
         """
         return self._traded_quantity >= self._quantity
+
+    @property
+    def status(self):
+        """
+        Return the status of this order. Can be one of these: "open", "completed", "expired" or "cancelled"
+        :return: The status of this order
+        :rtype: str
+        """
+        if self._cancelled:
+            return "cancelled"
+        elif self.is_complete():
+            return "completed",
+        elif self._timeout.is_timed_out(self._timestamp):
+            return "expired"
+        return "open"
 
     def reserve_quantity_for_tick(self, order_id, quantity):
         """
@@ -309,10 +334,10 @@ class Order(object):
         :return: True if valid, False otherwise
         :rtype: bool
         """
-        return not self._timeout.is_timed_out(self._timestamp)
+        return not self._timeout.is_timed_out(self._timestamp) and not self._cancelled
 
     def cancel(self):
-        self._timeout = Timestamp.now()
+        self._cancelled = True
 
     def add_trade(self, other_order_id, quantity):
         self._logger.debug("Adding trade for order %s with quantity %s (other id: %s)",
@@ -344,5 +369,7 @@ class Order(object):
             "timeout": float(self.timeout),
             "timestamp": float(self.timestamp),
             "completed_timestamp": completed_timestamp,
-            "is_ask": self.is_ask()
+            "is_ask": self.is_ask(),
+            "cancelled": self.cancelled,
+            "status": self.status
         }

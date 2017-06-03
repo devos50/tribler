@@ -20,7 +20,7 @@ class OrderWidgetItem(QTreeWidgetItem):
         self.setText(4, "%g %s" % (order["reserved_quantity"], order["quantity_type"]))
         self.setText(5, "%g %s" % (order["traded_quantity"], order["quantity_type"]))
         self.setText(6, "Sell" if order["is_ask"] else "Buy")
-        self.setText(7, "Yes" if order["completed_timestamp"] else "No")
+        self.setText(7, "%s" % order["status"])
 
     def __lt__(self, other):
         column = self.treeWidget().sortColumn()

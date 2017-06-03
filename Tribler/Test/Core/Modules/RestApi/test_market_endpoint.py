@@ -19,12 +19,12 @@ from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWall
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 
-class TestWalletsEndpoint(AbstractApiTest):
+class TestMarketEndpoint(AbstractApiTest):
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
     def setUp(self, autoload_discovery=True):
-        yield super(TestWalletsEndpoint, self).setUp(autoload_discovery=autoload_discovery)
+        yield super(TestMarketEndpoint, self).setUp(autoload_discovery=autoload_discovery)
         dummy1_wallet = DummyWallet1()
         dummy2_wallet = DummyWallet2()
 
@@ -53,7 +53,7 @@ class TestWalletsEndpoint(AbstractApiTest):
 
     @blocking_call_on_reactor_thread
     def setUpPreSession(self):
-        super(TestWalletsEndpoint, self).setUpPreSession()
+        super(TestMarketEndpoint, self).setUpPreSession()
         self.config.set_dispersy(True)
 
     @deferred(timeout=10)
@@ -159,3 +159,41 @@ class TestWalletsEndpoint(AbstractApiTest):
         return self.do_request('market/transactions/%s/%s/payments' %
                                (transaction.transaction_id.trader_id, transaction.transaction_id.transaction_number),
                                expected_code=200).addCallback(on_response)
+
+    @deferred(timeout=10)
+    def test_cancel_order_not_found(self):
+        """
+        Test whether a 404 is returned when we try to cancel an order that does not exist
+        """
+        self.session.lm.market_community.order_manager.create_ask_order(
+            Price(3, 'DUM1'), Quantity(4, 'DUM2'), Timeout(3600))
+        self.should_check_equality = False
+        return self.do_request('market/orders/1234/cancel', request_type='POST', expected_code=404)
+
+    @deferred(timeout=10)
+    def test_cancel_order_invalid(self):
+        """
+        Test whether an error is returned when we try to cancel an order that has expired
+        """
+        self.session.lm.market_community.order_manager.create_ask_order(
+            Price(3, 'DUM1'), Quantity(4, 'DUM2'), Timeout(0))
+        self.should_check_equality = False
+        return self.do_request('market/orders/1/cancel', request_type='POST', expected_code=400)
+
+    @deferred(timeout=10)
+    def test_cancel_order_invalid(self):
+        """
+        Test whether an error is returned when we try to cancel an order that has expired
+        """
+        order = self.session.lm.market_community.order_manager.create_ask_order(
+            Price(3, 'DUM1'), Quantity(4, 'DUM2'), Timeout(3600))
+
+        def on_response(response):
+            json_response = json.loads(response)
+            self.assertTrue(json_response['cancelled'])
+            cancelled_order = self.session.lm.market_community.order_manager.order_repository.find_by_id(order.order_id)
+            self.assertTrue(cancelled_order.cancelled)
+
+        self.should_check_equality = False
+        return self.do_request('market/orders/1/cancel', request_type='POST', expected_code=200)\
+            .addCallback(on_response)

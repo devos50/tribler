@@ -678,6 +678,12 @@ class MarketCommunity(Community):
                     notify_subject = NTFY_MARKET_ON_ASK if message.payload.is_ask else NTFY_MARKET_ON_BID
                     self.tribler_session.notifier.notify(notify_subject, NTFY_UPDATE, None, tick)
 
+    def cancel_order(self, order_id):
+        order = self.order_manager.order_repository.find_by_id(order_id)
+        if order and order.status == "open":
+            self.order_manager.cancel_order(order_id)
+            self.order_book.remove_tick(order_id)
+
     # Proposed trade
     def send_proposed_trade(self, proposed_trade):
         assert isinstance(proposed_trade, ProposedTrade), type(proposed_trade)
