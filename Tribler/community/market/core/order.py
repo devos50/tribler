@@ -285,7 +285,7 @@ class Order(object):
         if self._cancelled:
             return "cancelled"
         elif self.is_complete():
-            return "completed",
+            return "completed"
         elif self._timeout.is_timed_out(self._timestamp):
             return "expired"
         return "open"
