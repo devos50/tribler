@@ -7782,8 +7782,8 @@ QTabBar::tab:selected {
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>131</width>
-                       <height>236</height>
+                       <width>653</width>
+                       <height>263</height>
                       </rect>
                      </property>
                      <layout class="QFormLayout" name="formLayout_4">
@@ -11078,6 +11078,9 @@ font-weight: bold;</string>
           </item>
           <item>
            <widget class="QTreeWidget" name="market_orders_list">
+            <property name="contextMenuPolicy">
+             <enum>Qt::CustomContextMenu</enum>
+            </property>
             <property name="selectionMode">
              <enum>QAbstractItemView::NoSelection</enum>
             </property>
@@ -11105,11 +11108,6 @@ font-weight: bold;</string>
             <column>
              <property name="text">
               <string>Quantity</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>Reserved Quantity</string>
              </property>
             </column>
             <column>
