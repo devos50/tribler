@@ -2,7 +2,9 @@ import logging
 import random
 import string
 
+import keyring
 from Tribler.dispersy.taskmanager import TaskManager
+from keyrings.alt.file import EncryptedKeyring, PlaintextKeyring
 
 
 class InsufficientFunds(Exception):
@@ -21,10 +23,11 @@ class Wallet(TaskManager):
         super(Wallet, self).__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        # Properties for the monitor poll mechanism
-        self.min_poll_interval = 1
-        self.max_poll_interval = 10
-        self.max_poll_duration = 180
+        # We use an unencrypted keyring since an encrypted keyring requires input from stdin.
+        if isinstance(keyring.get_keyring(), EncryptedKeyring):
+            for new_keyring in keyring.backend.get_all_keyring():
+                if isinstance(new_keyring, PlaintextKeyring):
+                    keyring.set_keyring(new_keyring)
 
     def generate_txid(self, length=10):
         """
