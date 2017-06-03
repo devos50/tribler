@@ -3,6 +3,7 @@ from collections import deque
 
 import time
 
+from Tribler.community.market.database import MarketDB
 from twisted.internet import reactor
 from twisted.internet.defer import fail
 from twisted.internet.task import deferLater
@@ -193,6 +194,17 @@ class OrderBook(TaskManager):
         assert isinstance(order_id, OrderId), type(order_id)
 
         return self._bids.get_tick(order_id)
+
+    def get_tick(self, order_id):
+        """
+        Return a tick with the specified order id.
+        :param order_id: The order id to search for
+        :type order_id: OrderId
+        :rtype: TickEntry
+        """
+        assert isinstance(order_id, OrderId), type(order_id)
+
+        return self._bids.get_tick(order_id) or self._asks.get_tick(order_id)
 
     def ask_exists(self, order_id):
         """
@@ -412,3 +424,34 @@ class OrderBook(TaskManager):
                     break
         tempfile.write("\n")
         return tempfile.getvalue()
+
+
+class DatabaseOrderBook(OrderBook):
+    """
+    This class adds support for a persistency backend to store ticks.
+    For now, it only provides methods to save all ticks to the database or to restore all ticks from the database.
+    """
+    def __init__(self, message_repository, database):
+        super(DatabaseOrderBook, self).__init__(message_repository)
+
+        assert isinstance(database, MarketDB)
+
+        self.database = database
+
+    def save_to_database(self):
+        """
+        Write all ticks to the database
+        """
+        self.database.delete_all_ticks()
+        for order_id in self.get_order_ids():
+            tick = self.get_tick(order_id)
+            if tick.is_valid():
+                self.database.add_tick(tick.tick)
+
+    def restore_from_database(self):
+        """
+        Restore ticks from the database
+        """
+        for tick in self.database.get_ticks():
+            if not self.tick_exists(tick.order_id) and tick.is_valid():
+                self.insert_ask(tick) if tick.is_ask() else self.insert_bid(tick)

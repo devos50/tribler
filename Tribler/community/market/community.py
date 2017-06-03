@@ -29,7 +29,7 @@ from core.message_repository import MemoryMessageRepository
 from core.order import TickWasNotReserved, OrderId
 from core.order_manager import OrderManager
 from core.order_repository import DatabaseOrderRepository, MemoryOrderRepository
-from core.orderbook import OrderBook
+from core.orderbook import OrderBook, DatabaseOrderBook
 from core.payment import Payment
 from core.price import Price
 from core.quantity import Quantity
@@ -100,8 +100,11 @@ class MarketCommunity(Community):
         self.mid_register = {}  # TODO: fix memory leak
         self.relayed_asks = []
         self.relayed_bids = []
-
+        message_repository = MemoryMessageRepository(self.mid)
         self.market_database = MarketDB(self.dispersy.working_directory)
+        self.order_book = DatabaseOrderBook(message_repository, self.market_database)
+        self.order_book.restore_from_database()
+
         for trader in self.market_database.get_traders():
             self.update_ip(TraderId(str(trader[0])), (str(trader[1]), trader[2]))
 
@@ -112,9 +115,7 @@ class MarketCommunity(Community):
             order_repository = MemoryOrderRepository(self.mid)
             transaction_repository = MemoryTransactionRepository(self.mid)
 
-        message_repository = MemoryMessageRepository(self.mid)
         self.order_manager = OrderManager(order_repository)
-        self.order_book = OrderBook(message_repository)
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.tribler_session = tribler_session
         self.tradechain_community = tradechain_community
@@ -311,6 +312,9 @@ class MarketCommunity(Community):
         # Store all traders to the database
         for trader_id, sock_addr in self.mid_register.iteritems():
             self.market_database.add_trader_identity(trader_id, sock_addr[0], sock_addr[1])
+
+        # Save the ticks to the database
+        self.order_book.save_to_database()
 
         self.order_book.cancel_all_pending_tasks()
         yield super(MarketCommunity, self).unload_community()

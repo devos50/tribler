@@ -42,7 +42,7 @@ class Side(object):
         :rtype: TickEntry
         """
         assert isinstance(order_id, OrderId), type(order_id)
-        return self._tick_map[order_id]
+        return self._tick_map[order_id] if order_id in self._tick_map else None
 
     def _create_price_level(self, price, quantity_wallet_id):
         """

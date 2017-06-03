@@ -7,6 +7,7 @@ from os import path
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import Order
 from Tribler.community.market.core.payment import Payment
+from Tribler.community.market.core.tick import Tick
 from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
 from Tribler.dispersy.database import Database
 
@@ -73,6 +74,23 @@ CREATE TABLE IF NOT EXISTS orders(
   timestamp                TIMESTAMP NOT NULL,
 
   PRIMARY KEY (trader_id, message_number, transaction_trader_id, transaction_number)
+ );
+
+ CREATE TABLE IF NOT EXISTS ticks(
+  trader_id            TEXT NOT NULL,
+  message_number       TEXT NOT NULL,
+  order_number         INTEGER NOT NULL,
+  price                DOUBLE NOT NULL,
+  price_type           TEXT NOT NULL,
+  quantity             DOUBLE NOT NULL,
+  quantity_type        TEXT NOT NULL,
+  timeout              DOUBLE NOT NULL,
+  timestamp            TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  is_ask               INTEGER NOT NULL,
+  public_key           TEXT NOT NULL,
+  signature            TEXT NOT NULL,
+
+  PRIMARY KEY (trader_id, order_number)
  );
 
  CREATE TABLE IF NOT EXISTS traders(
@@ -225,6 +243,28 @@ class MarketDB(Database):
         """
         self.execute(u"DELETE FROM payments WHERE transaction_trader_id = ? AND transaction_number = ?",
                      (unicode(transaction_id.trader_id), unicode(transaction_id.transaction_number)))
+
+    def add_tick(self, tick):
+        """
+        Add a specific tick to the database
+        """
+        self.execute(
+            u"INSERT INTO ticks (trader_id, message_number, order_number, price, price_type, quantity,"
+            u"quantity_type, timeout, timestamp, is_ask, public_key, signature) "
+            u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", tick.to_database())
+        self.commit()
+
+    def delete_all_ticks(self):
+        """
+        Remove all ticks from the database.
+        """
+        self.execute(u"DELETE FROM ticks")
+
+    def get_ticks(self):
+        """
+        Get all ticks present in the database.
+        """
+        return [Tick.from_database(db_tick) for db_tick in self.execute(u"SELECT * FROM ticks").fetchall()]
 
     def add_trader_identity(self, trader_id, ip, port):
         self.execute(u"INSERT OR REPLACE INTO traders VALUES(?,?,?)", (unicode(trader_id), unicode(ip), port))

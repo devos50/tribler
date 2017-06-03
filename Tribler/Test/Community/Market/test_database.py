@@ -1,5 +1,6 @@
 import os
 
+from Tribler.community.market.core.tick import Tick
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Test.test_as_server import AbstractServer
@@ -32,7 +33,9 @@ class TestDatabase(AbstractServer):
         self.database = MarketDB(self.getStateDir())
 
         self.order_id1 = OrderId(TraderId('3'), OrderNumber(4))
+        self.order_id2 = OrderId(TraderId('4'), OrderNumber(5))
         self.order1 = Order(self.order_id1, Price(5, 'EUR'), Quantity(6, 'BTC'), Timeout(3600), Timestamp.now(), True)
+        self.order2 = Order(self.order_id2, Price(5, 'EUR'), Quantity(6, 'BTC'), Timeout(3600), Timestamp.now(), False)
 
         self.transaction_id1 = TransactionId(TraderId("0"), TransactionNumber(4))
         self.transaction1 = Transaction(self.transaction_id1, TraderId("1"), Price(100, 'BTC'), Quantity(30, 'MC'),
@@ -131,9 +134,24 @@ class TestDatabase(AbstractServer):
         self.assertEqual(len(payments), 1)
 
     @blocking_call_on_reactor_thread
+    def test_add_remove_tick(self):
+        """
+        Test addition, retrieval and deletion of ticks in the database
+        """
+        ask = Tick.from_order(self.order1, MessageId(TraderId('0'), MessageNumber('message_number')))
+        self.database.add_tick(ask)
+        bid = Tick.from_order(self.order2, MessageId(TraderId('0'), MessageNumber('message_number')))
+        self.database.add_tick(bid)
+
+        self.assertEqual(len(self.database.get_ticks()), 2)
+
+        self.database.delete_all_ticks()
+        self.assertEqual(len(self.database.get_ticks()), 0)
+
+    @blocking_call_on_reactor_thread
     def test_add_get_trader_identity(self):
         """
-        Test the addition and retrieval of a trader identity
+        Test the addition and retrieval of a trader identity in the database
         """
         self.database.add_trader_identity("a", "123", 1234)
         self.database.add_trader_identity("b", "124", 1235)

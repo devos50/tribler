@@ -66,6 +66,20 @@ class Tick(Message):
         self._signature = signature
 
     @classmethod
+    def from_database(cls, data):
+        tick_cls = Ask if data[9] else Bid
+        message_id = MessageId(TraderId(str(data[0])), MessageNumber(str(data[1])))
+        order_id = OrderId(TraderId(str(data[0])), OrderNumber(data[2]))
+        return tick_cls(message_id, order_id, Price(data[3], str(data[4])), Quantity(data[5], str(data[6])),
+                        Timeout(data[7]), Timestamp(data[8]), str(data[10].decode('hex')), str(data[11].decode('hex')))
+
+    def to_database(self):
+        return (unicode(self.message_id.trader_id), unicode(self.message_id.message_number),
+                int(self.order_id.order_number), float(self.price), unicode(self.price.wallet_id), float(self.quantity),
+                unicode(self.quantity.wallet_id), float(self.timeout), float(self.timestamp), self.is_ask(),
+                unicode(self._public_key.encode('hex')), unicode(self._signature.encode('hex')))
+
+    @classmethod
     def from_order(cls, order, message_id):
         """
         Create a tick from an order

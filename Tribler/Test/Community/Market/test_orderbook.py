@@ -1,34 +1,38 @@
-import unittest
-
-from twisted.internet.defer import Deferred
+import os
 
 from Tribler.Test.test_as_server import AbstractServer
 from Tribler.Test.twisted_thread import deferred
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.message_repository import MemoryMessageRepository
 from Tribler.community.market.core.order import OrderId, OrderNumber
-from Tribler.community.market.core.orderbook import OrderBook
+from Tribler.community.market.core.orderbook import OrderBook, DatabaseOrderBook
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.quantity import Quantity
 from Tribler.community.market.core.tick import Ask, Bid
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.trade import Trade
+from Tribler.community.market.database import MarketDB
+from Tribler.dispersy.util import blocking_call_on_reactor_thread
+from twisted.internet.defer import inlineCallbacks
 
 
+class AbstractTestOrderBook(AbstractServer):
+    """
+    Base class for the order book tests.
+    """
 
-class OrderBookTestSuite(AbstractServer):
-    """OrderBook test cases."""
-
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
     def setUp(self, annotate=True):
-        super(OrderBookTestSuite, self).setUp(annotate=annotate)
+        yield super(AbstractTestOrderBook, self).setUp(annotate=annotate)
         # Object creation
         self.ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
                        OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
                        Timeout(1462224447.117), Timestamp(1462224447.117))
         self.invalid_ask = Ask(MessageId(TraderId('0'), MessageNumber('message_number')),
-                       OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
-                       Timeout(0), Timestamp(0.0))
+                               OrderId(TraderId('0'), OrderNumber(1)), Price(100, 'BTC'), Quantity(30, 'MC'),
+                               Timeout(0), Timestamp(0.0))
         self.ask2 = Ask(MessageId(TraderId('1'), MessageNumber('message_number')),
                         OrderId(TraderId('1'), OrderNumber(1)), Price(400, 'BTC'), Quantity(30, 'MC'),
                         Timeout(1462224447.117), Timestamp(1462224447.117))
@@ -49,7 +53,11 @@ class OrderBookTestSuite(AbstractServer):
 
     def tearDown(self, annotate=True):
         self.order_book.cancel_all_pending_tasks()
-        super(OrderBookTestSuite, self).tearDown(annotate=annotate)
+        super(AbstractTestOrderBook, self).tearDown(annotate=annotate)
+
+
+class TestOrderBook(AbstractTestOrderBook):
+    """OrderBook test cases."""
 
     def test_timeouts(self):
         """
@@ -70,6 +78,15 @@ class OrderBookTestSuite(AbstractServer):
         self.assertTrue(self.order_book.ask_exists(self.ask2.order_id))
         self.assertFalse(self.order_book.bid_exists(self.ask2.order_id))
         self.assertEquals(self.ask2, self.order_book.get_ask(self.ask2.order_id)._tick)
+
+    def test_get_tick(self):
+        """
+        Test the retrieval of a tick from the order book
+        """
+        self.order_book.insert_ask(self.ask)
+        self.order_book.insert_bid(self.bid)
+        self.assertTrue(self.order_book.get_tick(self.ask.order_id))
+        self.assertTrue(self.order_book.get_tick(self.bid.order_id))
 
     @deferred(timeout=10)
     def test_ask_insertion_invalid(self):
@@ -223,5 +240,42 @@ class OrderBookTestSuite(AbstractServer):
                           '30.000000 MC @ 100.000000 BTC (2016-05-02 23:27:27.117000)\n\n', str(self.order_book))
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestDatabaseOrderBook(AbstractTestOrderBook):
+    """
+    This class contains tests for the database order book.
+    """
+
+    @blocking_call_on_reactor_thread
+    @inlineCallbacks
+    def setUp(self, annotate=True):
+        yield super(TestDatabaseOrderBook, self).setUp(annotate=annotate)
+
+        path = os.path.join(self.getStateDir(), 'sqlite')
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        self.database = MarketDB(self.getStateDir())
+        self.order_book = DatabaseOrderBook(MemoryMessageRepository('0'), self.database)
+
+    @blocking_call_on_reactor_thread
+    def test_save_to_db(self):
+        """
+        Test whether ticks from the order book are correctly saved to the database
+        """
+        self.order_book.insert_ask(self.ask)
+        self.order_book.insert_bid(self.bid)
+        self.order_book.save_to_database()
+
+        self.assertEqual(len(self.database.get_ticks()), 2)
+
+    @blocking_call_on_reactor_thread
+    def test_restore_from_db(self):
+        """
+        Test whether ticks from the database are correctly restored to the order book
+        """
+        self.database.add_tick(self.ask)
+        self.database.add_tick(self.bid)
+        self.order_book.restore_from_database()
+
+        self.assertEqual(len(self.order_book.asks), 1)
+        self.assertEqual(len(self.order_book.bids), 1)
