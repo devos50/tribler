@@ -762,13 +762,8 @@ class TriblerLaunchMany(TaskManager):
         if self.dispersy:
             self._logger.info("lmc: Shutting down Dispersy...")
             now = timemod.time()
-            try:
-                success = yield self.dispersy.stop()
-                self._logger.info("SUCCESS? %s", success)
-            except Exception as e:
-                self._logger.exception("OMG EXCEPTION")
-                print_exc()
-                success = False
+            success = yield self.dispersy.stop()
+            self._logger.info("SUCCESS? %s", success)
 
             diff = timemod.time() - now
             if success:
@@ -776,50 +771,74 @@ class TriblerLaunchMany(TaskManager):
             else:
                 self._logger.info("lmc: Dispersy failed to shutdown in %.2f seconds", diff)
 
+        self._logger.error("AFTER DISPERSY SHUTDOWN?")
+
         if self.metadata_store is not None:
             yield self.metadata_store.close()
         self.metadata_store = None
+
+        self._logger.error("AFTER METASTORE DB SHUTDOWN?")
 
         if self.tftp_handler is not None:
             yield self.tftp_handler.shutdown()
         self.tftp_handler = None
 
+        self._logger.error("AFTER TFTP HANDLER SHUTDOWN?")
+
         if self.channelcast_db is not None:
             yield self.channelcast_db.close()
         self.channelcast_db = None
+
+        self._logger.error("AFTER CHANNELCAST DB SHUTDOWN?")
 
         if self.votecast_db is not None:
             yield self.votecast_db.close()
         self.votecast_db = None
 
+        self._logger.error("AFTER VOTECAST DB SHUTDOWN?")
+
         if self.mypref_db is not None:
             yield self.mypref_db.close()
         self.mypref_db = None
+
+        self._logger.error("AFTER MYPREF DB SHUTDOWN?")
 
         if self.torrent_db is not None:
             yield self.torrent_db.close()
         self.torrent_db = None
 
+        self._logger.error("AFTER TORRENT DB SHUTDOWN?")
+
         if self.peer_db is not None:
             yield self.peer_db.close()
         self.peer_db = None
+
+        self._logger.error("AFTER PEER DB SHUTDOWN?")
 
         if self.mainline_dht is not None:
             from Tribler.Core.DecentralizedTracking import mainlineDHT
             yield mainlineDHT.deinit(self.mainline_dht)
         self.mainline_dht = None
 
+        self._logger.error("AFTER MAINLINE DHT SHUTDOWN?")
+
         if self.torrent_store is not None:
             yield self.torrent_store.close()
         self.torrent_store = None
+
+        self._logger.error("AFTER TORRENT STORE SHUTDOWN?")
 
         if self.api_manager is not None:
             yield self.api_manager.stop()
         self.api_manager = None
 
+        self._logger.error("AFTER API MANAGER SHUTDOWN?")
+
         if self.watch_folder is not None:
             yield self.watch_folder.stop()
         self.watch_folder = None
+
+        self._logger.error("AT END OF EARLY SHUTDOWN?")
 
     def network_shutdown(self):
         try:

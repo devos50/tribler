@@ -140,6 +140,11 @@ class LevelDbStore(MutableMapping, TaskManager):
             return self._db.Write(write_batch)
 
     def close(self):
+        self._logger.error("DB: %s, store dir: %s", self._db, self._store_dir)
+        self._logger.error("AT START OF CLOSE")
         self.cancel_all_pending_tasks()
+        self._logger.error("AFTER CANCEL TASKS")
         self.flush()
+        self._logger.error("AT FLUSH")
         self._db = None
+        self._logger.error("SETTING DB TO NONE")
