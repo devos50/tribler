@@ -763,7 +763,9 @@ class TriblerLaunchMany(TaskManager):
             now = timemod.time()
             try:
                 success = yield self.dispersy.stop()
-            except:
+                self._logger.info("SUCCESS? %s", success)
+            except Exception as e:
+                self._logger.exception("OMG EXCEPTION")
                 print_exc()
                 success = False
 
