@@ -720,6 +720,7 @@ class TriblerLaunchMany(TaskManager):
         to checkpointing, etc.
         :returns a Deferred that will fire once all dependencies acknowledge they have shutdown.
         """
+        assert isInIOThread()
         self._logger.info("tlm: early_shutdown")
 
         self.cancel_all_pending_tasks()
