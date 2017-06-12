@@ -66,8 +66,10 @@ class LevelDbStore(MutableMapping, TaskManager):
         except ValueError:
             # This can happen on Windows when the state dir and Tribler installation are on different disks.
             # In this case, hope for the best by using the full path.
+            self._logger("ERRORZ VALUE LEVELDB")
             self._db = self._leveldb(store_dir)
         except Exception as exc:
+            self._logger("OTHER EXCEPTION LEVELDB: %s" % exc)
             # We cannot simply catch LevelDBError since that class might not be available on some systems.
             if use_leveldb and isinstance(exc, LevelDBError):
                 # The database might be corrupt, start with a fresh one
