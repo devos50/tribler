@@ -499,14 +499,20 @@ class Session(object):
             Continues the shutdown procedure that is dependant on the early shutdown.
             :param _: ignored parameter of the Deferred
             """
+            self._logger.error("A1")
             self.config.write()
+            self._logger.error("A2")
             yield self.checkpoint_downloads()
+            self._logger.error("A3")
             self.lm.shutdown_downloads()
+            self._logger.error("A4")
             self.lm.network_shutdown()
+            self._logger.error("A5")
 
             if self.sqlite_db:
                 self.sqlite_db.close()
             self.sqlite_db = None
+            self._logger.error("A6")
 
         return self.lm.early_shutdown().addCallback(on_early_shutdown_complete)
 
