@@ -60,8 +60,9 @@ class LevelDbStore(MutableMapping, TaskManager):
         self._logger = logging.getLogger(self.__class__.__name__)
         # This is done to work around LevelDB's inability to deal with non-ascii paths on windows.
         try:
-            db_path = store_dir.decode('windows-1252') if sys.platform == "win32" else store_dir
-            self._db = self._leveldb(db_path)
+            self._db = self._leveldb(os.path.relpath(store_dir, os.getcwdu()))
+            #db_path = store_dir.decode('windows-1252') if sys.platform == "win32" else store_dir
+            #self._db = self._leveldb(db_path)
         except ValueError:
             # This can happen on Windows when the state dir and Tribler installation are on different disks.
             # In this case, hope for the best by using the full path.
