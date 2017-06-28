@@ -146,6 +146,82 @@ class OfferSyncPayload(OfferPayload):
             return self._is_ask
 
 
+class MatchPayload(OfferPayload):
+    class Implementation(OfferPayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,
+                     public_key, signature, ttl, ip, port, recipient_order_number, match_quantity, match_trader_id,
+                     matchmaker_trader_id, match_id):
+            assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
+            assert isinstance(match_quantity, Quantity), type(match_quantity)
+            assert isinstance(match_trader_id, TraderId), type(match_trader_id)
+            assert isinstance(matchmaker_trader_id, TraderId), type(matchmaker_trader_id)
+            assert isinstance(match_id, str), type(match_id)
+            super(MatchPayload.Implementation, self).__init__(meta, trader_id, message_number, order_number, price,
+                                                              quantity, timeout, timestamp, public_key, signature,
+                                                              ttl, ip, port)
+            self._recipient_order_number = recipient_order_number
+            self._match_quantity = match_quantity
+            self._match_trader_id = match_trader_id
+            self._matchmaker_trader_id = matchmaker_trader_id
+            self._match_id = match_id
+
+        @property
+        def recipient_order_number(self):
+            return self._recipient_order_number
+
+        @property
+        def match_quantity(self):
+            return self._match_quantity
+
+        @property
+        def match_trader_id(self):
+            return self._match_trader_id
+
+        @property
+        def matchmaker_trader_id(self):
+            return self._matchmaker_trader_id
+
+        @property
+        def match_id(self):
+            return self._match_id
+
+
+class AcceptMatchPayload(MessagePayload):
+    class Implementation(MessagePayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, timestamp, match_id, quantity):
+            assert isinstance(match_id, str), type(match_id)
+            assert isinstance(quantity, Quantity), type(quantity)
+            super(AcceptMatchPayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
+            self._match_id = match_id
+            self._quantity = quantity
+
+        @property
+        def match_id(self):
+            return self._match_id
+
+        @property
+        def quantity(self):
+            return self._quantity
+
+
+class DeclineMatchPayload(MessagePayload):
+    class Implementation(MessagePayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, timestamp, match_id, order_completed):
+            assert isinstance(match_id, str), type(match_id)
+            assert isinstance(order_completed, bool), type(order_completed)
+            super(DeclineMatchPayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
+            self._match_id = match_id
+            self._order_completed = order_completed
+
+        @property
+        def match_id(self):
+            return self._match_id
+
+        @property
+        def order_completed(self):
+            return self._order_completed
+
+
 class TradePayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, recipient_trader_id, recipient_order_number,
@@ -242,6 +318,51 @@ class TransactionPayload(MessagePayload):
         @property
         def transaction_number(self):
             return self._transaction_number
+
+
+class TransactionCompletedPayload(TransactionPayload):
+    class Implementation(TransactionPayload.Implementation):
+        def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number, order_trader_id,
+                     order_number, recipient_trader_id, recipient_order_number, match_id, quantity, timestamp):
+            assert isinstance(order_trader_id, TraderId), type(order_trader_id)
+            assert isinstance(order_number, OrderNumber), type(order_number)
+            assert isinstance(recipient_trader_id, TraderId), type(recipient_trader_id)
+            assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
+            assert isinstance(match_id, str), type(match_id)
+            assert isinstance(quantity, Quantity), type(quantity)
+            super(TransactionCompletedPayload.Implementation, self).__init__(meta, trader_id, message_number,
+                                                                             transaction_trader_id, transaction_number,
+                                                                             timestamp)
+            self._order_trader_id = order_trader_id
+            self._order_number = order_number
+            self._recipient_trader_id = recipient_trader_id
+            self._recipient_order_number = recipient_order_number
+            self._match_id = match_id
+            self._quantity = quantity
+
+        @property
+        def order_trader_id(self):
+            return self._order_trader_id
+
+        @property
+        def order_number(self):
+            return self._order_number
+
+        @property
+        def recipient_trader_id(self):
+            return self._recipient_trader_id
+
+        @property
+        def recipient_order_number(self):
+            return self._recipient_order_number
+
+        @property
+        def match_id(self):
+            return self._match_id
+
+        @property
+        def quantity(self):
+            return self._quantity
 
 
 class StartTransactionPayload(TransactionPayload):
