@@ -1,6 +1,7 @@
 import time
 from base64 import b64decode
 
+from Tribler.community.market.core import DeclinedTradeReason, DeclineMatchReason
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import LoopingCall, deferLater
@@ -69,7 +70,8 @@ class ProposedTradeRequestCache(NumberCache):
         if self.match_id:
             # Inform the matchmaker about the failed trade
             match_message = self.community.incoming_match_messages[self.match_id]
-            self.community.send_decline_match_message(self.match_id, match_message.payload.matchmaker_trader_id, False)
+            self.community.send_decline_match_message(self.match_id, match_message.payload.matchmaker_trader_id,
+                                                      DeclineMatchReason.OTHER)
 
 
 class MarketCommunity(Community):
@@ -808,7 +810,8 @@ class MarketCommunity(Community):
                 # Send a declined trade back
                 order_completed = order.status != "open"
                 self.send_decline_match_message(message.payload.match_id,
-                                                message.payload.matchmaker_trader_id, order_completed)
+                                                message.payload.matchmaker_trader_id,
+                                                DeclineMatchReason.ORDER_COMPLETED)
                 continue
 
             propose_quantity = Quantity(min(float(order.available_quantity), float(message.payload.match_quantity)),
@@ -875,17 +878,16 @@ class MarketCommunity(Community):
             matched_tick_entry.release_for_matching(reserved_quantity)
             matched_tick_entry.reserve_for_matching(message.payload.quantity)
 
-    def send_decline_match_message(self, match_id, matchmaker_trader_id, order_completed):
+    def send_decline_match_message(self, match_id, matchmaker_trader_id, decline_reason):
         del self.incoming_match_messages[match_id]
         address = self.lookup_ip(matchmaker_trader_id)
         candidate = Candidate(address, False)
 
         self._logger.debug("Sending decline match message with match id %s to trader "
-                           "%s, completed %s (ip: %s, port: %s)", str(match_id), str(matchmaker_trader_id),
-                           order_completed, *address)
+                           "%s (ip: %s, port: %s)", str(match_id), str(matchmaker_trader_id), *address)
 
         msg_id = self.message_repository.next_identity()
-        payload = (msg_id.trader_id, msg_id.message_number, Timestamp.now(), match_id, order_completed)
+        payload = (msg_id.trader_id, msg_id.message_number, Timestamp.now(), match_id, decline_reason)
 
         meta = self.get_meta_message(u"decline-match")
         message = meta.impl(
@@ -909,7 +911,11 @@ class MarketCommunity(Community):
             matched_tick_entry.block_for_matching(tick_entry.order_id)
             del self.matching_engine.matches[message.payload.match_id]
 
-            if message.payload.order_completed:
+            if message.payload.decline_reason == DeclineMatchReason.OTHER_ORDER_COMPLETED:
+                self.order_book.remove_tick(matched_tick_entry.order_id)
+                self.order_book.completed_orders.append(matched_tick_entry.order_id)
+
+            if message.payload.decline_reason == DeclineMatchReason.ORDER_COMPLETED:
                 self.order_book.remove_tick(tick_entry.order_id)
                 self.order_book.completed_orders.append(tick_entry.order_id)
             else:
@@ -1034,8 +1040,31 @@ class MarketCommunity(Community):
                     request = self.request_cache.pop(u"proposed-trade", int(proposal_id.split(':')[1]))
                     order.release_quantity_for_tick(proposed_trade.order_id, request.proposed_trade.quantity)
 
-            if order.is_valid() and order.available_quantity > Quantity(0, order.available_quantity.wallet_id) \
-                    and proposed_trade.has_acceptable_price(order.is_ask(), order.price):
+            should_decline = True
+            decline_reason = 0
+            if not order.is_valid:
+                decline_reason = DeclinedTradeReason.ORDER_INVALID
+            elif order.status == "completed":
+                decline_reason = DeclinedTradeReason.ORDER_COMPLETED
+            elif order.status == "expired":
+                decline_reason = DeclinedTradeReason.ORDER_EXPIRED
+            elif order.available_quantity == Quantity(0, order.available_quantity.wallet_id):
+                decline_reason = DeclinedTradeReason.ORDER_RESERVED
+            elif not proposed_trade.has_acceptable_price(order.is_ask(), order.price):
+                decline_reason = DeclinedTradeReason.UNACCEPTABLE_PRICE
+            else:
+                should_decline = False
+
+            if should_decline:
+                declined_trade = Trade.decline(self.message_repository.next_identity(),
+                                               Timestamp.now(), proposed_trade, decline_reason)
+                self._logger.debug("Declined trade made with id: %s for proposed trade with id: %s "
+                                   "(valid? %s, available quantity of order: %s, reserved: %s, traded: %s)",
+                                   str(declined_trade.message_id), str(proposed_trade.message_id),
+                                   order.is_valid(), order.available_quantity, order.reserved_quantity,
+                                   order.traded_quantity)
+                self.send_declined_trade(declined_trade)
+            else:
                 self._logger.debug("Proposed trade received with id: %s for order with id: %s",
                                    str(proposed_trade.message_id), str(order.order_id))
 
@@ -1053,15 +1082,6 @@ class MarketCommunity(Community):
                     self._logger.debug("Counter trade made with quantity: %s for proposed trade with id: %s",
                                        str(counter_trade.quantity), str(proposed_trade.message_id))
                     self.send_counter_trade(counter_trade)
-            else:  # Order invalid send cancel
-                declined_trade = Trade.decline(self.message_repository.next_identity(),
-                                               Timestamp.now(), proposed_trade)
-                self._logger.debug("Declined trade made with id: %s for proposed trade with id: %s "
-                                   "(valid? %s, available quantity of order: %s, reserved: %s, traded: %s)",
-                                   str(declined_trade.message_id), str(proposed_trade.message_id),
-                                   order.is_valid(), order.available_quantity, order.reserved_quantity,
-                                   order.traded_quantity)
-                self.send_declined_trade(declined_trade)
 
     # Declined trade
     def send_declined_trade(self, declined_trade):
@@ -1097,7 +1117,12 @@ class MarketCommunity(Community):
 
             # Let the matchmaker know that we don't have a match
             match_message = self.incoming_match_messages[request.match_id]
-            self.send_decline_match_message(request.match_id, match_message.payload.matchmaker_trader_id, False)
+            match_decline_reason = DeclineMatchReason.OTHER
+            if declined_trade.decline_reason == DeclinedTradeReason.ORDER_COMPLETED:
+                match_decline_reason = DeclineMatchReason.OTHER_ORDER_COMPLETED
+
+            self.send_decline_match_message(request.match_id, match_message.payload.matchmaker_trader_id,
+                                            match_decline_reason)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
@@ -1129,7 +1154,22 @@ class MarketCommunity(Community):
             request = self.request_cache.pop(u"proposed-trade", counter_trade.proposal_id)
 
             order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
-            if order.is_valid() and counter_trade.has_acceptable_price(order.is_ask(), order.price):  # Accept trade
+            should_decline = True
+            decline_reason = 0
+            if not order.is_valid:
+                decline_reason = DeclinedTradeReason.ORDER_INVALID
+            elif not counter_trade.has_acceptable_price(order.is_ask(), order.price):
+                decline_reason = DeclinedTradeReason.UNACCEPTABLE_PRICE
+            else:
+                should_decline = False
+
+            if should_decline:
+                declined_trade = Trade.decline(self.message_repository.next_identity(),
+                                               Timestamp.now(), counter_trade, decline_reason)
+                self._logger.debug("Declined trade made with id: %s for counter trade with id: %s",
+                                   str(declined_trade.message_id), str(counter_trade.message_id))
+                self.send_declined_trade(declined_trade)
+            else:
                 order.release_quantity_for_tick(counter_trade.order_id, request.proposed_trade.quantity)
                 order.reserve_quantity_for_tick(counter_trade.order_id, counter_trade.quantity)
                 self.order_manager.order_repository.update(order)
@@ -1139,12 +1179,6 @@ class MarketCommunity(Community):
                 match_message = self.incoming_match_messages[request.match_id]
                 self.send_accept_match_message(request.match_id, match_message.payload.matchmaker_trader_id,
                                                counter_trade.quantity)
-            else:
-                declined_trade = Trade.decline(self.message_repository.next_identity(),
-                                               Timestamp.now(), counter_trade)
-                self._logger.debug("Declined trade made with id: %s for counter trade with id: %s",
-                                   str(declined_trade.message_id), str(counter_trade.message_id))
-                self.send_declined_trade(declined_trade)
 
     # Transactions
     def start_transaction(self, proposed_trade, match_id):

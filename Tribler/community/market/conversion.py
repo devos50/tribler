@@ -169,12 +169,12 @@ class MarketConversion(BinaryConversion):
         payload = message.payload
         packet = encode((
             str(payload.trader_id), str(payload.message_number), float(payload.timestamp), str(payload.match_id),
-            bool(payload.order_completed)
+            int(payload.decline_reason)
         ))
         return packet,
 
     def _decode_decline_match(self, placeholder, offset, data):
-        return self._decode_payload(placeholder, offset, data, [TraderId, MessageNumber, Timestamp, str, bool])
+        return self._decode_payload(placeholder, offset, data, [TraderId, MessageNumber, Timestamp, str, int])
 
     def _encode_offer_sync(self, message):
         payload = message.payload
@@ -212,13 +212,13 @@ class MarketConversion(BinaryConversion):
         packet = encode((
             str(payload.trader_id), str(payload.message_number), int(payload.order_number),
             str(payload.recipient_trader_id), int(payload.recipient_order_number), payload.proposal_id,
-            float(payload.timestamp)
+            float(payload.timestamp), int(payload.decline_reason)
         ))
         return packet,
 
     def _decode_declined_trade(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, OrderNumber, TraderId, OrderNumber, int, Timestamp])
+                                    [TraderId, MessageNumber, OrderNumber, TraderId, OrderNumber, int, Timestamp, int])
 
     def _encode_start_transaction(self, message):
         payload = message.payload

@@ -206,20 +206,20 @@ class AcceptMatchPayload(MessagePayload):
 
 class DeclineMatchPayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, timestamp, match_id, order_completed):
+        def __init__(self, meta, trader_id, message_number, timestamp, match_id, decline_reason):
             assert isinstance(match_id, str), type(match_id)
-            assert isinstance(order_completed, bool), type(order_completed)
+            assert isinstance(decline_reason, int), type(decline_reason)
             super(DeclineMatchPayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
             self._match_id = match_id
-            self._order_completed = order_completed
+            self._decline_reason = decline_reason
 
         @property
         def match_id(self):
             return self._match_id
 
         @property
-        def order_completed(self):
-            return self._order_completed
+        def decline_reason(self):
+            return self._decline_reason
 
 
 class TradePayload(MessagePayload):
@@ -274,16 +274,18 @@ class TradePayload(MessagePayload):
 class DeclinedTradePayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, recipient_trader_id, recipient_order_number,
-                     proposal_id, timestamp):
+                     proposal_id, timestamp, decline_reason):
             assert isinstance(order_number, OrderNumber), type(order_number)
             assert isinstance(recipient_trader_id, TraderId), type(recipient_trader_id)
             assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
             assert isinstance(proposal_id, int), type(proposal_id)
+            assert isinstance(decline_reason, int), type(decline_reason)
             super(DeclinedTradePayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
             self._order_number = order_number
             self._recipient_trader_id = recipient_trader_id
             self._recipient_order_number = recipient_order_number
             self._proposal_id = proposal_id
+            self._decline_reason = decline_reason
 
         @property
         def order_number(self):
@@ -300,6 +302,10 @@ class DeclinedTradePayload(MessagePayload):
         @property
         def proposal_id(self):
             return self._proposal_id
+
+        @property
+        def decline_reason(self):
+            return self._decline_reason
 
 
 class TransactionPayload(MessagePayload):
