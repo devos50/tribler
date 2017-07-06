@@ -1,5 +1,6 @@
 import unittest
 
+from Tribler.community.market.core import DeclinedTradeReason
 from Tribler.community.market.core.message import TraderId, MessageNumber, MessageId
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.price import Price
@@ -73,7 +74,8 @@ class DeclinedTradeTestSuite(unittest.TestCase):
                                             OrderId(TraderId('1'), OrderNumber(2)),
                                             Price(63400, 'BTC'), Quantity(30, 'MC'), Timestamp(1462224447.117))
         self.declined_trade = Trade.decline(MessageId(TraderId('0'), MessageNumber('message_number')),
-                                            Timestamp(1462224447.117), self.proposed_trade)
+                                            Timestamp(1462224447.117), self.proposed_trade,
+                                            DeclinedTradeReason.ORDER_COMPLETED)
 
     def test_to_network(self):
         # Test for to network
@@ -96,7 +98,8 @@ class DeclinedTradeTestSuite(unittest.TestCase):
                                                                    "recipient_trader_id": TraderId('1'),
                                                                    "recipient_order_number": OrderNumber(2),
                                                                    "proposal_id": 1235,
-                                                                   "timestamp": Timestamp(1462224447.117),}))
+                                                                   "timestamp": Timestamp(1462224447.117),
+                                                                   "decline_reason": 0}))
 
         self.assertEquals(MessageId(TraderId('0'), MessageNumber('message_number')), data.message_id)
         self.assertEquals(OrderId(TraderId('1'), OrderNumber(2)),

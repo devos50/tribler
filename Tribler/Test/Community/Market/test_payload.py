@@ -1,5 +1,6 @@
 import unittest
 
+from Tribler.community.market.core import DeclinedTradeReason
 from Tribler.community.market.core.message import TraderId, MessageNumber
 from Tribler.community.market.core.order import OrderNumber
 from Tribler.community.market.core.payment_id import PaymentId
@@ -21,12 +22,13 @@ class MarketIntroPayloadTestSuite(unittest.TestCase):
     def setUp(self):
         # Object creation
         self.market_intro_payload = MarketIntroPayload.Implementation(MetaObject(), ("a", 1324), ("b", 1234),
-                                                                      ("c", 1234), True, u"public", None, 3, "f")
+                                                                      ("c", 1234), True, u"public", None, 3, True, "f")
 
     def test_properties(self):
         """
         Test the market intro payload
         """
+        self.assertTrue(self.market_intro_payload.is_matchmaker)
         self.assertEqual(self.market_intro_payload.orders_bloom_filter, "f")
         self.market_intro_payload.set_orders_bloom_filter("g")
         self.assertEqual(self.market_intro_payload.orders_bloom_filter, "g")
@@ -56,7 +58,8 @@ class DeclinedTradePayloadTestSuite(unittest.TestCase):
                                                                           MessageNumber('message_number'),
                                                                           OrderNumber(1), TraderId('1'),
                                                                           OrderNumber(2), 1234,
-                                                                          Timestamp(1462224447.117))
+                                                                          Timestamp(1462224447.117),
+                                                                          DeclinedTradeReason.ORDER_COMPLETED)
 
     def test_properties(self):
         # Test for properties

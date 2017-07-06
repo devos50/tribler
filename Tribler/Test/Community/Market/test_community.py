@@ -85,9 +85,21 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.market_community.order_manager.order_repository.add(order)
         order.reserve_quantity_for_tick(self.proposed_trade.recipient_order_id, Quantity(30, 'DUM2'))
         self.market_community.order_manager.order_repository.update(order)
-        cache = ProposedTradeRequestCache(self.market_community, self.proposed_trade)
+
+        mocked_match_message = MockObject()
+        mocked_match_message.payload = MockObject()
+        mocked_match_message.payload.matchmaker_trader_id = 'a'
+        self.market_community.incoming_match_messages['a'] = mocked_match_message
+
+        def mocked_send_decline(*_):
+            mocked_send_decline.called = True
+
+        mocked_send_decline.called = False
+        self.market_community.send_decline_match_message = mocked_send_decline
+
+        cache = ProposedTradeRequestCache(self.market_community, self.proposed_trade, 'a')
         cache.on_timeout()
-        self.assertEqual(len(self.market_community.order_book.asks), 0)
+        self.assertTrue(mocked_send_decline.called)
 
     def get_tick_message(self, tick):
         meta = self.market_community.get_meta_message(u"ask" if isinstance(tick, Ask) else u"bid")
@@ -199,7 +211,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         Test sending a proposed trade
         """
         self.market_community.update_ip(TraderId(self.market_community.mid), ('127.0.0.1', 1234))
-        self.assertEqual(self.market_community.send_proposed_trade(self.proposed_trade), [True])
+        self.assertEqual(self.market_community.send_proposed_trade(self.proposed_trade, 'a'), True)
 
     @blocking_call_on_reactor_thread
     def test_send_counter_trade(self):
@@ -219,7 +231,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         """
         self.market_community.order_manager.order_repository.add(self.order)
         self.market_community.update_ip(TraderId('0'), ("127.0.0.1", 1234))
-        self.market_community.start_transaction(self.proposed_trade)
+        self.market_community.start_transaction(self.proposed_trade, 'a')
         self.assertEqual(len(self.market_community.transaction_manager.find_all()), 1)
 
     @blocking_call_on_reactor_thread
@@ -293,14 +305,6 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.market_community.on_tick([self.get_tick_message(self.ask), self.get_tick_message(self.bid)])
         self.assertEquals(1, len(self.market_community.order_book.asks))
         self.assertEquals(1, len(self.market_community.order_book.bids))
-
-        # Update the timestamp of the ticks
-        ask_timestamp = float(self.ask.timestamp)
-        self.ask.update_timestamp()
-        self.market_community.on_tick([self.get_tick_message(self.ask)])
-        self.assertEquals(1, len(self.market_community.order_book.asks))
-        new_timestamp = self.market_community.order_book.get_tick(self.ask.order_id).tick.timestamp
-        self.assertGreater(new_timestamp, ask_timestamp)
 
     @blocking_call_on_reactor_thread
     def test_create_bid(self):
@@ -412,7 +416,7 @@ class CommunityTestSuite(AbstractTestCommunity):
         self.order.reserve_quantity_for_tick(OrderId(TraderId('0'), OrderNumber(23)), Quantity(30, 'DUM2'))
         self.market_community.order_manager.order_repository.add(self.order)
         self.market_community.update_ip(TraderId('0'), ("127.0.0.1", 1234))
-        self.market_community.start_transaction(self.proposed_trade)
+        self.market_community.start_transaction(self.proposed_trade, 'a')
         transaction = self.market_community.transaction_manager.find_all()[0]
         self.assertTrue(transaction)
         self.assertEqual(self.order.reserved_quantity, Quantity(30, 'DUM2'))

@@ -1,5 +1,6 @@
 from struct import pack
 
+from Tribler.community.market.core import DeclinedTradeReason
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Core.Utilities.encoding import encode
@@ -169,7 +170,7 @@ class TestMarketConversion(AbstractTestCommunity):
 
         trade_payload = DeclinedTradePayload.Implementation(meta_msg, TraderId('abc'), MessageNumber('3'),
                                                             OrderNumber(4), TraderId('def'), OrderNumber(5), 1234,
-                                                            Timestamp.now())
+                                                            Timestamp.now(), DeclinedTradeReason.ORDER_COMPLETED)
         message.payload = trade_payload
         packet, = self.conversion._encode_declined_trade(message)
         self.assertTrue(packet)

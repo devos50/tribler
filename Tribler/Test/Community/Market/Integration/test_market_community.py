@@ -154,7 +154,7 @@ class TestMarketCommunity(BaseTestMarketCommunity):
         proposed_trade = Trade.propose(self.node_b.community.message_repository.next_identity(),
                                        order_a.order_id, order_b.order_id, Price(10, 'DUM1'),
                                        order_a.total_quantity, Timestamp.now())
-        self.node_a.community.send_proposed_trade(proposed_trade)
+        self.node_a.community.send_proposed_trade(proposed_trade, 'a')
 
         yield self.parse_assert_packets(self.node_b)
         yield self.parse_assert_packets(self.node_a)
@@ -183,13 +183,18 @@ class TestMarketCommunity(BaseTestMarketCommunity):
         self.node_b.community.send_proposed_trade(proposed_trade, 'a')
         deferred = Deferred()
 
-        def mocked_remove(_):
+        def mocked_send_decline(*_):
             deferred.callback(None)
 
-        self.node_b.community.order_book.remove_tick = mocked_remove
+        self.node_b.community.send_decline_match_message = mocked_send_decline
 
-        yield self.parse_assert_packets(self.node_a)
-        yield self.parse_assert_packets(self.node_b)
+        mocked_match_message = MockObject()
+        mocked_match_message.payload = MockObject()
+        mocked_match_message.payload.matchmaker_trader_id = 3
+        self.node_b.community.incoming_match_messages['a'] = mocked_match_message
+
+        yield self.parse_assert_packets(self.node_a)  # Parse proposed-trade message
+        yield self.parse_assert_packets(self.node_b)  # Parse declined-trade message
         yield deferred
 
     @blocking_call_on_reactor_thread

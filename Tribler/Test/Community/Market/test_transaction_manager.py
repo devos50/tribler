@@ -35,7 +35,7 @@ class TransactionManagerTestSuite(unittest.TestCase):
 
     def test_create_from_proposed_trade(self):
         # Test for create from a proposed trade
-        transaction = self.transaction_manager.create_from_proposed_trade(self.proposed_trade)
+        transaction = self.transaction_manager.create_from_proposed_trade(self.proposed_trade, 'a')
         self.assertEquals(transaction, self.transaction_manager.find_by_id(transaction.transaction_id))
 
     def test_find_by_id(self):
@@ -52,5 +52,5 @@ class TransactionManagerTestSuite(unittest.TestCase):
 
     def test_create_from_start_transaction(self):
         # Test for create from start transaction
-        transaction = self.transaction_manager.create_from_start_transaction(self.start_transaction)
+        transaction = self.transaction_manager.create_from_start_transaction(self.start_transaction, 'a')
         self.assertEquals(transaction, self.transaction_manager.find_by_id(transaction.transaction_id))
