@@ -57,7 +57,7 @@ class MarketConversion(BinaryConversion):
         data = BinaryConversion._encode_introduction_request(self, message)
 
         if message.payload.orders_bloom_filter:
-            data.extend((pack('!BH', message.payload.orders_bloom_filter.functions,
+            data.extend((pack('!?BH', message.payload.is_matchmaker, message.payload.orders_bloom_filter.functions,
                               message.payload.orders_bloom_filter.size), message.payload.orders_bloom_filter.prefix,
                          message.payload.orders_bloom_filter.bytes))
         return data
@@ -66,11 +66,11 @@ class MarketConversion(BinaryConversion):
         offset, payload = BinaryConversion._decode_introduction_request(self, placeholder, offset, data)
 
         if len(data) > offset:
-            if len(data) < offset + 5:
+            if len(data) < offset + 6:
                 raise DropPacket("Insufficient packet size")
 
-            functions, size = unpack_from('!BH', data, offset)
-            offset += 3
+            is_matchmaker, functions, size = unpack_from('!?BH', data, offset)
+            offset += 4
 
             prefix = data[offset]
             offset += 1
@@ -86,6 +86,7 @@ class MarketConversion(BinaryConversion):
             orders_bloom_filter = BloomFilter(data[offset:offset + length], functions, prefix=prefix)
             offset += length
 
+            payload.set_is_matchmaker(is_matchmaker)
             payload.set_orders_bloom_filter(orders_bloom_filter)
 
         return offset, payload

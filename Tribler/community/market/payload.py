@@ -17,12 +17,20 @@ class MarketIntroPayload(IntroductionRequestPayload):
     class Implementation(IntroductionRequestPayload.Implementation):
 
         def __init__(self, meta, destination_address, source_lan_address, source_wan_address, advice, connection_type,
-                     sync, identifier, orders_bloom_filter=None):
+                     sync, identifier, is_matchmaker=False, orders_bloom_filter=None):
             IntroductionRequestPayload.Implementation.__init__(self, meta, destination_address, source_lan_address,
                                                                source_wan_address, advice, connection_type, sync,
                                                                identifier)
 
+            self._is_matchmaker = is_matchmaker
             self._orders_bloom_filter = orders_bloom_filter
+
+        def set_is_matchmaker(self, is_matchmaker):
+            self._is_matchmaker = is_matchmaker
+
+        @property
+        def is_matchmaker(self):
+            return self._is_matchmaker
 
         def set_orders_bloom_filter(self, bloom_filter):
             self._orders_bloom_filter = bloom_filter

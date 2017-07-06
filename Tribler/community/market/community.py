@@ -1,3 +1,4 @@
+import random
 import time
 from base64 import b64decode
 
@@ -124,6 +125,7 @@ class MarketCommunity(Community):
         self.message_repository = None
         self.use_incremental_payments = True
         self.validate_tick_signatures = True
+        self.matchmakers = set()
 
     def initialize(self, tribler_session=None, tradechain_community=None, wallets=None,
                    use_database=True, is_matchmaker=True):
@@ -320,6 +322,17 @@ class MarketCommunity(Community):
         """
         return self.wallets.keys()
 
+    def dispersy_get_introduce_candidate(self, exclude_candidate=None):
+        """
+        Return a matchmaker with higher priority as introduce candidate.
+        """
+        if len(self.matchmakers) == 0:
+            return super(MarketCommunity, self).dispersy_get_introduce_candidate(exclude_candidate)
+
+        matchmaker = random.sample(self.matchmakers, 1)[0]
+        self._logger.debug("Introducing other node to matchmaker %s:%d", *matchmaker)
+        return self.get_candidate(matchmaker)
+
     def create_introduction_request(self, destination, allow_sync):
         assert isinstance(destination, WalkCandidate), [type(destination), destination]
 
@@ -334,7 +347,7 @@ class MarketCommunity(Community):
 
         cache = self._request_cache.add(IntroductionRequestCache(self, destination))
         payload = (destination.sock_addr, self._dispersy.lan_address, self._dispersy.wan_address, True,
-                   self._dispersy.connection_type, None, cache.number, orders_bloom_filter)
+                   self._dispersy.connection_type, None, cache.number, self.is_matchmaker, orders_bloom_filter)
 
         destination.walk(time.time())
         self.add_candidate(destination)
@@ -356,6 +369,9 @@ class MarketCommunity(Community):
         for message in messages:
             if not self.is_matchmaker:
                 continue
+
+            if message.payload.is_matchmaker:
+                self.matchmakers.add(message.candidate.sock_addr)
 
             orders_bloom_filter = message.payload.orders_bloom_filter
             for order_id in self.order_book.get_order_ids():
@@ -799,6 +815,13 @@ class MarketCommunity(Community):
             # We got a match, check whether we can respond to this match
             self.update_ip(message.payload.matchmaker_trader_id, message.candidate.sock_addr)
             self.update_ip(message.payload.trader_id, (message.payload.address.ip, message.payload.address.port))
+            self.matchmakers.add(message.candidate.sock_addr)
+
+            # Immediately send an introduction request to this matchmaker so it's verified
+            walk_candidate = self.create_or_update_walkcandidate(message.candidate.sock_addr, ('0.0.0.0', 0),
+                                                                 message.candidate.sock_addr, False, u'unknown')
+            self.create_introduction_request(walk_candidate, self.dispersy_enable_bloom_filter_sync)
+
             order_id = OrderId(TraderId(self.mid), message.payload.recipient_order_number)
             other_order_id = OrderId(message.payload.trader_id, message.payload.order_number)
             order = self.order_manager.order_repository.find_by_id(order_id)
