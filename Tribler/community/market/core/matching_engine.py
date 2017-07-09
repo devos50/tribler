@@ -1,6 +1,7 @@
 import logging
 import random
 from abc import ABCMeta, abstractmethod
+from math import radians, sin, cos, asin, sqrt
 from time import time
 
 from Tribler.community.market.core.order import OrderId
@@ -37,7 +38,7 @@ class MatchingStrategy(object):
         return ''.join(random.choice('0123456789abcdef') for _ in xrange(20))
 
     @abstractmethod
-    def match(self, order_id, price, quantity, is_ask):
+    def match(self, latitude, longitude, is_ask):
         """
         :param order_id: The order id of the tick to match
         :param price: The price to match against
@@ -51,6 +52,71 @@ class MatchingStrategy(object):
         :rtype: [(str, TickEntry, Quantity)]
         """
         return
+
+
+class TaxiStrategy(MatchingStrategy):
+    """
+    Matching strategy based on euclidean distance
+    """
+
+    def haversine(self, lon1, lat1, lon2, lat2):
+        """
+        Calculate the great circle distance between two points
+        on the earth (specified in decimal degrees)
+        """
+        # convert decimal degrees to radians
+        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+        # haversine formula
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        c = 2 * asin(sqrt(a))
+        r = 6371 # Radius of earth in kilometers. Use 3956 for miles
+        return c * r
+
+    def match(self, latitude, longitude, is_ask):
+        return self.match_ask(latitude, longitude) if is_ask else self.match_bid(latitude, longitude)
+
+    def match_ask(self, latitude, longitude):
+        price_lvl = self.order_book.bids.get_price_level(Price(1, 'taxi'))
+        if len(price_lvl) == 0:
+            return []
+
+        min_tick = None
+        min_distance = 100000000
+        for tick_entry in price_lvl:
+            if tick_entry.reserved_for_matching > Quantity(0, 'taxi'):
+                continue
+
+            distance = self.haversine(longitude, latitude, tick_entry.tick.longitude, tick_entry.tick.latitude)
+            if distance < min_distance:
+                min_tick = tick_entry
+                min_distance = distance
+
+        if min_tick:
+            return [(MatchingStrategy.generate_match_id(), min_tick, Quantity(1, 'taxi'))]
+        return []
+
+    def match_bid(self, latitude, longitude):
+        price_lvl = self.order_book.asks.get_price_level(Price(1, 'taxi'))
+        if len(price_lvl) == 0:
+            return []
+
+        min_tick = None
+        min_distance = 100000000
+        for tick_entry in price_lvl:
+            if tick_entry.reserved_for_matching > Quantity(0, 'taxi'):
+                continue
+
+            distance = self.haversine(longitude, latitude, tick_entry.tick.longitude, tick_entry.tick.latitude)
+            if distance < min_distance:
+                min_tick = tick_entry
+                min_distance = distance
+
+        if min_tick:
+            return [(MatchingStrategy.generate_match_id(), min_tick, Quantity(1, 'taxi'))]
+        return []
 
 
 class PriceTimeStrategy(MatchingStrategy):
@@ -278,9 +344,7 @@ class MatchingEngine(object):
         assert isinstance(tick_entry, TickEntry), type(tick_entry)
         now = time()
 
-        matched_ticks = self.matching_strategy.match(tick_entry.order_id,
-                                                     tick_entry.price,
-                                                     tick_entry.quantity - tick_entry.reserved_for_matching,
+        matched_ticks = self.matching_strategy.match(tick_entry.tick.latitude, tick_entry.tick.longitude,
                                                      tick_entry.tick.is_ask())
 
         for match_id, matched_tick_entry, quantity in matched_ticks:  # Store the matches

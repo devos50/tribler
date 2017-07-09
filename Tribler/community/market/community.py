@@ -11,7 +11,7 @@ from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY
     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT, NTFY_MARKET_ON_PAYMENT_RECEIVED, NTFY_MARKET_ON_PAYMENT_SENT
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market.conversion import MarketConversion
-from Tribler.community.market.core.matching_engine import MatchingEngine, PriceTimeStrategy
+from Tribler.community.market.core.matching_engine import MatchingEngine, TaxiStrategy
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.message_repository import MemoryMessageRepository
 from Tribler.community.market.core.order import OrderId, Order
@@ -305,7 +305,7 @@ class MarketCommunity(Community):
         """
         self.order_book = DatabaseOrderBook(self.market_database)
         self.order_book.restore_from_database()
-        self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
+        self.matching_engine = MatchingEngine(TaxiStrategy(self.order_book))
         self.is_matchmaker = True
 
     def disable_matchmaker(self):
@@ -536,9 +536,9 @@ class MarketCommunity(Community):
                                % quantity_min_unit)
 
     # Ask
-    def create_ask(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
+    def create_ride_offer(self, latitude, longitude, timeout):
         """
-        Create an ask order (sell order)
+        Create a taxi ride offer (sell order)
 
         :param price: The price for the order in btc
         :param price_wallet_id: The type of the price (i.e. EUR, BTC)
@@ -553,15 +553,13 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
-        self.verify_offer_creation(price, price_wallet_id, quantity, quantity_wallet_id)
 
         # Convert values to value objects
-        price = Price(price, price_wallet_id)
-        quantity = Quantity(quantity, quantity_wallet_id)
+        quantity = Quantity(1, 'taxi')
         timeout = Timeout(timeout)
 
         # Create the order
-        order = self.order_manager.create_ask_order(price, quantity, timeout)
+        order = self.order_manager.create_ride_offer(latitude, longitude, quantity, timeout)
 
         # Create the tick
         tick = Tick.from_order(order, self.message_repository.next_identity())
@@ -575,7 +573,7 @@ class MarketCommunity(Community):
 
         self.send_tick(tick)
 
-        self._logger.debug("Ask created with price %s and quantity %s", price, quantity)
+        self._logger.debug("Ride offer created (lat: %f, long: %f)", latitude, longitude)
 
         return order
 
@@ -609,8 +607,8 @@ class MarketCommunity(Community):
         for message in messages:
             tick = Ask.from_network(message.payload) if message.name == u"ask" else Bid.from_network(message.payload)
 
-            self._logger.debug("%s received from trader %s (price: %s, quantity: %s)", type(tick),
-                               str(tick.order_id.trader_id), tick.price, tick.quantity)
+            self._logger.debug("%s received from trader %s (lat: %f, long: %f)", type(tick),
+                               str(tick.order_id.trader_id), tick.latitude, tick.longitude)
 
             # Update the mid register with the current address
             self.update_ip(tick.message_id.trader_id, (message.payload.address.ip, message.payload.address.port))
@@ -620,8 +618,8 @@ class MarketCommunity(Community):
                 timeout_method = self.on_ask_timeout if isinstance(tick, Ask) else self.on_bid_timeout
 
                 if not self.order_book.tick_exists(tick.order_id) and tick.quantity > Quantity(0, tick.quantity.wallet_id):
-                    self._logger.debug("Inserting %s from %s (price: %s, quantity: %s)",
-                                       tick, tick.order_id, tick.price, tick.quantity)
+                    self._logger.debug("Inserting %s from %s (lat: %f, long: %f)",
+                                       tick, tick.order_id, tick.latitude, tick.longitude)
                     insert_method(tick).addCallback(timeout_method)
                     if self.tribler_session:
                         subject = NTFY_MARKET_ON_ASK if isinstance(tick, Ask) else NTFY_MARKET_ON_BID
@@ -654,7 +652,7 @@ class MarketCommunity(Community):
             self.dispersy.store_update_forward([message], True, True, True)
 
     # Bid
-    def create_bid(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
+    def create_ride_request(self, latitude, longitude, timeout):
         """
         Create an ask order (sell order)
 
@@ -671,15 +669,13 @@ class MarketCommunity(Community):
         :return: The created order
         :rtype: Order
         """
-        self.verify_offer_creation(price, price_wallet_id, quantity, quantity_wallet_id)
 
         # Convert values to value objects
-        price = Price(price, price_wallet_id)
-        quantity = Quantity(quantity, quantity_wallet_id)
+        quantity = Quantity(1, 'taxi')
         timeout = Timeout(timeout)
 
         # Create the order
-        order = self.order_manager.create_bid_order(price, quantity, timeout)
+        order = self.order_manager.create_ride_request(latitude, longitude, quantity, timeout)
 
         # Create the tick
         tick = Tick.from_order(order, self.message_repository.next_identity())
@@ -693,7 +689,7 @@ class MarketCommunity(Community):
 
         self.send_tick(tick)
 
-        self._logger.debug("Bid created with price %s and quantity %s", price, quantity)
+        self._logger.debug("Ride request created (lat: %f, long: %f)", latitude, longitude)
 
         return order
 

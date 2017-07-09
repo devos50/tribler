@@ -99,14 +99,14 @@ class Side(object):
         """
         assert isinstance(tick, Tick), type(tick)
 
-        if (tick.price.wallet_id, tick.quantity.wallet_id) not in self._price_level_list_map:
-            self._price_level_list_map[(tick.price.wallet_id, tick.quantity.wallet_id)] = PriceLevelList()
-            self._depth[(tick.price.wallet_id, tick.quantity.wallet_id)] = 0
+        if ('taxi', tick.quantity.wallet_id) not in self._price_level_list_map:
+            self._price_level_list_map[('taxi', tick.quantity.wallet_id)] = PriceLevelList()
+            self._depth[('taxi', tick.quantity.wallet_id)] = 0
 
-        if not self._price_level_exists(tick.price):  # First tick for that price
-            self._create_price_level(tick.price, tick.quantity.wallet_id)
-        tick_entry = TickEntry(tick, self._price_map[tick.price])
-        self.get_price_level(tick.price).append_tick(tick_entry)
+        if not self._price_level_exists(Price(1, 'taxi')):  # First tick for that price
+            self._create_price_level(Price(1, 'taxi'), tick.quantity.wallet_id)
+        tick_entry = TickEntry(tick, self._price_map[Price(1, 'taxi')])
+        self.get_price_level(Price(1, 'taxi')).append_tick(tick_entry)
         self._tick_map[tick.order_id] = tick_entry
 
     def remove_tick(self, order_id):
@@ -119,7 +119,7 @@ class Side(object):
         tick = self.get_tick(order_id)
         tick.price_level().remove_tick(tick)
         if len(tick.price_level()) == 0:  # Last tick for that price
-            self._remove_price_level(tick.price, tick.quantity.wallet_id)
+            self._remove_price_level(Price(1, 'taxi'), tick.quantity.wallet_id)
         del self._tick_map[order_id]
 
     def get_price_level_list(self, price_wallet_id, quantity_wallet_id):

@@ -107,10 +107,9 @@ class OrderId(object):
 class Order(object):
     """Class for representing an ask or a bid created by the user"""
 
-    def __init__(self, order_id, price, quantity, timeout, timestamp, is_ask):
+    def __init__(self, order_id, latitude, longitude, quantity, timeout, timestamp, is_ask):
         """
         :param order_id: An order id to identify the order
-        :param price: A price to indicate for which amount to sell or buy
         :param quantity: A quantity to indicate how much to sell or buy
         :param timeout: A timeout when this tick is going to expire
         :param timestamp: A timestamp when the order was created
@@ -126,14 +125,16 @@ class Order(object):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         assert isinstance(order_id, OrderId), type(order_id)
-        assert isinstance(price, Price), type(price)
+        assert isinstance(latitude, float), type(latitude)
+        assert isinstance(longitude, float), type(longitude)
         assert isinstance(quantity, Quantity), type(quantity)
         assert isinstance(timeout, Timeout), type(timeout)
         assert isinstance(timestamp, Timestamp), type(timestamp)
         assert isinstance(is_ask, bool), type(is_ask)
 
         self._order_id = order_id
-        self._price = price
+        self._latitude = latitude
+        self._longitude = longitude
         self._quantity = quantity
         self._reserved_quantity = Quantity(0, quantity.wallet_id)
         self._traded_quantity = Quantity(0, quantity.wallet_id)
@@ -192,11 +193,18 @@ class Order(object):
         return self._order_id
 
     @property
-    def price(self):
+    def latitude(self):
         """
-        :rtype: Price
+        :rtype: float
         """
-        return self._price
+        return self._latitude
+
+    @property
+    def longitude(self):
+        """
+        :rtype: float
+        """
+        return self._longitude
 
     @property
     def total_quantity(self):
