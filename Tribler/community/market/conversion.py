@@ -81,8 +81,8 @@ class MarketConversion(BinaryConversion):
     def _encode_match(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.price),
-            int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.latitude),
+            float(payload.longitude), float(payload.quantity), int(payload.quantity.int_wallet_id),
             float(payload.timeout), float(payload.timestamp), str(payload.address.ip),
             int(payload.address.port), int(payload.recipient_order_number), float(payload.match_quantity),
             int(payload.match_quantity.int_wallet_id), str(payload.match_trader_id),
@@ -92,7 +92,7 @@ class MarketConversion(BinaryConversion):
 
     def _decode_match(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp,
+                                    [TraderId, MessageNumber, OrderNumber, float, float, Quantity, Timeout, Timestamp,
                                      str, int, OrderNumber, Quantity, TraderId, TraderId, str])
 
     def _encode_accept_match(self, message):
@@ -122,7 +122,7 @@ class MarketConversion(BinaryConversion):
         packet = encode((
             str(payload.trader_id), str(payload.message_number), int(payload.order_number),
             str(payload.recipient_trader_id), int(payload.recipient_order_number), payload.proposal_id,
-            float(payload.price), int(payload.price.int_wallet_id), float(payload.quantity),
+            float(payload.latitude), float(payload.longitude), float(payload.quantity),
             int(payload.quantity.int_wallet_id), float(payload.timestamp), str(payload.address.ip),
             int(payload.address.port)
         ))
@@ -130,7 +130,7 @@ class MarketConversion(BinaryConversion):
 
     def _decode_proposed_trade(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, OrderNumber, TraderId, OrderNumber, int, Price, Quantity,
+                                    [TraderId, MessageNumber, OrderNumber, TraderId, OrderNumber, int, float, float, Quantity,
                                      Timestamp, str, int])
 
     def _encode_declined_trade(self, message):
@@ -152,7 +152,7 @@ class MarketConversion(BinaryConversion):
             str(payload.trader_id), str(payload.message_number), str(payload.transaction_trader_id),
             int(payload.transaction_number), str(payload.order_trader_id), int(payload.order_number),
             str(payload.recipient_trader_id), int(payload.recipient_order_number), payload.proposal_id,
-            float(payload.price), int(payload.price.int_wallet_id), float(payload.quantity),
+            float(payload.latitude), float(payload.longitude), float(payload.quantity),
             int(payload.quantity.int_wallet_id), float(payload.timestamp)
         ))
         return packet,
@@ -160,7 +160,7 @@ class MarketConversion(BinaryConversion):
     def _decode_start_transaction(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
                                     [TraderId, MessageNumber, TraderId, TransactionNumber, TraderId, OrderNumber,
-                                     TraderId, OrderNumber, int, Price, Quantity, Timestamp])
+                                     TraderId, OrderNumber, int, float, float, Quantity, Timestamp])
 
     def _encode_wallet_info(self, message):
         payload = message.payload
@@ -205,8 +205,8 @@ class MarketConversion(BinaryConversion):
     def _encode_order_status_response(self, message):
         payload = message.payload
         packet = encode((
-            str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.price),
-            int(payload.price.int_wallet_id), float(payload.quantity), int(payload.quantity.int_wallet_id),
+            str(payload.trader_id), str(payload.message_number), int(payload.order_number), float(payload.latitude),
+            float(payload.longitude), float(payload.quantity), int(payload.quantity.int_wallet_id),
             float(payload.timeout), float(payload.timestamp), float(payload.traded_quantity),
             int(payload.traded_quantity.int_wallet_id), str(payload.address.ip), int(payload.address.port),
             int(payload.identifier)
@@ -215,5 +215,5 @@ class MarketConversion(BinaryConversion):
 
     def _decode_order_status_response(self, placeholder, offset, data):
         return self._decode_payload(placeholder, offset, data,
-                                    [TraderId, MessageNumber, OrderNumber, Price, Quantity, Timeout, Timestamp,
+                                    [TraderId, MessageNumber, OrderNumber, float, float, Quantity, Timeout, Timestamp,
                                      Quantity, str, int, int])

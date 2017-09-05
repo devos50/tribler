@@ -15,32 +15,32 @@ class Tick(object):
     """
     TIME_TOLERANCE = 10  # A small tolerance for the timestamp, to account for network delays
 
-    def __init__(self, order_id, price, quantity, timeout, timestamp, is_ask):
+    def __init__(self, order_id, latitude, longitude, quantity, timeout, timestamp, is_ask):
         """
         Don't use this class directly, use one of the class methods
 
         :param order_id: A order id to identify the order this tick represents
-        :param price: A price to indicate for which amount to sell or buy
         :param quantity: A quantity to indicate how much to sell or buy
         :param timeout: A timeout when this tick is going to expire
         :param timestamp: A timestamp when the tick was created
         :param is_ask: A bool to indicate if this tick is an ask
         :type order_id: OrderId
-        :type price: Price
         :type quantity: Quantity
         :type timeout: Timeout
         :type timestamp: Timestamp
         :type is_ask: bool
         """
         assert isinstance(order_id, OrderId), type(order_id)
-        assert isinstance(price, Price), type(price)
+        assert isinstance(latitude, float), type(latitude)
+        assert isinstance(longitude, float), type(longitude)
         assert isinstance(quantity, Quantity), type(quantity)
         assert isinstance(timeout, Timeout), type(timeout)
         assert isinstance(timestamp, Timestamp), type(timestamp)
         assert isinstance(is_ask, bool), type(is_ask)
 
         self._order_id = order_id
-        self._price = price
+        self._latitude = latitude
+        self._longitude = longitude
         self._quantity = quantity
         self._timeout = timeout
         self._timestamp = timestamp
@@ -72,10 +72,10 @@ class Tick(object):
         assert isinstance(order, Order), type(order)
 
         if order.is_ask():
-            return Ask(order.order_id, order.price, order.total_quantity - order.traded_quantity,
+            return Ask(order.order_id, order.latitude, order.longitude, order.total_quantity - order.traded_quantity,
                        order.timeout, order.timestamp)
         else:
-            return Bid(order.order_id, order.price, order.total_quantity - order.traded_quantity,
+            return Bid(order.order_id, order.latitude, order.longitude, order.total_quantity - order.traded_quantity,
                        order.timeout, order.timestamp)
 
     @property
@@ -86,11 +86,18 @@ class Tick(object):
         return self._order_id
 
     @property
-    def price(self):
+    def latitude(self):
         """
-        :rtype: Price
+        :rtype: float
         """
-        return self._price
+        return self._latitude
+
+    @property
+    def longitude(self):
+        """
+        :rtype: float
+        """
+        return self._longitude
 
     @property
     def quantity(self):
@@ -147,7 +154,8 @@ class Tick(object):
             self._order_id.trader_id,
             message_id.message_number,
             self._order_id.order_number,
-            self._price,
+            self._latitude,
+            self._longitude,
             self._quantity,
             self._timeout,
             self._timestamp,
@@ -160,8 +168,8 @@ class Tick(object):
         return {
             "trader_id": str(self.order_id.trader_id),
             "order_number": int(self.order_id.order_number),
-            "price": float(self.price),
-            "price_type": self.price.wallet_id,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
             "quantity": float(self.quantity),
             "quantity_type": self.quantity.wallet_id,
             "timeout": float(self.timeout),
@@ -176,8 +184,8 @@ class Tick(object):
         return {
             "trader_id": str(self.order_id.trader_id),
             "order_number": int(self.order_id.order_number),
-            "price": float(self.price),
-            "price_type": self.price.wallet_id,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
             "quantity": float(self.quantity),
             "quantity_type": self.quantity.wallet_id,
             "timeout": float(self.timeout),
@@ -188,20 +196,18 @@ class Tick(object):
 class Ask(Tick):
     """Represents an ask from a order located on another node."""
 
-    def __init__(self, order_id, price, quantity, timeout, timestamp):
+    def __init__(self, order_id, latitude, longitude, quantity, timeout, timestamp):
         """
         :param order_id: A order id to identify the order this tick represents
-        :param price: A price that needs to be paid for the ask
         :param quantity: The quantity that needs to be sold
         :param timeout: A timeout for the ask
         :param timestamp: A timestamp for when the ask was created
         :type order_id: OrderId
-        :type price: Price
         :type quantity: Quantity
         :type timeout: Timeout
         :type timestamp: Timestamp
         """
-        super(Ask, self).__init__(order_id, price, quantity, timeout, timestamp, True)
+        super(Ask, self).__init__(order_id, latitude, longitude, quantity, timeout, timestamp, True)
 
     @classmethod
     def from_block(cls, block):
@@ -215,7 +221,7 @@ class Ask(Tick):
         tx_dict = block.transaction["tick"]
         return cls(
             OrderId(TraderId(tx_dict["trader_id"]), OrderNumber(tx_dict["order_number"])),
-            Price(tx_dict["price"], tx_dict["price_type"]),
+            tx_dict["latitude"], tx_dict["longitude"],
             Quantity(tx_dict["quantity"], tx_dict["quantity_type"]),
             Timeout(tx_dict["timeout"]),
             Timestamp(tx_dict["timestamp"])
@@ -225,20 +231,18 @@ class Ask(Tick):
 class Bid(Tick):
     """Represents a bid from a order located on another node."""
 
-    def __init__(self, order_id, price, quantity, timeout, timestamp):
+    def __init__(self, order_id, latitude, longitude, quantity, timeout, timestamp):
         """
         :param order_id: A order id to identify the order this tick represents
-        :param price: A price that you are willing to pay for the bid
         :param quantity: The quantity that you want to buy
         :param timeout: A timeout for the bid
         :param timestamp: A timestamp for when the bid was created
         :type order_id: OrderId
-        :type price: Price
         :type quantity: Quantity
         :type timeout: Timeout
         :type timestamp: Timestamp
         """
-        super(Bid, self).__init__(order_id, price, quantity, timeout, timestamp, False)
+        super(Bid, self).__init__(order_id, latitude, longitude, quantity, timeout, timestamp, False)
 
     @classmethod
     def from_block(cls, block):
@@ -252,7 +256,7 @@ class Bid(Tick):
         tx_dict = block.transaction["tick"]
         return cls(
             OrderId(TraderId(tx_dict["trader_id"]), OrderNumber(tx_dict["order_number"])),
-            Price(tx_dict["price"], tx_dict["price_type"]),
+            tx_dict["latitude"], tx_dict["longitude"],
             Quantity(tx_dict["quantity"], tx_dict["quantity_type"]),
             Timeout(tx_dict["timeout"]),
             Timestamp(tx_dict["timestamp"])

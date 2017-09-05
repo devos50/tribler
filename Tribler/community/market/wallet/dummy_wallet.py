@@ -107,3 +107,12 @@ class DummyWallet2(BaseDummyWallet):
 
     def get_identifier(self):
         return 'DUM2'
+
+
+class TaxiWallet(BaseDummyWallet):
+
+    def get_name(self):
+        return 'Taxi Wallet'
+
+    def get_identifier(self):
+        return 'taxi'

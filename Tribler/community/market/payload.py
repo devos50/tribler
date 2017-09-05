@@ -49,17 +49,19 @@ class InfoPayload(MessagePayload):
 
 class OfferPayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,
+        def __init__(self, meta, trader_id, message_number, order_number, latitude, longitude, quantity, timeout, timestamp,
                      ip, port):
             assert isinstance(order_number, OrderNumber), type(order_number)
-            assert isinstance(price, Price), type(price)
+            assert isinstance(latitude, float), type(latitude)
+            assert isinstance(longitude, float), type(longitude)
             assert isinstance(quantity, Quantity), type(quantity)
             assert isinstance(timeout, Timeout), type(timeout)
             assert isinstance(ip, str), type(ip)
             assert isinstance(port, int), type(port)
             super(OfferPayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
             self._order_number = order_number
-            self._price = price
+            self._latitude = latitude
+            self._longitude = longitude
             self._quantity = quantity
             self._timeout = timeout
             self._ip = ip
@@ -70,8 +72,12 @@ class OfferPayload(MessagePayload):
             return self._order_number
 
         @property
-        def price(self):
-            return self._price
+        def latitude(self):
+            return self._latitude
+
+        @property
+        def longitude(self):
+            return self._longitude
 
         @property
         def quantity(self):
@@ -88,7 +94,7 @@ class OfferPayload(MessagePayload):
 
 class MatchPayload(OfferPayload):
     class Implementation(OfferPayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,
+        def __init__(self, meta, trader_id, message_number, order_number, latitude, longitude, quantity, timeout, timestamp,
                      ip, port, recipient_order_number, match_quantity, match_trader_id,
                      matchmaker_trader_id, match_id):
             assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
@@ -96,7 +102,7 @@ class MatchPayload(OfferPayload):
             assert isinstance(match_trader_id, TraderId), type(match_trader_id)
             assert isinstance(matchmaker_trader_id, TraderId), type(matchmaker_trader_id)
             assert isinstance(match_id, str), type(match_id)
-            super(MatchPayload.Implementation, self).__init__(meta, trader_id, message_number, order_number, price,
+            super(MatchPayload.Implementation, self).__init__(meta, trader_id, message_number, order_number, latitude, longitude,
                                                               quantity, timeout, timestamp, ip, port)
             self._recipient_order_number = recipient_order_number
             self._match_quantity = match_quantity
@@ -164,19 +170,21 @@ class DeclineMatchPayload(MessagePayload):
 class TradePayload(MessagePayload):
     class Implementation(MessagePayload.Implementation):
         def __init__(self, meta, trader_id, message_number, order_number, recipient_trader_id, recipient_order_number,
-                     proposal_id, price, quantity, timestamp, ip, port):
+                     proposal_id, latitude, longitude, quantity, timestamp, ip, port):
             assert isinstance(order_number, OrderNumber), type(order_number)
             assert isinstance(recipient_trader_id, TraderId), type(recipient_trader_id)
             assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
             assert isinstance(proposal_id, int), type(proposal_id)
-            assert isinstance(price, Price), type(price)
+            assert isinstance(latitude, float), type(latitude)
+            assert isinstance(longitude, float), type(longitude)
             assert isinstance(quantity, Quantity), type(quantity)
             super(TradePayload.Implementation, self).__init__(meta, trader_id, message_number, timestamp)
             self._order_number = order_number
             self._recipient_trader_id = recipient_trader_id
             self._recipient_order_number = recipient_order_number
             self._proposal_id = proposal_id
-            self._price = price
+            self._latitude = latitude
+            self._longitude = longitude
             self._quantity = quantity
             self._ip = ip
             self._port = port
@@ -198,8 +206,12 @@ class TradePayload(MessagePayload):
             return self._proposal_id
 
         @property
-        def price(self):
-            return self._price
+        def latitude(self):
+            return self._latitude
+
+        @property
+        def longitude(self):
+            return self._longitude
 
         @property
         def quantity(self):
@@ -269,13 +281,14 @@ class StartTransactionPayload(TransactionPayload):
     class Implementation(TransactionPayload.Implementation):
         def __init__(self, meta, trader_id, message_number, transaction_trader_id, transaction_number, order_trader_id,
                      order_number, recipient_trader_id, recipient_order_number, proposal_id,
-                     price, quantity, timestamp):
+                     latitude, longitude, quantity, timestamp):
             assert isinstance(order_trader_id, TraderId), type(order_trader_id)
             assert isinstance(order_number, OrderNumber), type(order_number)
             assert isinstance(recipient_trader_id, TraderId), type(recipient_trader_id)
             assert isinstance(recipient_order_number, OrderNumber), type(recipient_order_number)
             assert isinstance(proposal_id, int), type(proposal_id)
-            assert isinstance(price, Price), type(price)
+            assert isinstance(latitude, float), type(latitude)
+            assert isinstance(longitude, float), type(longitude)
             assert isinstance(quantity, Quantity), type(quantity)
             super(StartTransactionPayload.Implementation, self).__init__(meta, trader_id, message_number,
                                                                          transaction_trader_id, transaction_number,
@@ -285,7 +298,8 @@ class StartTransactionPayload(TransactionPayload):
             self._recipient_trader_id = recipient_trader_id
             self._recipient_order_number = recipient_order_number
             self._proposal_id = proposal_id
-            self._price = price
+            self._latitude = latitude
+            self._longitude = longitude
             self._quantity = quantity
 
         @property
@@ -309,8 +323,12 @@ class StartTransactionPayload(TransactionPayload):
             return self._proposal_id
 
         @property
-        def price(self):
-            return self._price
+        def latitude(self):
+            return self._latitude
+
+        @property
+        def longitude(self):
+            return self._longitude
 
         @property
         def quantity(self):
@@ -407,11 +425,11 @@ class OrderStatusRequestPayload(MessagePayload):
 
 class OrderStatusResponsePayload(OfferPayload):
     class Implementation(OfferPayload.Implementation):
-        def __init__(self, meta, trader_id, message_number, order_number, price, quantity, timeout, timestamp,
+        def __init__(self, meta, trader_id, message_number, order_number, latitude, longitude, quantity, timeout, timestamp,
                      traded_quantity, ip, port, identifier):
             assert isinstance(traded_quantity, Quantity), type(traded_quantity)
             super(OrderStatusResponsePayload.Implementation, self).__init__(meta, trader_id, message_number,
-                                                                            order_number, price, quantity, timeout,
+                                                                            order_number, latitude, longitude, quantity, timeout,
                                                                             timestamp, ip, port)
             self._traded_quantity = traded_quantity
             self._identifier = identifier

@@ -104,16 +104,14 @@ class TransactionId(object):
 class Transaction(object):
     """Class for representing a transaction between two nodes"""
 
-    def __init__(self, transaction_id, price, quantity, order_id, partner_order_id, timestamp):
+    def __init__(self, transaction_id, latitude, longitude, quantity, order_id, partner_order_id, timestamp):
         """
         :param transaction_id: An transaction id to identify the order
-        :param price: A price to indicate for which amount to sell or buy
         :param quantity: A quantity to indicate how much to sell or buy
         :param order_id: The id of your order for this transaction
         :param partner_order_id: The id of the order of the other party
         :param timestamp: A timestamp when the transaction was created
         :type transaction_id: TransactionId
-        :type price: Price
         :type quantity: Quantity
         :type order_id: OrderId
         :type partner_order_id: OrderId
@@ -123,16 +121,16 @@ class Transaction(object):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
-        assert isinstance(price, Price), type(price)
+        assert isinstance(latitude, float), type(latitude)
+        assert isinstance(longitude, float), type(longitude)
         assert isinstance(quantity, Quantity), type(quantity)
         assert isinstance(order_id, OrderId), type(order_id)
         assert isinstance(partner_order_id, OrderId), type(partner_order_id)
         assert isinstance(timestamp, Timestamp), type(timestamp)
 
         self._transaction_id = transaction_id
-        self._price = price
-        self._transferred_price = Price(0, price.wallet_id)
-        self._total_price = Price(float(price) * float(quantity), price.wallet_id)
+        self._latitude = latitude
+        self._longitude = longitude
         self._quantity = quantity
         self._transferred_quantity = Quantity(0, quantity.wallet_id)
         self._order_id = order_id
@@ -207,8 +205,8 @@ class Transaction(object):
         assert isinstance(proposed_trade, ProposedTrade), type(proposed_trade)
         assert isinstance(transaction_id, TransactionId), type(transaction_id)
 
-        return cls(transaction_id, proposed_trade.price, proposed_trade.quantity, proposed_trade.recipient_order_id,
-                   proposed_trade.order_id, proposed_trade.timestamp)
+        return cls(transaction_id, proposed_trade.latitude, proposed_trade.longitude, proposed_trade.quantity,
+                   proposed_trade.recipient_order_id, proposed_trade.order_id, proposed_trade.timestamp)
 
     @property
     def transaction_id(self):
@@ -218,25 +216,18 @@ class Transaction(object):
         return self._transaction_id
 
     @property
-    def price(self):
+    def latitude(self):
         """
-        :rtype: Price
+        :rtype: float
         """
-        return self._price
+        return self._latitude
 
     @property
-    def total_price(self):
+    def longitude(self):
         """
-        :rtype: Price
+        :rtype: float
         """
-        return self._total_price
-
-    @property
-    def transferred_price(self):
-        """
-        :rtype: Price
-        """
-        return self._transferred_price
+        return self._longitude
 
     @property
     def total_quantity(self):
@@ -305,9 +296,7 @@ class Transaction(object):
         self._logger.debug("Adding price %s and quantity %s to transaction %s",
                            payment.transferee_price, payment.transferee_quantity, self.transaction_id)
         self._transferred_quantity += payment.transferee_quantity
-        self._transferred_price += payment.transferee_price
-        self._logger.debug("Transferred price: %s, transferred quantity: %s",
-                           self.transferred_price, self.transferred_quantity)
+        self._logger.debug("transferred quantity: %s", self.transferred_quantity)
         self._payments.append(payment)
 
     def last_payment(self, is_ask):
@@ -321,7 +310,7 @@ class Transaction(object):
     def next_payment(self, order_is_ask, min_unit, incremental):
         if not incremental:
             # Don't use incremental payments, just return the full amount
-            ret_val = self.total_quantity if order_is_ask else self.total_price
+            ret_val = self.total_quantity if order_is_ask else Price(1, 'taxi')
             self._logger.debug("Returning %s for the next payment (no incremental payments)", ret_val)
             return ret_val
 
@@ -352,7 +341,7 @@ class Transaction(object):
             return Price(transfer_amount, self.total_price.wallet_id)
 
     def is_payment_complete(self):
-        return self.transferred_price >= self.total_price and self.transferred_quantity >= self.total_quantity
+        return self.transferred_quantity >= self.total_quantity
 
     def to_dictionary(self):
         """
@@ -364,9 +353,8 @@ class Transaction(object):
             "partner_trader_id": str(self.partner_order_id.trader_id),
             "partner_order_number": int(self.partner_order_id.order_number),
             "transaction_number": int(self.transaction_id.transaction_number),
-            "price": float(self.price),
-            "price_type": self.price.wallet_id,
-            "transferred_price": float(self.transferred_price),
+            "latitude": self.latitude,
+            "longitude": self.longitude,
             "quantity": float(self.total_quantity),
             "quantity_type": self.total_quantity.wallet_id,
             "transferred_quantity": float(self.transferred_quantity),
@@ -380,21 +368,19 @@ class StartTransaction(Message):
     """Class for representing a message to indicate the start of a payment set"""
 
     def __init__(self, message_id, transaction_id, order_id, recipient_order_id, proposal_id,
-                 price, quantity, timestamp):
+                 latitude, longitude, quantity, timestamp):
         """
         :param message_id: A message id to identify the message
         :param transaction_id: A transaction id to identify the transaction
         :param order_id: My order id
         :param recipient_order_id: The order id of the recipient of this message
         :param proposal_id: The proposal ID associated with this start transaction message
-        :param price: A price for the trade
         :param quantity: A quantity to be traded
         :param timestamp: A timestamp when the transaction was created
         :type message_id: MessageId
         :type transaction_id: TransactionId
         :type proposal_id: int
         :type order_id: OrderId
-        :type price: Price
         :type quantity: Quantity
         :type timestamp: Timestamp
         """
@@ -404,14 +390,16 @@ class StartTransaction(Message):
         assert isinstance(order_id, OrderId), type(order_id)
         assert isinstance(recipient_order_id, OrderId), type(order_id)
         assert isinstance(proposal_id, int), type(proposal_id)
-        assert isinstance(price, Price), type(price)
+        assert isinstance(latitude, float), type(latitude)
+        assert isinstance(longitude, float), type(longitude)
         assert isinstance(quantity, Quantity), type(quantity)
 
         self._transaction_id = transaction_id
         self._order_id = order_id
         self._recipient_order_id = recipient_order_id
         self._proposal_id = proposal_id
-        self._price = price
+        self._latitude = latitude
+        self._longitude = longitude
         self._quantity = quantity
 
     @property
@@ -444,12 +432,20 @@ class StartTransaction(Message):
         return self._proposal_id
 
     @property
-    def price(self):
+    def latitude(self):
         """
-        :return: The price
-        :rtype: Price
+        :return: The latitude
+        :rtype: float
         """
-        return self._price
+        return self._latitude
+
+    @property
+    def longitude(self):
+        """
+        :return: The longitude
+        :rtype: float
+        """
+        return self._longitude
 
     @property
     def quantity(self):
@@ -477,7 +473,8 @@ class StartTransaction(Message):
         assert hasattr(data, 'recipient_trader_id'), isinstance(data.recipient_trader_id, TraderId)
         assert hasattr(data, 'recipient_order_number'), isinstance(data.recipient_order_number, OrderNumber)
         assert hasattr(data, 'proposal_id'), isinstance(data.proposal_id, int)
-        assert hasattr(data, 'price'), isinstance(data.price, Price)
+        assert hasattr(data, 'latitude'), isinstance(data.latitude, float)
+        assert hasattr(data, 'longitude'), isinstance(data.longitude, float)
         assert hasattr(data, 'quantity'), isinstance(data.quantity, Quantity)
         assert hasattr(data, 'timestamp'), isinstance(data.timestamp, Timestamp)
 
@@ -487,7 +484,8 @@ class StartTransaction(Message):
             OrderId(data.order_trader_id, data.order_number),
             OrderId(data.recipient_trader_id, data.recipient_order_number),
             data.proposal_id,
-            data.price,
+            data.latitude,
+            data.longitude,
             data.quantity,
             data.timestamp
         )
@@ -506,7 +504,8 @@ class StartTransaction(Message):
             self._recipient_order_id.trader_id,
             self._recipient_order_id.order_number,
             self._proposal_id,
-            self._price,
+            self._latitude,
+            self._longitude,
             self._quantity,
             self._timestamp,
         )
