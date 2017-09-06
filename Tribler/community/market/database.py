@@ -141,6 +141,16 @@ class MarketDB(TrustChainDB):
     Ensures a proper DB schema on startup.
     """
 
+    def __init__(self, working_directory, db_name):
+        """
+        Sets up the persistence layer ready for use.
+        :param working_directory: Path to the working directory
+        that will contain the the db at working directory/DATABASE_PATH
+        :param db_name: The name of the database
+        """
+        Database.__init__(self, u":memory:")
+        self.open()
+
     def get_schema(self):
         """
         Return the schema for the database.
