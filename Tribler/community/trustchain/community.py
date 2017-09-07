@@ -433,6 +433,7 @@ class TrustChainCommunity(Community):
         :return: the trust value for this member
         :rtype: int
         """
+        return 1
         block = self.persistence.get_latest(member.public_key)
         if block:
             return block.sequence_number
