@@ -26,6 +26,7 @@ class TrustChainBlock(object):
 
     def __init__(self, data=None):
         super(TrustChainBlock, self).__init__()
+        self.computed_hash = None
         if data is None:
             # data
             self.transaction = {}
@@ -65,7 +66,9 @@ class TrustChainBlock(object):
 
     @property
     def hash(self):
-        return sha256(self.pack()).digest()
+        if not self.computed_hash:
+            self.computed_hash = sha256(self.pack()).digest()
+        return self.computed_hash
 
     def validate_transaction(self, database):
         """
