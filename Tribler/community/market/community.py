@@ -7,6 +7,8 @@ from math import sin
 from math import asin
 
 from math import sqrt
+
+from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, succeed, Deferred
 from twisted.internet.task import LoopingCall
 
@@ -154,6 +156,7 @@ class MarketCommunity(TrustChainCommunity):
         self.use_incremental_payments = True
         self.matchmakers = set()
         self.pending_matchmaker_deferreds = []
+        self.pending_matches = {}
 
     def initialize(self, tribler_session=None, tradechain_community=None, wallets=None,
                    use_database=True, is_matchmaker=True):
@@ -912,6 +915,53 @@ class MarketCommunity(TrustChainCommunity):
 
         return self.dispersy.store_update_forward([message], True, False, True)
 
+    def parse_match_batch(self, order_id):
+        """
+        Parse a batch of messages, pick the closest taxi driver
+        """
+        order = self.order_manager.order_repository.find_by_id(order_id)
+
+        min_match_msg = None
+        min_distance = 100000000
+        for match_message in self.pending_matches[order_id]:
+            distance = self.haversine(order.longitude, order.latitude,
+                                      match_message.payload.longitude, match_message.payload.latitude)
+            if distance < min_distance:
+                min_distance = distance
+                min_match_msg = match_message
+
+        # Now send responses -> accept first
+        other_order_id = OrderId(min_match_msg.payload.trader_id, min_match_msg.payload.order_number)
+        propose_quantity = Quantity(min(float(order.available_quantity), float(min_match_msg.payload.match_quantity)),
+                                    order.available_quantity.wallet_id)
+
+        # Reserve the quantity
+        order.reserve_quantity_for_tick(other_order_id, propose_quantity)
+        self.order_manager.order_repository.update(order)
+
+        propose_trade = Trade.propose(
+            self.message_repository.next_identity(),
+            order.order_id,
+            other_order_id,
+            order.latitude,
+            order.longitude,
+            propose_quantity,
+            Timestamp.now()
+        )
+        self.send_proposed_trade(propose_trade, min_match_msg.payload.match_id)
+
+        for match_message in self.pending_matches[order_id]:
+            if match_message == min_match_msg:
+                continue
+
+            # Send a declined trade back
+            self.send_decline_match_message(match_message.payload.match_id,
+                                            match_message.payload.matchmaker_trader_id,
+                                            DeclineMatchReason.ORDER_COMPLETED)
+            continue
+
+        del self.pending_matches[order_id]
+
     def on_match_message(self, messages):
         for message in messages:
             # We got a match, check whether we can respond to this match
@@ -925,7 +975,6 @@ class MarketCommunity(TrustChainCommunity):
             #self.create_introduction_request(walk_candidate, self.dispersy_enable_bloom_filter_sync)
 
             order_id = OrderId(TraderId(self.mid), message.payload.recipient_order_number)
-            other_order_id = OrderId(message.payload.trader_id, message.payload.order_number)
             order = self.order_manager.order_repository.find_by_id(order_id)
 
             # Store the message for later
@@ -938,23 +987,11 @@ class MarketCommunity(TrustChainCommunity):
                                                 DeclineMatchReason.ORDER_COMPLETED)
                 continue
 
-            propose_quantity = Quantity(min(float(order.available_quantity), float(message.payload.match_quantity)),
-                                        order.available_quantity.wallet_id)
+            if order_id not in self.pending_matches:
+                self.pending_matches[order_id] = []
+                self.register_task("parse_match_%s" % order_id, reactor.callLater(2, self.parse_match_batch, order_id))
 
-            # Reserve the quantity
-            order.reserve_quantity_for_tick(other_order_id, propose_quantity)
-            self.order_manager.order_repository.update(order)
-
-            propose_trade = Trade.propose(
-                self.message_repository.next_identity(),
-                order.order_id,
-                other_order_id,
-                order.latitude,
-                order.longitude,
-                propose_quantity,
-                Timestamp.now()
-            )
-            self.send_proposed_trade(propose_trade, message.payload.match_id)
+            self.pending_matches[order_id].append(message)
 
     def check_match_message(self, messages):
         for message in messages:
