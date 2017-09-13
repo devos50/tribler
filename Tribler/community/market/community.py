@@ -292,7 +292,8 @@ class MarketCommunity(TrustChainCommunity):
         return [DefaultConversion(self), TrustChainConversion(self), MarketConversion(self)]
 
     def start_walking(self):
-        self.register_task("take step", LoopingCall(self.take_step)).start(5.0, now=False)
+        #self.register_task("take step", LoopingCall(self.take_step)).start(5.0, now=False)
+        pass
 
     def should_sign(self, message):
         """
