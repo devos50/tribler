@@ -919,9 +919,9 @@ class MarketCommunity(TrustChainCommunity):
             self.add_matchmaker(message.candidate.sock_addr)
 
             # Immediately send an introduction request to this matchmaker so it's verified
-            walk_candidate = self.create_or_update_walkcandidate(message.candidate.sock_addr, ('0.0.0.0', 0),
-                                                                 message.candidate.sock_addr, False, u'unknown')
-            self.create_introduction_request(walk_candidate, self.dispersy_enable_bloom_filter_sync)
+            #walk_candidate = self.create_or_update_walkcandidate(message.candidate.sock_addr, ('0.0.0.0', 0),
+            #                                                     message.candidate.sock_addr, False, u'unknown')
+            #self.create_introduction_request(walk_candidate, self.dispersy_enable_bloom_filter_sync)
 
             order_id = OrderId(TraderId(self.mid), message.payload.recipient_order_number)
             other_order_id = OrderId(message.payload.trader_id, message.payload.order_number)
