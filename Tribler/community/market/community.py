@@ -988,9 +988,10 @@ class MarketCommunity(TrustChainCommunity):
 
             if order.status != "open" or order.available_quantity == Quantity(0, order.available_quantity.wallet_id):
                 # Send a declined trade back
+                decline_reason = DeclineMatchReason.ORDER_COMPLETED if order.status != "open" else DeclineMatchReason.OTHER
                 self.send_decline_match_message(message.payload.match_id,
                                                 message.payload.matchmaker_trader_id,
-                                                DeclineMatchReason.ORDER_COMPLETED)
+                                                decline_reason)
                 continue
 
             if order_id not in self.pending_matches:
