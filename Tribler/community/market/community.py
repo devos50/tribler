@@ -190,6 +190,8 @@ class MarketCommunity(TrustChainCommunity):
         # Determine the reputation of peers every five minutes
         #self.register_task("calculate_reputation", LoopingCall(self.compute_reputation)).start(300.0, now=False)
 
+        self.register_task("periodic_match", LoopingCall(self.periodic_match)).start(5, now=False)
+
         self._logger.info("Market community initialized with mid %s", self.mid)
 
     def initiate_meta_messages(self):
@@ -488,6 +490,12 @@ class MarketCommunity(TrustChainCommunity):
 
         if self.tribler_session:
             self.tribler_session.notifier.notify(NTFY_MARKET_ON_BID_TIMEOUT, NTFY_UPDATE, None, bid.to_dictionary())
+
+    def periodic_match(self):
+        if self.is_matchmaker:
+            bid_ids = self.order_book.get_bid_ids()
+            for bid_id in bid_ids:
+                self.match(self.order_book.get_tick(bid_id).tick)
 
     def update_ips_from_block(self, block):
         """
