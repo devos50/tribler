@@ -79,6 +79,7 @@ class ProposedTradeRequestCache(NumberCache):
             match_message = self.community.incoming_match_messages[self.match_id]
             self.community.send_decline_match_message(self.match_id, match_message.payload.matchmaker_trader_id,
                                                       DeclineMatchReason.OTHER)
+            self.community.parse_match_message(order.order_id)
 
 
 class OrderStatusRequestCache(RandomNumberCache):
@@ -914,10 +915,13 @@ class MarketCommunity(TrustChainCommunity):
 
         return self.dispersy.store_update_forward([message], True, False, True)
 
-    def parse_match_batch(self, order_id):
+    def parse_match_message(self, order_id):
         """
-        Parse a batch of messages, pick the closest taxi driver
+        Attempt to parse a match message
         """
+        if order_id not in self.pending_matches or len(self.pending_matches[order_id]) == 0:
+            return
+
         order = self.order_manager.order_repository.find_by_id(order_id)
 
         min_match_msg = None
@@ -949,14 +953,17 @@ class MarketCommunity(TrustChainCommunity):
         )
         self.send_proposed_trade(propose_trade, min_match_msg.payload.match_id)
 
-        for match_message in self.pending_matches[order_id]:
-            if match_message == min_match_msg:
-                continue
+        self.pending_matches[order_id].remove(min_match_msg)
 
+    def decline_all_match_messages(self, order_id):
+        """
+        Decline all saved match messages
+        """
+        for match_message in self.pending_matches[order_id]:
             # Send a declined trade back
             self.send_decline_match_message(match_message.payload.match_id,
                                             match_message.payload.matchmaker_trader_id,
-                                            DeclineMatchReason.ORDER_COMPLETED)
+                                            DeclineMatchReason.OTHER)
             continue
 
         del self.pending_matches[order_id]
@@ -988,7 +995,7 @@ class MarketCommunity(TrustChainCommunity):
 
             if order_id not in self.pending_matches:
                 self.pending_matches[order_id] = []
-                self.register_task("parse_match_%s" % order_id, reactor.callLater(2, self.parse_match_batch, order_id))
+                self.register_task("parse_match_%s" % order_id, reactor.callLater(2, self.parse_match_message, order_id))
 
             self.pending_matches[order_id].append(message)
 
@@ -1278,6 +1285,7 @@ class MarketCommunity(TrustChainCommunity):
 
             self.send_decline_match_message(request.match_id, match_message.payload.matchmaker_trader_id,
                                             match_decline_reason)
+            self.parse_match_message(order.order_id)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
@@ -1403,6 +1411,9 @@ class MarketCommunity(TrustChainCommunity):
                 match_message = self.incoming_match_messages[request.match_id]
                 self.send_accept_match_message(request.match_id, match_message.payload.matchmaker_trader_id,
                                                start_transaction.quantity)
+
+                # Decline all other matches
+                self.decline_all_match_messages(order.order_id)
 
                 transaction = self.transaction_manager.create_from_start_transaction(start_transaction,
                                                                                      request.match_id)
