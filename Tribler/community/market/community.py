@@ -391,6 +391,22 @@ class MarketCommunity(TrustChainCommunity):
 
         return self.wallets[wallet_id].get_address()
 
+    def get_matchmaker_candidates(self):
+        candidates = []
+        for verified_candidate in self.dispersy_yield_verified_candidates():
+            if verified_candidate.sock_addr in self.matchmakers:
+                candidates.append(verified_candidate)
+                if len(candidates) == 10:
+                    return candidates
+
+        return candidates
+
+    def relay_block_message(self, message):
+        matchmaker_candidates = self.get_matchmaker_candidates()
+        message._destination._candidates = matchmaker_candidates
+        message.regenerate_packet()
+        self.dispersy.store_update_forward([message], False, False, True)
+
     def get_order_addresses(self, order):
         """
         Return a tuple of incoming and outgoing payment address of an order.

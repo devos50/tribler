@@ -18,7 +18,7 @@ from Tribler.dispersy.authentication import NoAuthentication, MemberAuthenticati
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
 from Tribler.dispersy.conversion import DefaultConversion
-from Tribler.dispersy.destination import CandidateDestination, NHopCommunityDestination
+from Tribler.dispersy.destination import CandidateDestination, NHopCommunityDestination, CommunityDestination
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.message import Message, DelayPacketByMissingMember
 from Tribler.dispersy.resolution import PublicResolution
@@ -104,7 +104,7 @@ class TrustChainCommunity(Community):
                     NoAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
-                    NHopCommunityDestination(10, depth=2),
+                    NHopCommunityDestination(0, depth=2),
                     HalfBlockPayload(),
                     self._generic_timeline_check,
                     self.received_half_block),
@@ -120,7 +120,7 @@ class TrustChainCommunity(Community):
                     NoAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
-                    NHopCommunityDestination(10, depth=2),
+                    NHopCommunityDestination(0, depth=2),
                     BlockPairPayload(),
                     self._generic_timeline_check,
                     self.received_block_pair),
@@ -159,7 +159,7 @@ class TrustChainCommunity(Community):
         message = self.get_meta_message(HALF_BLOCK if candidate else HALF_BLOCK_BROADCAST).impl(
             authentication=tuple(),
             distribution=(self.claim_global_time(),),
-            destination=(candidate,) if candidate else (),
+            destination=(candidate,) if candidate else self.get_matchmaker_candidates(),
             payload=(block,))
         try:
             self.dispersy.store_update_forward([message], False, False, True)
@@ -183,7 +183,7 @@ class TrustChainCommunity(Community):
         message = self.get_meta_message(BLOCK_PAIR if candidate else BLOCK_PAIR_BROADCAST).impl(
             authentication=tuple(),
             distribution=(self.claim_global_time(),),
-            destination=(candidate,) if candidate else (),
+            destination=(candidate,) if candidate else self.get_matchmaker_candidates(),
             payload=(block1, block2))
         try:
             self.dispersy.store_update_forward([message], False, False, True)
@@ -269,6 +269,13 @@ class TrustChainCommunity(Community):
 
         return validation
 
+    def get_matchmaker_candidates(self):
+        pass
+
+    def relay_block_message(self, message):
+        # Implemented in market community
+        pass
+
     def received_half_block(self, messages):
         """
         We've received a half block, either because we sent a SIGNED message to some one or we are crawling
@@ -281,8 +288,7 @@ class TrustChainCommunity(Community):
 
             if message.name == HALF_BLOCK_BROADCAST and message.destination.depth > 0 \
                     and block_id not in self.relayed_broadcasts:
-                message.regenerate_packet()
-                self.dispersy.store_update_forward([message], False, False, True)
+                self.relay_block_message(message)
                 self.relayed_broadcasts.append(block_id)
 
             validation = self.validate_persist_block(blk)
@@ -351,7 +357,7 @@ class TrustChainCommunity(Community):
 
             if message.name == BLOCK_PAIR_BROADCAST and message.destination.depth > 0 \
                     and block_id not in self.relayed_broadcasts:
-                message.regenerate_packet()
+                self.relay_block_message(message)
                 self.dispersy.store_update_forward([message], False, False, True)
                 self.relayed_broadcasts.append(block_id)
 
