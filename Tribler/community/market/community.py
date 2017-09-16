@@ -992,7 +992,7 @@ class MarketCommunity(TrustChainCommunity):
             # Send a declined trade back
             self.send_decline_match_message(match_message.payload.match_id,
                                             match_message.payload.matchmaker_trader_id,
-                                            DeclineMatchReason.OTHER)
+                                            DeclineMatchReason.ORDER_COMPLETED)
             continue
 
         del self.pending_matches[order_id]
