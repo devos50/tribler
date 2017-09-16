@@ -91,9 +91,9 @@ class TaxiStrategy(MatchingStrategy):
         return c * r
 
     def match(self, order_id, latitude, longitude, is_ask):
-        return self.match_ask(latitude, longitude) if is_ask else self.match_bid(latitude, longitude)
+        return self.match_ask(order_id, latitude, longitude) if is_ask else self.match_bid(order_id, latitude, longitude)
 
-    def match_ask(self, latitude, longitude):
+    def match_ask(self, order_id, latitude, longitude):
         if not self.order_book.bids._price_level_exists(Price(1, 'taxi')):
             return []
 
@@ -104,7 +104,7 @@ class TaxiStrategy(MatchingStrategy):
         min_tick = None
         min_distance = 100000000
         for tick_entry in price_lvl:
-            if tick_entry.reserved_for_matching > Quantity(0, 'taxi'):
+            if tick_entry.reserved_for_matching > Quantity(0, 'taxi') or tick_entry.is_blocked_for_matching(order_id):
                 continue
 
             distance = self.haversine(longitude, latitude, tick_entry.tick.longitude, tick_entry.tick.latitude)
@@ -116,7 +116,7 @@ class TaxiStrategy(MatchingStrategy):
             return [(self.get_unique_match_id(), min_tick, Quantity(1, 'taxi'))]
         return []
 
-    def match_bid(self, latitude, longitude):
+    def match_bid(self, order_id, latitude, longitude):
         if not self.order_book.asks._price_level_exists(Price(1, 'taxi')):
             return []
 
@@ -127,7 +127,7 @@ class TaxiStrategy(MatchingStrategy):
         min_tick = None
         min_distance = 100000000
         for tick_entry in price_lvl:
-            if tick_entry.reserved_for_matching > Quantity(0, 'taxi'):
+            if tick_entry.reserved_for_matching > Quantity(0, 'taxi') or tick_entry.is_blocked_for_matching(order_id):
                 continue
 
             distance = self.haversine(longitude, latitude, tick_entry.tick.longitude, tick_entry.tick.latitude)
