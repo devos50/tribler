@@ -952,6 +952,10 @@ class MarketCommunity(TrustChainCommunity):
             return
 
         order = self.order_manager.order_repository.find_by_id(order_id)
+        if order.status != "open":
+            # We are already done!
+            self.decline_all_match_messages(order_id)
+            return
 
         min_match_msg = None
         min_distance = 100000000
@@ -993,7 +997,6 @@ class MarketCommunity(TrustChainCommunity):
             self.send_decline_match_message(match_message.payload.match_id,
                                             match_message.payload.matchmaker_trader_id,
                                             DeclineMatchReason.ORDER_COMPLETED)
-            continue
 
         del self.pending_matches[order_id]
 
