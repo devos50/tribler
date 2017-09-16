@@ -943,7 +943,12 @@ class MarketCommunity(TrustChainCommunity):
         """
         Attempt to parse a match message
         """
-        if order_id not in self.pending_matches or len(self.pending_matches[order_id]) == 0:
+        self._logger.debug("Parsing match message with order id %s", order_id)
+        if order_id not in self.pending_matches:
+            return
+
+        if len(self.pending_matches[order_id]) == 0:
+            del self.pending_matches[order_id]
             return
 
         order = self.order_manager.order_repository.find_by_id(order_id)
