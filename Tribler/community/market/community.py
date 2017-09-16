@@ -684,7 +684,10 @@ class MarketCommunity(TrustChainCommunity):
         :return: A Deferred that fires with a matchmaker.
         """
         if len(self.matchmakers) > 0:
-            return succeed(self.get_candidate(random.sample(self.matchmakers, 1)[0], False))
+            rand_mm = self.get_candidate(random.sample(self.matchmakers, 1)[0], False)
+            while rand_mm is None:
+                rand_mm = self.get_candidate(random.sample(self.matchmakers, 1)[0], False)
+            return succeed(rand_mm)
 
         matchmaker_deferred = Deferred()
         self.pending_matchmaker_deferreds.append(matchmaker_deferred)
