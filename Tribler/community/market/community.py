@@ -398,7 +398,7 @@ class MarketCommunity(TrustChainCommunity):
         for verified_candidate in self.dispersy_yield_verified_candidates():
             if verified_candidate.sock_addr in self.matchmakers:
                 candidates.append(verified_candidate)
-                if len(candidates) == 10:
+                if len(candidates) == 8:
                     return candidates
 
         return candidates
