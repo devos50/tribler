@@ -1,18 +1,15 @@
-import logging
-import logging.config
 import os
-
-from twisted.internet.defer import inlineCallbacks
 
 import Tribler.Core.Utilities.json_util as json
 from Tribler.Test.Core.Modules.RestApi.base_api_test import AbstractApiTest
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.Test.twisted_thread import deferred
-from Tribler.community.tunnel.hidden_community import HiddenTunnelCommunity
+from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
 from Tribler.dispersy.dispersy import Dispersy
 from Tribler.dispersy.endpoint import ManualEnpoint
 from Tribler.dispersy.member import DummyMember
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
+from twisted.internet.defer import inlineCallbacks
 
 
 class TestCircuitDebugEndpoint(AbstractApiTest):

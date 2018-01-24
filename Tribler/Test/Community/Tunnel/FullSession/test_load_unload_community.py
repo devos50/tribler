@@ -1,11 +1,10 @@
-from twisted.internet.defer import inlineCallbacks
-
-from Tribler.community.tunnel.hidden_community import HiddenTunnelCommunity
+from Tribler.Test.test_as_server import TestAsServer
+from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
 from Tribler.community.tunnel.tunnel_community import TunnelSettings
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.crypto import ECCrypto
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
-from Tribler.Test.test_as_server import TestAsServer
+from twisted.internet.defer import inlineCallbacks
 
 
 class DummyTunnelCommunity(HiddenTunnelCommunity):

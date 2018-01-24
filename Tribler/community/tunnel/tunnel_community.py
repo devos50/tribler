@@ -10,6 +10,8 @@ import time
 from collections import defaultdict
 from itertools import chain
 
+from Tribler.community.triblerchain.community import TriblerChainCommunity
+from Tribler.community.trustchain.conversion import TrustChainConversion
 from cryptography.exceptions import InvalidTag
 from twisted.internet import reactor
 from twisted.internet.defer import maybeDeferred, succeed, inlineCallbacks, returnValue, fail
@@ -260,11 +262,9 @@ class TunnelSettings(object):
         if tribler_config:
             self.socks_listen_ports = tribler_config.get_tunnel_community_socks5_listen_ports()
             self.become_exitnode = tribler_config.get_tunnel_community_exitnode_enabled()
-            self.enable_trustchain = tribler_config.get_trustchain_enabled()
         else:
             self.socks_listen_ports = range(1080, 1085)
             self.become_exitnode = False
-            self.enable_trustchain = False
 
 
 class RoundRobin(object):
@@ -295,7 +295,7 @@ class RoundRobin(object):
         return self.community.active_data_circuits()[circuit_id]
 
 
-class TunnelCommunity(Community):
+class TunnelCommunity(TriblerChainCommunity):
 
     def __init__(self, *args, **kwargs):
         super(TunnelCommunity, self).__init__(*args, **kwargs)
@@ -417,7 +417,7 @@ class TunnelCommunity(Community):
                                         self._generic_timeline_check, self.on_stats_response)]
 
     def initiate_conversions(self):
-        return [DefaultConversion(self), TunnelConversion(self)]
+        return [DefaultConversion(self), TrustChainConversion(self), TunnelConversion(self)]
 
     @inlineCallbacks
     def unload_community(self):
