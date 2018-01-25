@@ -139,7 +139,7 @@ class LibtorrentMgr(TaskManager):
 
         # Elric: Strip out the -rcX, -beta, -whatever tail on the version string.
         fingerprint = ['TL'] + map(int, version_id.split('-')[0].split('.')) + [0]
-        ltsession = lt.session(lt.fingerprint(*fingerprint), flags=0) if hops == 0 else lt.session(flags=0)
+        ltsession = lt.session(lt.fingerprint(*fingerprint), flags=1) if hops == 0 else lt.session(flags=0)
 
         if hops == 0:
             settings['user_agent'] = 'Tribler/' + version_id
