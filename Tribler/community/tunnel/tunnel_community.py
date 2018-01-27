@@ -824,8 +824,8 @@ class TunnelCommunity(TriblerChainCommunity):
             self.global_time,), payload=(circuit_id, reason))
         self.send_packet([candidate], meta.name, destroy.packet)
 
-    def relay_cell(self, circuit_id, message_type, message):
-        return self.relay_packet(circuit_id, message_type, message.packet)
+    def relay_cell(self, circuit_id, message):
+        return self.relay_packet(circuit_id, message.payload.message_type, message.packet)
 
     def relay_packet(self, circuit_id, message_type, packet):
         next_relay = self.relay_from_to[circuit_id]
@@ -1054,7 +1054,7 @@ class TunnelCommunity(TriblerChainCommunity):
                                      self.my_member)
 
             if self.is_relay(circuit_id):
-                if not self.relay_cell(circuit_id, message.payload.message_type, message):
+                if not self.relay_cell(circuit_id, message):
                     # TODO: if crypto fails for relay messages, call remove_relay
                     pass
 
