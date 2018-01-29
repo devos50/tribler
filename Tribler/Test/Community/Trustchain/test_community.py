@@ -11,7 +11,8 @@ from Tribler.Test.Community.Trustchain.test_trustchain_utilities import TrustCha
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.Test.test_as_server import AbstractServer
 from Tribler.community.trustchain.block import GENESIS_SEQ
-from Tribler.community.trustchain.community import (TrustChainCommunity, HALF_BLOCK, CRAWL, BLOCK_PAIR)
+from Tribler.community.trustchain.community import (TrustChainCommunity, HALF_BLOCK, CRAWL, BLOCK_PAIR,
+                                                    CrawlRequestCache, CRAWL_RESPONSE)
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.message import DelayPacketByMissingMember
 from Tribler.dispersy.requestcache import IntroductionRequestCache
@@ -30,6 +31,7 @@ class BaseTestTrustChainCommunity(TrustChainTestCase, DispersyTestFunc):
     def setUp(self):
         AbstractServer.setUp(self)
         yield DispersyTestFunc.setUp(self)
+        CrawlRequestCache.CRAWL_TIMEOUT = 25.0
 
     def tearDown(self):
         DispersyTestFunc.tearDown(self)
@@ -80,7 +82,7 @@ class BaseTestTrustChainCommunity(TrustChainTestCase, DispersyTestFunc):
         while count != 0:
             count = 0
             try:
-                gen = destination.receive_message(names=[HALF_BLOCK])
+                gen = destination.receive_message(names=[CRAWL_RESPONSE, HALF_BLOCK])
                 message = gen.next()[1]
                 while message:
                     count += 1

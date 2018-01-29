@@ -62,6 +62,10 @@ class TestBlocks(TrustChainTestCase):
         self.assertEqual(block.hash, '\x1f\x1bp\x90\xe3>\x83\xf6\xcd\xafd\xd9\xee\xfb"&|<ZLsyB:Z\r'
                                      '<\xc5\xb0\x97\xa3\xaf')
 
+    def test_hash_num(self):
+        block = TrustChainBlock()
+        self.assertEqual(block.hash_number, 27806720)
+
     def test_sign(self):
         crypto = ECCrypto()
         block = TestBlock()

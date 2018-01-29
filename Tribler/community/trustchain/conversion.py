@@ -11,6 +11,8 @@ from Tribler.dispersy.message import DropPacket
 # The crawl message format permits future extensions by providing space for a public key and response limit
 crawl_request_format = "! {0}s l I ".format(PK_LENGTH)
 crawl_request_size = calcsize(crawl_request_format)
+crawl_response_format = "! I I I "
+crawl_response_size = calcsize(crawl_response_format)
 
 
 class TrustChainConversion(BinaryConversion):
@@ -19,7 +21,7 @@ class TrustChainConversion(BinaryConversion):
     """
     def __init__(self, community):
         super(TrustChainConversion, self).__init__(community, "\x01")
-        from Tribler.community.trustchain.community import HALF_BLOCK, CRAWL, HALF_BLOCK_BROADCAST,\
+        from Tribler.community.trustchain.community import HALF_BLOCK, CRAWL, CRAWL_RESPONSE, HALF_BLOCK_BROADCAST,\
             BLOCK_PAIR, BLOCK_PAIR_BROADCAST
 
         # Define Request Signature.
@@ -33,6 +35,8 @@ class TrustChainConversion(BinaryConversion):
                                  self._encode_block_pair, self._decode_block_pair)
         self.define_meta_message(chr(5), community.get_meta_message(CRAWL),
                                  self._encode_crawl_request, self._decode_crawl_request)
+        self.define_meta_message(chr(6), community.get_meta_message(CRAWL_RESPONSE),
+                                 self._encode_crawl_response, self._decode_crawl_response)
 
     @staticmethod
     def _encode_half_block(message):
@@ -98,7 +102,8 @@ class TrustChainConversion(BinaryConversion):
         :param message: Message.impl of CrawlRequestPayload.impl
         :return encoding ready to be sent of the network of the message
         """
-        return pack(crawl_request_format, EMPTY_PK, message.payload.requested_sequence_number, 10),
+        return pack(crawl_request_format, EMPTY_PK, message.payload.requested_sequence_number,
+                    message.payload.crawl_id),
 
     @staticmethod
     def _decode_crawl_request(placeholder, offset, data):
@@ -112,7 +117,35 @@ class TrustChainConversion(BinaryConversion):
         if len(data) < offset + crawl_request_size:
             raise DropPacket("Unable to decode the payload")
 
-        who, seq, limit = unpack_from(crawl_request_format, data, offset)
+        who, seq, crawl_id = unpack_from(crawl_request_format, data, offset)
 
         return offset + crawl_request_size, \
-            placeholder.meta.payload.implement(seq)
+            placeholder.meta.payload.implement(seq, crawl_id)
+
+    @staticmethod
+    def _encode_crawl_response(message):
+        """
+        Encode a crawl response message.
+        :param message: Message.impl of CrawlResponsePayload.impl
+        :return encoding ready to be sent of the network of the message
+        """
+        return message.payload.block.pack() + pack(crawl_response_format, message.payload.crawl_id,
+                                                   message.payload.cur_count, message.payload.total_count),
+
+    @staticmethod
+    def _decode_crawl_response(placeholder, offset, data):
+        """
+        Decode an incoming crawl response message.
+        :param placeholder:
+        :param offset: Start of the CrawlResponse message in the data.
+        :param data: ByteStream containing the message.
+        :return: (offset, CrawlResponse.impl)
+        """
+        if len(data) < offset + block_pack_size + crawl_response_size:
+            raise DropPacket("Unable to decode the payload")
+
+        offset, block = TrustChainBlock.unpack(data, offset)
+        crawl_id, cur_count, total_count = unpack_from(crawl_response_format, data, offset)
+
+        return offset + crawl_response_size, \
+               placeholder.meta.payload.implement(block, crawl_id, cur_count, total_count)

@@ -67,6 +67,13 @@ class TrustChainBlock(object):
     def hash(self):
         return sha256(self.pack()).digest()
 
+    @property
+    def hash_number(self):
+        """
+        Return the hash of this block as a number (used as crawl ID).
+        """
+        return int(self.hash.encode('hex'), 16) % 100000000L
+
     def validate_transaction(self, database):
         """
         Validates the transaction of this block
