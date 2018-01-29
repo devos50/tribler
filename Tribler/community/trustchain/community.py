@@ -5,15 +5,16 @@ Every node has a chain and these chains intertwine by blocks shared by chains.
 """
 import logging
 from random import randint
+import sys
 from time import time
 
-from twisted.internet import reactor
 from twisted.internet.defer import succeed, Deferred, inlineCallbacks
 
 from Tribler.community.trustchain.block import TrustChainBlock, ValidationResult, GENESIS_SEQ, UNKNOWN_SEQ
 from Tribler.community.trustchain.conversion import TrustChainConversion
 from Tribler.community.trustchain.database import TrustChainDB
-from Tribler.community.trustchain.payload import HalfBlockPayload, CrawlRequestPayload, BlockPairPayload
+from Tribler.community.trustchain.payload import HalfBlockPayload, CrawlRequestPayload, BlockPairPayload, \
+    CrawlResponsePayload
 from Tribler.dispersy.authentication import NoAuthentication, MemberAuthentication
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.community import Community
@@ -21,13 +22,48 @@ from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.dispersy.destination import CandidateDestination, NHopCommunityDestination
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.message import Message, DelayPacketByMissingMember
+from Tribler.dispersy.requestcache import NumberCache, RandomNumberCache
 from Tribler.dispersy.resolution import PublicResolution
+from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 HALF_BLOCK = u"half_block"
 HALF_BLOCK_BROADCAST = u"half_block_community"
 BLOCK_PAIR = u"block_pair"
 BLOCK_PAIR_BROADCAST = u"block_pair_broadcast"
 CRAWL = u"crawl"
+CRAWL_RESPONSE = u"crawl_response"
+
+
+class CrawlRequestCache(NumberCache):
+    """
+    This request cache keeps track of outstanding crawl requests.
+    """
+    CRAWL_TIMEOUT = 5.0
+
+    def __init__(self, community, crawl_id, crawl_deferred):
+        super(CrawlRequestCache, self).__init__(community.request_cache, u"crawl", crawl_id)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.community = community
+        self.crawl_deferred = crawl_deferred
+        self.received_half_blocks = []
+        self.total_half_blocks_expected = sys.maxint
+
+    @property
+    def timeout_delay(self):
+        return CrawlRequestCache.CRAWL_TIMEOUT
+
+    def received_crawl_response(self, response):
+        self.received_half_blocks.append(response.payload.block)
+        self.total_half_blocks_expected = response.payload.total_count
+
+        if len(self.received_half_blocks) >= self.total_half_blocks_expected:
+            self.community.request_cache.pop(u"crawl", self.number)
+            self.crawl_deferred.callback(self.received_half_blocks)
+
+    def on_timeout(self):
+        self._logger.info("Timeout for crawl with id %d", self.number)
+        self.community.request_cache.pop(u"crawl", self.number)
+        self.crawl_deferred.callback(self.received_half_blocks)
 
 
 class TrustChainCommunity(Community):
@@ -131,7 +167,15 @@ class TrustChainCommunity(Community):
                     CandidateDestination(),
                     CrawlRequestPayload(),
                     self._generic_timeline_check,
-                    self.received_crawl_request)]
+                    self.received_crawl_request),
+            Message(self, CRAWL_RESPONSE,
+                    MemberAuthentication(),
+                    PublicResolution(),
+                    DirectDistribution(),
+                    CandidateDestination(),
+                    CrawlResponsePayload(),
+                    self._generic_timeline_check,
+                    self.received_crawl_response)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), TrustChainConversion(self)]
@@ -311,7 +355,6 @@ class TrustChainCommunity(Community):
             if not self.should_sign(message):
                 continue
 
-            crawl_task = "crawl_%s" % blk.hash
             # It is important that the request matches up with its previous block, gaps cannot be tolerated at
             # this point. We already dropped invalids, so here we delay this message if the result is partial,
             # partial_previous or no-info. We send a crawl request to the requester to (hopefully) close the gap
@@ -323,19 +366,16 @@ class TrustChainCommunity(Community):
 
                 # Are we already waiting for this crawl to happen?
                 # For example: it's taking longer than 5 secs or the block message reached us twice via different paths
-                if self.is_pending_task_active(crawl_task):
+                if self.request_cache.has(u"crawl", blk.hash_number):
                     continue
 
-                self.send_crawl_request(message.candidate, blk.public_key, max(GENESIS_SEQ, blk.sequence_number - 5))
-
-                # Make sure we get called again after a while. Note that the cleanup task on pend will prevent
-                # us from waiting on the peer forever.
-                self.register_task(crawl_task, reactor.callLater(5.0, self.received_half_block, [message]))
+                request_cache = self.send_crawl_request(message.candidate,
+                                                        blk.public_key,
+                                                        max(GENESIS_SEQ, blk.sequence_number - 5),
+                                                        for_half_block=blk)
+                request_cache.crawl_deferred.addCallback(lambda _, msg=message: self.received_half_block([msg]))
             else:
                 self.sign_block(message.candidate, linked=blk)
-                if self.is_pending_task_active(crawl_task):
-                    self.cancel_pending_task(crawl_task)
-                    continue
 
     def received_block_pair(self, messages):
         """
@@ -355,19 +395,27 @@ class TrustChainCommunity(Community):
                 self.dispersy.store_update_forward([message], False, False, True)
                 self.relayed_broadcasts.append(block_id)
 
-    def send_crawl_request(self, candidate, public_key, sequence_number=None):
+    def send_crawl_request(self, candidate, public_key, sequence_number=None, for_half_block=None):
         sq = sequence_number
         if sequence_number is None:
             blk = self.persistence.get_latest(public_key)
             sq = blk.sequence_number if blk else GENESIS_SEQ
         sq = max(GENESIS_SEQ, sq) if sq >= 0 else sq
-        self.logger.info("Requesting crawl of node %s:%d", public_key.encode("hex")[-8:], sq)
+
+        crawl_id = for_half_block.hash_number if for_half_block else \
+            RandomNumberCache.find_unclaimed_identifier(self.request_cache, u"crawl")
+        crawl_deferred = Deferred()
+        cache = self.request_cache.add(CrawlRequestCache(self, crawl_id, crawl_deferred))
+
+        self.logger.info("Requesting crawl of node %s:%d with id %d", public_key.encode("hex")[-8:], sq, crawl_id)
         message = self.get_meta_message(CRAWL).impl(
             authentication=(self.my_member,),
             distribution=(self.claim_global_time(),),
             destination=(candidate,),
-            payload=(sq,))
+            payload=(sq, crawl_id))
         self.dispersy.store_update_forward([message], False, False, True)
+
+        return cache
 
     def received_crawl_request(self, messages):
         self.logger.debug("Received %d crawl messages.", len(messages))
@@ -383,10 +431,30 @@ class TrustChainCommunity(Community):
                 # Etc. until the genesis seq_nr
                 sq = max(GENESIS_SEQ, last_block.sequence_number + (sq + 1)) if last_block else GENESIS_SEQ
             blocks = self.persistence.crawl(self.my_member.public_key, sq)
-            count = len(blocks)
-            for blk in blocks:
-                self.send_block(blk, message.candidate)
-            self.logger.info("Sent %d blocks", count)
+            total_count = len(blocks)
+            for ind in xrange(len(blocks)):
+                self.send_crawl_response(blocks[ind], message.payload.crawl_id, ind + 1, total_count, message.candidate)
+            self.logger.info("Sent %d blocks", total_count)
+
+    def send_crawl_response(self, block, crawl_id, cur_count, total_count, candidate):
+        self.logger.debug("Sending crawl response %d/%d with id %d", cur_count, total_count, crawl_id)
+        message = self.get_meta_message(CRAWL_RESPONSE).impl(
+            authentication=(self.my_member,),
+            distribution=(self.claim_global_time(),),
+            destination=(candidate,),
+            payload=(block, crawl_id, cur_count, total_count))
+        self.dispersy.store_update_forward([message], False, False, True)
+
+    def received_crawl_response(self, messages):
+        self.logger.debug("Received %d crawl responses", len(messages))
+        for message in messages:
+            self.logger.debug("Received crawl request from node %s with sequence number %d",
+                              message.candidate.get_member().public_key.encode("hex")[-8:],
+                              message.payload.block.sequence_number)
+
+            cache = self.request_cache.get(u"crawl", message.payload.crawl_id)
+            cache.received_crawl_response(message)
+            self.received_half_block([message])
 
     @inlineCallbacks
     def unload_community(self):

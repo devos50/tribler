@@ -6,9 +6,23 @@ class CrawlRequestPayload(Payload):
     Request a crawl of blocks starting with a specific sequence number or the first if 0.
     """
     class Implementation(Payload.Implementation):
-        def __init__(self, meta, requested_sequence_number):
+        def __init__(self, meta, requested_sequence_number, crawl_id):
             super(CrawlRequestPayload.Implementation, self).__init__(meta)
             self.requested_sequence_number = requested_sequence_number
+            self.crawl_id = crawl_id
+
+
+class CrawlResponsePayload(Payload):
+    """
+    Response to a crawl of blocks.
+    """
+    class Implementation(Payload.Implementation):
+        def __init__(self, meta, block, crawl_id, cur_count, total_count):
+            super(CrawlResponsePayload.Implementation, self).__init__(meta)
+            self.block = block
+            self.crawl_id = crawl_id
+            self.cur_count = cur_count
+            self.total_count = total_count
 
 
 class HalfBlockPayload(Payload):
