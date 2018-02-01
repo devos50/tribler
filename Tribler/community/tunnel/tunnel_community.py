@@ -11,6 +11,8 @@ from collections import defaultdict
 from itertools import chain
 
 import struct
+
+from Tribler.community.trustchain.block import ValidationResult
 from cryptography.exceptions import InvalidTag
 from twisted.internet import reactor
 from twisted.internet.defer import maybeDeferred, succeed, inlineCallbacks, returnValue, fail
@@ -31,7 +33,7 @@ from Tribler.community.tunnel.crypto.tunnelcrypto import CryptoException, Tunnel
 from Tribler.community.tunnel.payload import (CellPayload, CreatePayload, CreatedPayload, DestroyPayload, ExtendPayload,
                                               ExtendedPayload, PingPayload, PongPayload, StatsRequestPayload,
                                               StatsResponsePayload, TunnelIntroductionRequestPayload,
-                                              TunnelIntroductionResponsePayload)
+                                              TunnelIntroductionResponsePayload, PayoutPayload)
 from Tribler.community.tunnel.routing import Circuit, Hop, RelayRoute
 from Tribler.dispersy.authentication import MemberAuthentication, NoAuthentication
 from Tribler.dispersy.candidate import Candidate
@@ -69,15 +71,15 @@ class ExtendRequestCache(NumberCache):
     This request cache keeps track of a circuit that is being extended.
     """
 
-    def __init__(self, community, to_circuit_id, from_circuit_id, candidate_sock_addr, candidate_mid, to_candidate_sock_addr, to_candidate_mid):
+    def __init__(self, community, to_circuit_id, from_circuit_id, candidate_sock_addr, candidate_mid, to_sock_addr, to_member):
         super(ExtendRequestCache, self).__init__(community.request_cache, u"anon-circuit", to_circuit_id)
         self.community = community
         self.to_circuit_id = to_circuit_id
         self.from_circuit_id = from_circuit_id
         self.candidate_sock_addr = candidate_sock_addr
         self.candidate_mid = candidate_mid
-        self.to_candidate_sock_addr = to_candidate_sock_addr
-        self.to_candidate_mid = to_candidate_mid
+        self.to_sock_addr = to_sock_addr
+        self.to_member = to_member
         self.should_forward = True
 
     def on_timeout(self):
@@ -144,7 +146,7 @@ class TunnelExitSocket(DatagramProtocol, TaskManager):
     by the exit node.
     """
 
-    def __init__(self, circuit_id, community, sock_addr, mid=None):
+    def __init__(self, circuit_id, community, sock_addr, member=None):
         self.tunnel_logger = logging.getLogger(self.__class__.__name__)
         super(TunnelExitSocket, self).__init__()
 
@@ -155,7 +157,7 @@ class TunnelExitSocket(DatagramProtocol, TaskManager):
         self.ips = defaultdict(int)
         self.bytes_up = self.bytes_down = 0
         self.creation_time = time.time()
-        self.mid = mid
+        self.member = member
 
     def enable(self):
         if not self.enabled:
@@ -323,7 +325,8 @@ class TunnelCommunity(TriblerChainCommunity):
 
     def initialize(self, tribler_session=None, settings=None):
         self.tribler_session = tribler_session
-        self.settings = settings if settings else TunnelSettings(tribler_config=tribler_session.config)
+        self.settings = settings if settings else TunnelSettings(
+            tribler_config=tribler_session.config if tribler_session else None)
 
         self.tunnel_logger.info("TunnelCommunity: setting become_exitnode = %s" % self.settings.become_exitnode)
 
@@ -410,7 +413,10 @@ class TunnelCommunity(TriblerChainCommunity):
                                         self._generic_timeline_check, self.on_stats_request),
                                 Message(self, u"stats-response", MemberAuthentication(), PublicResolution(),
                                         DirectDistribution(), CandidateDestination(), StatsResponsePayload(),
-                                        self._generic_timeline_check, self.on_stats_response)]
+                                        self._generic_timeline_check, self.on_stats_response),
+                                Message(self, u"payout", NoAuthentication(), PublicResolution(),
+                                        DirectDistribution(), CandidateDestination(), PayoutPayload(),
+                                        self._generic_timeline_check, self.on_payout_message)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), TrustChainConversion(self), TunnelConversion(self)]
@@ -550,7 +556,14 @@ class TunnelCommunity(TriblerChainCommunity):
         assert isinstance(tunnel, Circuit) or isinstance(tunnel, RelayRoute) or isinstance(tunnel, TunnelExitSocket)
 
         candidate = Candidate(sock_addr, True)
-        member = self.dispersy.get_member(mid=tunnel.mid.decode('hex'))
+        member = None
+        if isinstance(tunnel, Circuit):
+            member = tunnel.first_hop_member
+        elif isinstance(tunnel, RelayRoute):
+            member = tunnel.relay_member
+        elif isinstance(tunnel, TunnelExitSocket):
+            member = tunnel.member
+
         candidate.associate(member)
 
         return candidate
@@ -604,7 +617,7 @@ class TunnelCommunity(TriblerChainCommunity):
         # Finally, construct the Circuit object and send the CREATE message
         circuit_id = self._generate_circuit_id(first_hop.sock_addr)
         circuit = Circuit(circuit_id, goal_hops, first_hop.sock_addr, self, ctype,
-                          required_exit, first_hop.get_member().mid.encode('hex'))
+                          required_exit, first_hop.get_member())
 
         self.request_cache.add(CircuitRequestCache(self, circuit))
 
@@ -639,10 +652,19 @@ class TunnelCommunity(TriblerChainCommunity):
         if circuit_id in self.circuits:
             self.tunnel_logger.info("removing circuit %d " + additional_info, circuit_id)
 
+            circuit = self.circuits.pop(circuit_id)
+            if circuit.ctype == CIRCUIT_TYPE_DATA and circuit.bytes_down > 1024 * 1024:
+                # We send a payout to all subsequent hops.
+                transaction = {'up': 0, 'down': circuit.bytes_down * (circuit.goal_hops * 2 - 1)}
+                block = self.BLOCK_CLASS.create(transaction, self.persistence, self.my_member.public_key,
+                                                link=None, link_pk=circuit.first_hop_member.public_key)
+                block.sign(self.my_member.private_key)
+                self.persistence.add_block(block)
+                self.send_payout_message(block, circuit.bytes_down, circuit.circuit_id,
+                                         Candidate(circuit.first_hop, False))
             if destroy:
                 self.destroy_circuit(circuit_id)
 
-            circuit = self.circuits.pop(circuit_id)
             if self.notifier:
                 peer = (circuit.first_hop[0], circuit.first_hop[1])
                 from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
@@ -688,18 +710,27 @@ class TunnelCommunity(TriblerChainCommunity):
         for cid in to_remove:
             if cid in self.relay_from_to:
                 self.tunnel_logger.info("Removing relay %d %s", cid, additional_info)
-                # Remove the relay
-                relay = self.relay_from_to.pop(cid)
+                relay = self.relay_from_to[cid]
+
+                def remove_relay_info(cid_to_remove):
+                    # Remove the relay
+                    self.relay_from_to.pop(cid_to_remove)
+
+                    # Remove old session key
+                    if cid_to_remove in self.relay_session_keys:
+                        del self.relay_session_keys[cid_to_remove]
+
+                    if cid_to_remove in self.directions:
+                        del self.directions[cid_to_remove]
+
                 if self.notifier:
                     peer = (relay.sock_addr[0], relay.sock_addr[1])
                     from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
                     self.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, relay, self.copy_shallow_candidate(relay, peer))
-                # Remove old session key
-                if cid in self.relay_session_keys:
-                    del self.relay_session_keys[cid]
 
-                if cid in self.directions:
-                    del self.directions[cid]
+                if not self.is_pending_task_active("remove_relay_%s" % cid):
+                    self.register_task("remove_relay_%s" % cid,
+                                       reactor.callLater(5, lambda cid_copy=cid: remove_relay_info(cid_copy)))
             else:
                 self.tunnel_logger.error("Could not remove relay %d %s", circuit_id, additional_info)
 
@@ -1098,12 +1129,11 @@ class TunnelCommunity(TriblerChainCommunity):
             candidates = {c.get_member().public_key:c for c in candidates_list}
 
             self.request_cache.add(CreatedRequestCache(self, circuit_id, candidate, candidates))
-            candidate_mid = 0
             if candidate.get_member() is not None:
-                candidate_mid = candidate.get_member().mid.encode('hex')
+                candidate_member = candidate.get_member()
             else:
-                candidate_mid = self.dispersy.get_member(public_key=message.payload.node_public_key).mid.encode('hex')
-            self.exit_sockets[circuit_id] = TunnelExitSocket(circuit_id, self, candidate.sock_addr, candidate_mid)
+                candidate_member = self.dispersy.get_member(public_key=message.payload.node_public_key)
+            self.exit_sockets[circuit_id] = TunnelExitSocket(circuit_id, self, candidate.sock_addr, candidate_member)
 
             if self.notifier:
                 from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_JOINED
@@ -1126,11 +1156,11 @@ class TunnelCommunity(TriblerChainCommunity):
 
                 self.relay_from_to[request.to_circuit_id] = forwarding_relay = RelayRoute(request.from_circuit_id,
                                                                                           request.candidate_sock_addr,
-                                                                                          mid=request.candidate_mid)
+                                                                                          relay_member=request.to_member)
 
                 self.relay_from_to[request.from_circuit_id] = RelayRoute(request.to_circuit_id,
-                                                                         request.to_candidate_sock_addr,
-                                                                         mid=request.to_candidate_mid)
+                                                                         request.to_sock_addr,
+                                                                         relay_member=request.to_member)
 
                 self.relay_session_keys[request.to_circuit_id] = self.relay_session_keys[request.from_circuit_id]
 
@@ -1157,7 +1187,7 @@ class TunnelCommunity(TriblerChainCommunity):
                 extend_candidate = Candidate(message.payload.node_addr, False)
                 member = self.dispersy.get_member(public_key=message.payload.node_public_key)
                 extend_candidate.associate(member)
-            extend_candidate_mid = extend_candidate.get_member().mid.encode('hex')
+            extend_member = extend_candidate.get_member()
 
             self.tunnel_logger.info("on_extend send CREATE for circuit (%s, %d) to %s:%d", candidate.sock_addr,
                                     circuit_id,
@@ -1167,11 +1197,11 @@ class TunnelCommunity(TriblerChainCommunity):
             to_circuit_id = self._generate_circuit_id(extend_candidate.sock_addr)
 
             if circuit_id in self.circuits:
-                candidate_mid = self.circuits[circuit_id].mid
+                candidate_mid = self.circuits[circuit_id].first_hop_member.mid
             elif circuit_id in self.exit_sockets:
-                candidate_mid = self.exit_sockets[circuit_id].mid
+                candidate_mid = self.exit_sockets[circuit_id].member.mid
             elif circuit_id in self.relay_from_to:
-                candidate_mid = self.relay_from_to[circuit_id].mid
+                candidate_mid = self.relay_from_to[circuit_id].relay_member.mid
             else:
                 self.tunnel_logger.error("Got extend for unknown source circuit_id")
                 return
@@ -1181,7 +1211,7 @@ class TunnelCommunity(TriblerChainCommunity):
 
             self.request_cache.add(ExtendRequestCache(self, to_circuit_id, circuit_id,
                                                       candidate.sock_addr, candidate_mid,
-                                                      extend_candidate.sock_addr, extend_candidate_mid))
+                                                      extend_candidate.sock_addr, extend_member))
 
             self.send_cell([extend_candidate],
                            u"create", (to_circuit_id,
@@ -1308,6 +1338,42 @@ class TunnelCommunity(TriblerChainCommunity):
         request = meta.impl(authentication=(self._my_member,),
                             distribution=(self.global_time,), payload=(cache.number,))
         self.send_packet([candidate], u"stats-request", request.packet)
+
+    def send_payout_message(self, block, payout_base_amount, circuit_id, candidate):
+        """
+        Send a payout message to a specific candidate.
+        """
+        message = self.get_meta_message(u"payout").impl(
+            authentication=tuple(),
+            distribution=(self.claim_global_time(),),
+            destination=(candidate,) if candidate else (),
+            payload=(block, payout_base_amount, circuit_id))
+
+        self.dispersy.store_update_forward([message], False, False, True)
+
+    def on_payout_message(self, messages):
+        """
+        We received a payout message with a block in it. Process this block and pay the subsequent hop.
+        """
+        for message in messages:
+            circuit_id = message.payload.circuit_id
+            payout_base_amount = message.payload.payout_base_amount
+            received_block = message.payload.block
+
+            # Process this half block
+            self.received_half_block([message])
+
+            if circuit_id in self.relay_from_to and received_block.transaction['down'] > payout_base_amount:
+                self.tunnel_logger.info("Sending payment to next hop.")
+
+                relay = self.relay_from_to[circuit_id]
+                transaction = {'up': 0, 'down': received_block.transaction['down'] - payout_base_amount * 2}
+                block = self.BLOCK_CLASS.create(transaction, self.persistence, self.my_member.public_key,
+                                                link=None, link_pk=relay.relay_member.public_key)
+                block.sign(self.my_member.private_key)
+                self.persistence.add_block(block)
+                self.send_payout_message(block, payout_base_amount, relay.circuit_id,
+                                         Candidate(relay.sock_addr, False))
 
     def exit_data(self, circuit_id, sock_addr, destination, data):
         if not self.become_exitnode() and not TunnelConversion.could_be_dispersy(data):

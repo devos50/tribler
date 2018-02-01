@@ -70,6 +70,7 @@ class TestTunnelBase(TestAsServer):
         TestAsServer.setUpPreSession(self)
         self.config.set_dispersy_enabled(True)
         self.config.set_libtorrent_enabled(True)
+        self.config.set_market_community_enabled(False)
         self.config.set_tunnel_community_socks5_listen_ports(self.get_socks5_ports())
 
     @blocking_call_on_reactor_thread
@@ -84,7 +85,7 @@ class TestTunnelBase(TestAsServer):
         yield TestAsServer.tearDown(self)
 
     @inlineCallbacks
-    def setup_nodes(self, num_relays=1, num_exitnodes=1, seed_hops=0):
+    def setup_nodes(self, num_relays=0, num_exitnodes=1, seed_hops=0):
         """
         Setup all required nodes, including the relays, exit nodes and seeder.
         """
@@ -131,6 +132,8 @@ class TestTunnelBase(TestAsServer):
         keypair = dispersy.crypto.generate_key(u"curve25519")
         dispersy_member = dispersy.get_member(private_key=dispersy.crypto.key_to_bin(keypair))
         settings = TunnelSettings(tribler_config=session.config)
+        settings.min_circuits = 1
+        settings.max_circuits = 1
         if not self.crypto_enabled:
             settings.crypto = NoCrypto()
         settings.become_exitnode = exitnode

@@ -1,14 +1,19 @@
 from socket import inet_ntoa, inet_aton, error as socket_error
-from struct import pack, unpack_from
+from struct import pack, unpack_from, calcsize
 
 from libtorrent import bdecode
 
+from Tribler.community.triblerchain.block import TriblerChainBlock
+from Tribler.community.trustchain.block import block_pack_size
 from Tribler.dispersy.conversion import BinaryConversion
 from Tribler.dispersy.endpoint import TUNNEL_PREFIX, TUNNEL_PREFIX_LENGHT
 from Tribler.dispersy.message import DropPacket
 
 ADDRESS_TYPE_IPV4 = 0x01
 ADDRESS_TYPE_DOMAIN_NAME = 0x02
+
+payout_message_format = "! I I "
+payout_message_size = calcsize(payout_message_format)
 
 
 class TunnelConversion(BinaryConversion):
@@ -54,6 +59,9 @@ class TunnelConversion(BinaryConversion):
         self.define_meta_message(chr(19),
                                  community.get_meta_message(u"destroy"),
                                  self._encode_destroy, self._decode_destroy)
+        self.define_meta_message(chr(20),
+                                 community.get_meta_message(u"payout"),
+                                 self._encode_payout, self._decode_payout)
 
     def _encode_introduction_response(self, message):
         payload = message.payload
@@ -243,6 +251,21 @@ class TunnelConversion(BinaryConversion):
         offset += len(data[offset:])
 
         return offset, placeholder.meta.payload.implement(identifier, stats_dict)
+
+    @staticmethod
+    def _encode_payout(message):
+        return message.payload.block.pack() + \
+               pack(payout_message_format, message.payload.payout_base_amount, message.payload.circuit_id),
+
+    @staticmethod
+    def _decode_payout(placeholder, offset, data):
+        if len(data) < offset + block_pack_size + payout_message_size:
+            raise DropPacket("Unable to decode the payload")
+
+        offset, block = TriblerChainBlock.unpack(data, offset)
+        payout_base_amount, circuit_id = unpack_from(payout_message_format, data, offset)
+
+        return offset + payout_message_size, placeholder.meta.payload.implement(block, payout_base_amount, circuit_id)
 
     @staticmethod
     def swap_circuit_id(packet, message_type, old_circuit_id, new_circuit_id):

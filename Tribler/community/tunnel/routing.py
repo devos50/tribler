@@ -15,13 +15,16 @@ class Circuit(object):
     """ Circuit data structure storing the id, state and hops """
 
     def __init__(self, circuit_id, goal_hops=0, first_hop=None, proxy=None,
-                 ctype=CIRCUIT_TYPE_DATA, required_exit=None, mid=None):
+                 ctype=CIRCUIT_TYPE_DATA, required_exit=None, first_hop_member=None):
         """
-        Instantiate a new Circuit data structure
-        :type proxy: TunnelCommunity
-        :param long circuit_id: the id of the candidate circuit
-        :param (str, int) first_hop: the first hop of the circuit
-        :return: Circuit
+        Instantiate a new Circuit.
+        :param circuit_id: the id of the candidate circuit
+        :param goal_hops: the number of hops for this circuit, including the exit node
+        :param proxy: the tunnel community
+        :param ctype: the type of the circuit (data, rendez-vous etc)
+        :param required_exit: an optional required exit candidate
+        :param first_hop: the first hop of the circuit
+        :param first_hop_member: the member of the first hop
         """
 
         from Tribler.community.tunnel.tunnel_community import TunnelCommunity
@@ -46,7 +49,7 @@ class Circuit(object):
         self.ctype = ctype
         self.created_deferred = Deferred()
         self.required_exit = required_exit
-        self.mid = mid
+        self.first_hop_member = first_hop_member
         self.hs_session_keys = None
 
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -180,7 +183,7 @@ class RelayRoute(object):
     it is online or not
     """
 
-    def __init__(self, circuit_id, sock_addr, rendezvous_relay=False, mid=None):
+    def __init__(self, circuit_id, sock_addr, rendezvous_relay=False, relay_member=None):
         """
         @type sock_addr: (str, int)
         @type circuit_id: int
@@ -193,7 +196,8 @@ class RelayRoute(object):
         self.last_incoming = time.time()
         self.bytes_up = self.bytes_down = 0
         self.rendezvous_relay = rendezvous_relay
-        self.mid = mid
+        self.relay_member = relay_member
+
 
 class RendezvousPoint(object):
 

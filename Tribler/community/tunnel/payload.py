@@ -275,3 +275,13 @@ class StatsResponsePayload(Payload):
         @property
         def stats(self):
             return self._stats
+
+
+class PayoutPayload(Payload):
+
+    class Implementation(Payload.Implementation):
+        def __init__(self, meta, block, payout_base_amount, circuit_id):
+            super(PayoutPayload.Implementation, self).__init__(meta)
+            self.block = block
+            self.payout_base_amount = payout_base_amount
+            self.circuit_id = circuit_id

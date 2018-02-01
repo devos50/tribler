@@ -23,15 +23,20 @@ class TestTunnelCommunity(TestTunnelBase):
     @inlineCallbacks
     def test_anon_download(self):
         """
-        Testing whether an anonymous download over our tunnels works
+        Testing whether an anonymous download over our tunnels works and the downloader pays the right amount.
         """
         yield self.setup_nodes()
 
+        @blocking_call_on_reactor_thread
         def download_state_callback(ds):
             download = ds.get_download()
             if download.get_progress() == 1.0 and ds.get_status() == DLSTATUS_SEEDING:
+                for circuit_id in self.tunnel_communities[-1].circuits.keys():
+                    self.tunnel_communities[-1].remove_circuit(circuit_id, 'test_finished', destroy=True)
+
+            if self.tunnel_communities[-1].get_bandwidth_tokens() < 0:
                 self.test_deferred.callback(None)
-                return 0.0, False
+
             return 2.0, False
 
         download = self.start_anon_download()
