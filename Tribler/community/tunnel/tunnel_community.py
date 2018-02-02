@@ -329,6 +329,7 @@ class TunnelCommunity(TriblerChainCommunity):
             tribler_config=tribler_session.config if tribler_session else None)
 
         self.tunnel_logger.info("TunnelCommunity: setting become_exitnode = %s" % self.settings.become_exitnode)
+        self.tunnel_logger.info("Min circuits: %d, max: %d", self.settings.min_circuits, self.settings.max_circuits)
 
         super(TunnelCommunity, self).initialize()
 
