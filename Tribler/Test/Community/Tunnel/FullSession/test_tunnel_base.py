@@ -1,4 +1,9 @@
 import os
+
+from Tribler.community.triblertunnel.community import TriblerTunnelCommunity
+from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
+from Tribler.pyipv8.ipv8.peer import Peer
+from Tribler.pyipv8.ipv8.util import blocking_call_on_reactor_thread
 from twisted.internet.defer import returnValue, inlineCallbacks
 from twisted.python.threadable import isInIOThread
 
@@ -6,42 +11,9 @@ from Tribler.Core.DownloadConfig import DownloadStartupConfig
 from Tribler.Core.TorrentDef import TorrentDef
 from Tribler.Core.simpledefs import dlstatus_strings
 from Tribler.Test.test_as_server import TESTS_DATA_DIR, TestAsServer
-from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
-from Tribler.community.tunnel.tunnel_community import TunnelSettings, TunnelCommunity
-from Tribler.dispersy.candidate import Candidate
-from Tribler.dispersy.crypto import NoCrypto, ECCrypto
-from Tribler.dispersy.util import blocking_call_on_reactor_thread
-
-
-class TunnelCommunityTests(TunnelCommunity):
-    """
-    We are using a separate community so we do not act as an exit node for the outside world.
-    """
-    master_key = ""
-
-    @classmethod
-    def get_master_members(cls, dispersy):
-        master_key_hex = TunnelCommunityTests.master_key.decode("HEX")
-        master = dispersy.get_member(public_key=master_key_hex)
-        return [master]
-
-
-class HiddenTunnelCommunityTests(HiddenTunnelCommunity):
-    """
-    We are using a separate community so we do not act as an exit node for the outside world.
-    """
-    master_key = ""
-
-    @classmethod
-    def get_master_members(cls, dispersy):
-        master_key_hex = HiddenTunnelCommunityTests.master_key.decode("HEX")
-        master = dispersy.get_member(public_key=master_key_hex)
-        return [master]
 
 
 class TestTunnelBase(TestAsServer):
-
-    TUNNEL_CLASS = TunnelCommunityTests
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
@@ -53,15 +25,14 @@ class TestTunnelBase(TestAsServer):
         self.seed_tdef = None
         self.sessions = []
         self.session2 = None
-        self.crypto_enabled = True
         self.bypass_dht = False
         self.seed_config = None
         self.tunnel_community_seeder = None
 
         self.eccrypto = ECCrypto()
         ec = self.eccrypto.generate_key(u"curve25519")
-        TunnelCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
-        HiddenTunnelCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
+        TriblerTunnelCommunity.master_key = Peer(ec)
+        #HiddenTunnelCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
 
         self.tunnel_community = self.load_tunnel_community_in_session(self.session, exitnode=True)
         self.tunnel_communities = []
@@ -70,18 +41,19 @@ class TestTunnelBase(TestAsServer):
         TestAsServer.setUpPreSession(self)
         self.config.set_dispersy_enabled(True)
         self.config.set_libtorrent_enabled(True)
+        self.config.set_market_community_enabled(False)
         self.config.set_tunnel_community_socks5_listen_ports(self.get_socks5_ports())
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
-    def tearDown(self):
+    def tearDown(self, annotate=True):
         if self.session2:
             yield self.session2.shutdown()
 
         for session in self.sessions:
             yield session.shutdown()
 
-        yield TestAsServer.tearDown(self)
+        yield TestAsServer.tearDown(self, annotate=annotate)
 
     @inlineCallbacks
     def setup_nodes(self, num_relays=1, num_exitnodes=1, seed_hops=0):
@@ -105,21 +77,9 @@ class TestTunnelBase(TestAsServer):
         # Add the tunnel community of the downloader session
         self.tunnel_communities.append(self.tunnel_community)
 
-        # Connect the candidates with each other in all available tunnel communities
-        candidates = []
-        for session in self.sessions:
-            self._logger.debug("Appending candidate from this session to the list")
-            candidates.append(Candidate(session.get_dispersy_instance().lan_address, tunnel=False))
-
-        communities_to_inject = self.tunnel_communities
-        if self.tunnel_community_seeder is not None:
-            communities_to_inject.append(self.tunnel_community_seeder)
-
-        for community in communities_to_inject:
-            for candidate in candidates:
-                self._logger.debug("Add appended candidate as discovered candidate to this community")
-                # We are letting dispersy deal with adding the community's candidate to itself.
-                community.add_discovered_candidate(candidate)
+        for community_introduce in self.tunnel_communities:
+            for community in self.tunnel_communities:
+                community.walk_to(community_introduce.endpoint.get_address())
 
     @blocking_call_on_reactor_thread
     def load_tunnel_community_in_session(self, session, exitnode=False):
@@ -127,15 +87,12 @@ class TestTunnelBase(TestAsServer):
         Load the tunnel community in a given session. We are using our own tunnel community here instead of the one
         used in Tribler.
         """
-        dispersy = session.get_dispersy_instance()
-        keypair = dispersy.crypto.generate_key(u"curve25519")
-        dispersy_member = dispersy.get_member(private_key=dispersy.crypto.key_to_bin(keypair))
-        settings = TunnelSettings(tribler_config=session.config)
-        if not self.crypto_enabled:
-            settings.crypto = NoCrypto()
-        settings.become_exitnode = exitnode
+        keypair = ECCrypto().generate_key(u"curve25519")
+        tunnel_peer = Peer(keypair)
+        session.config.set_tunnel_community_exitnode_enabled(exitnode)
 
-        return dispersy.define_auto_load(self.TUNNEL_CLASS, dispersy_member, (session, settings), load=True)[0]
+        return TriblerTunnelCommunity(tunnel_peer, session.lm.ipv8.endpoint, session.lm.ipv8.network,
+                                      tribler_session=session)
 
     @inlineCallbacks
     def create_proxy(self, index, exitnode=False):
@@ -148,6 +105,7 @@ class TestTunnelBase(TestAsServer):
         config = self.config.copy()
         config.set_libtorrent_enabled(True)
         config.set_dispersy_enabled(True)
+        config.set_market_community_enabled(False)
         config.set_state_dir(self.getStateDir(index))
         config.set_tunnel_community_socks5_listen_ports(self.get_socks5_ports())
 
@@ -201,7 +159,9 @@ class TestTunnelBase(TestAsServer):
         useful for debugging purposes.
         """
         if self.tunnel_community_seeder:
-            self.tunnel_community_seeder.monitor_downloads([ds])
+            pass
+            # TODO FIX THIS
+            #self.tunnel_community_seeder.monitor_downloads([ds])
         d = ds.get_download()
         self._logger.debug("seeder: %s %s %s", repr(d.get_def().get_name()),
                            dlstatus_strings[ds.get_status()], ds.get_progress())

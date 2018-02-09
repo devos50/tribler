@@ -12,6 +12,9 @@ from glob import iglob
 from threading import Event, enumerate as enumerate_threads
 from traceback import print_exc
 
+from Tribler.pyipv8.ipv8.messaging.anonymization.community import TunnelSettings
+from Tribler.pyipv8.ipv8.peer import Peer
+from Tribler.pyipv8.ipv8_service import IPv8
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks, DeferredList, succeed
 from twisted.internet.task import LoopingCall
@@ -38,7 +41,6 @@ from Tribler.Core.simpledefs import (NTFY_DISPERSY, NTFY_STARTED, NTFY_TORRENTS,
                                      STATE_START_API_ENDPOINTS, STATE_START_WATCH_FOLDER, STATE_START_CREDIT_MINING)
 from Tribler.community.market.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.community.market.wallet.tc_wallet import TrustchainWallet
-from Tribler.community.tunnel.tunnel_community import TunnelSettings
 from Tribler.dispersy.taskmanager import TaskManager
 from Tribler.dispersy.util import blockingCallFromThread, blocking_call_on_reactor_thread
 
@@ -229,21 +231,18 @@ class TriblerLaunchMany(TaskManager):
 
         # Tunnel Community
         if self.session.config.get_tunnel_community_enabled():
-            tunnel_settings = TunnelSettings(tribler_config=self.session.config)
-            tunnel_kwargs = {'tribler_session': self.session, 'settings': tunnel_settings}
+            tunnel_settings = TunnelSettings()
 
             keypair = self.session.trustchain_keypair
-            dispersy_member = self.dispersy.get_member(private_key=keypair.key_to_bin())
+
+            tunnel_peer = Peer(keypair)
             has_hidden_seeding = self.session.config.get_tunnel_community_hidden_seeding
 
-            from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
-            from Tribler.community.tunnel.tunnel_community import TunnelCommunity
-            class_to_load = HiddenTunnelCommunity if has_hidden_seeding else TunnelCommunity
-            self.tunnel_community = self.dispersy.define_auto_load(
-                class_to_load, dispersy_member, load=True, kargs=tunnel_kwargs)[0]
-
-            # We don't want to automatically load other instances of this community with other master members.
-            self.dispersy.undefine_auto_load(HiddenTunnelCommunity)
+            #from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
+            from Tribler.community.triblertunnel.community import TriblerTunnelCommunity
+            class_to_load = TriblerTunnelCommunity #HiddenTunnelCommunity if has_hidden_seeding else TunnelCommunity
+            self.tunnel_community = class_to_load(tunnel_peer, self.ipv8.endpoint, self.ipv8.network,
+                                                  tribler_session=self.session, settings=tunnel_settings)
 
         # Use the permanent TrustChain ID for Market community/TradeChain if it's available
         if self.session.config.get_market_community_enabled():
@@ -616,10 +615,11 @@ class TriblerLaunchMany(TaskManager):
         if do_checkpoint:
             self.session.checkpoint_downloads()
 
-        from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
+        #from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
+        # TODO FIX THIS
         if self.state_cb_count % 4 == 0:
-            if self.tunnel_community and isinstance(self.tunnel_community, HiddenTunnelCommunity):
-                self.tunnel_community.monitor_downloads(states_list)
+            #if self.tunnel_community and isinstance(self.tunnel_community, HiddenTunnelCommunity):
+            #    self.tunnel_community.monitor_downloads(states_list)
             if self.credit_mining_manager:
                 self.credit_mining_manager.monitor_downloads(states_list)
 
@@ -821,6 +821,9 @@ class TriblerLaunchMany(TaskManager):
 
         if self.ipv8:
             self.ipv8.stop(stop_reactor=False)
+
+        if self.tunnel_community:
+            yield self.tunnel_community.unload()
 
         if self.metadata_store is not None:
             yield self.metadata_store.close()
