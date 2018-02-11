@@ -1,5 +1,6 @@
 import os
 
+from Tribler.Core.DecentralizedTracking.dht_provider import MainlineDHTProvider
 from Tribler.community.triblertunnel.community import TriblerTunnelCommunity
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 from Tribler.pyipv8.ipv8.peer import Peer
@@ -32,7 +33,6 @@ class TestTunnelBase(TestAsServer):
         self.eccrypto = ECCrypto()
         ec = self.eccrypto.generate_key(u"curve25519")
         TriblerTunnelCommunity.master_key = Peer(ec)
-        #HiddenTunnelCommunityTests.master_key = self.eccrypto.key_to_bin(ec.pub()).encode('hex')
 
         self.tunnel_community = self.load_tunnel_community_in_session(self.session, exitnode=True)
         self.tunnel_communities = []
@@ -77,9 +77,11 @@ class TestTunnelBase(TestAsServer):
         # Add the tunnel community of the downloader session
         self.tunnel_communities.append(self.tunnel_community)
 
-        for community_introduce in self.tunnel_communities:
-            for community in self.tunnel_communities:
-                community.walk_to(community_introduce.endpoint.get_address())
+        self._logger.info("Introducing all nodes to each other in tests")
+        for community_introduce in self.tunnel_communities + ([self.tunnel_community_seeder] if self.tunnel_community_seeder else []):
+            for community in self.tunnel_communities + ([self.tunnel_community_seeder] if self.tunnel_community_seeder else []):
+                if community != community_introduce:
+                    community.walk_to(community_introduce.endpoint.get_address())
 
     @blocking_call_on_reactor_thread
     def load_tunnel_community_in_session(self, session, exitnode=False):
@@ -159,9 +161,7 @@ class TestTunnelBase(TestAsServer):
         useful for debugging purposes.
         """
         if self.tunnel_community_seeder:
-            pass
-            # TODO FIX THIS
-            #self.tunnel_community_seeder.monitor_downloads([ds])
+            self.tunnel_community_seeder.monitor_downloads([ds])
         d = ds.get_download()
         self._logger.debug("seeder: %s %s %s", repr(d.get_def().get_name()),
                            dlstatus_strings[ds.get_status()], ds.get_progress())

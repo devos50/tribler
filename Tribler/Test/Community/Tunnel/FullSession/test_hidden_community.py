@@ -1,8 +1,9 @@
+from Tribler.Core.DecentralizedTracking.dht_provider import MainlineDHTProvider
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from Tribler.Core.DecentralizedTracking.pymdht.core.identifier import Id
 from Tribler.Core.simpledefs import DLSTATUS_SEEDING
-from Tribler.Test.Community.Tunnel.FullSession.test_tunnel_base import TestTunnelBase, HiddenTunnelCommunityTests
+from Tribler.Test.Community.Tunnel.FullSession.test_tunnel_base import TestTunnelBase
 from Tribler.Test.twisted_thread import deferred
 
 
@@ -27,7 +28,6 @@ class TestHiddenTunnelCommunity(TestTunnelBase):
     """
     This class contains tests for the hidden tunnel community.
     """
-    TUNNEL_CLASS = HiddenTunnelCommunityTests
 
     def setUp(self, autoload_discovery=True):
         TestTunnelBase.setUp(self, autoload_discovery=autoload_discovery)
@@ -68,9 +68,10 @@ class TestHiddenTunnelCommunity(TestTunnelBase):
 
     def setup_dht_bypass(self):
         for session in self.sessions + [self.session]:
-            session.lm.mainline_dht = FakeDHT(self.dht_dict)
+            dht_provider = MainlineDHTProvider(FakeDHT(self.dht_dict), session.config.get_dispersy_port())
+            session.lm.tunnel_community.dht_provider = dht_provider
 
-    @deferred(timeout=50)
+    @deferred(timeout=60)
     @inlineCallbacks
     def test_hidden_services(self):
         """
@@ -88,6 +89,7 @@ class TestHiddenTunnelCommunity(TestTunnelBase):
                 return 0.0, False
             return 2.0, False
 
+        self._logger.info("Building one tunnel before starting anon download in tests")
         self.tunnel_community.build_tunnels(1)
         from twisted.internet import reactor, task
         while not list(self.tunnel_community.active_data_circuits()):

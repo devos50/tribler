@@ -20,7 +20,6 @@ enabled = boolean(default=True)
 
 [tunnel_community]
 enabled = boolean(default=True)
-hidden_seeding_enabled = boolean(default=True)
 socks5_listen_ports = string_list(default=list('-1', '-1', '-1', '-1', '-1'))
 exitnode_enabled = boolean(default=False)
 

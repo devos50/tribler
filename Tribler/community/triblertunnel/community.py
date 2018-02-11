@@ -1,14 +1,23 @@
+import time
+
+from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_IP_RECREATE, NTFY_REMOVE, NTFY_EXTENDED, NTFY_CREATED, NTFY_JOINED, \
+    DLSTATUS_SEEDING, DLSTATUS_DOWNLOADING, DLSTATUS_STOPPED
+from Tribler.dispersy.util import call_on_reactor_thread
+from Tribler.pyipv8.ipv8.messaging.anonymization.hidden_services import HiddenTunnelCommunity
 from Tribler.pyipv8.ipv8.messaging.anonymization.tunnel import CIRCUIT_STATE_READY, CIRCUIT_TYPE_RP
+from Tribler.pyipv8.ipv8.peer import Peer
 from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Core.Socks5.server import Socks5Server
 from Tribler.community.triblertunnel.dispatcher import TunnelDispatcher
-from Tribler.pyipv8.ipv8.messaging.anonymization.community import TunnelCommunity, CreatePayload
+from Tribler.pyipv8.ipv8.messaging.anonymization.community import CreatePayload
 
 
-class TriblerTunnelCommunity(TunnelCommunity):
-    # TODO fix master peer
-    # TODO add notifiers!
+class TriblerTunnelCommunity(HiddenTunnelCommunity):
+    master_peer = Peer("3081a7301006072a8648ce3d020106052b81040027038192000401a4903559f4e39f290e03b81aa2e648700a104b"
+                       "286a724afc95257be04c664786c429766128c733838da51b1c314a44e71fe4d1591b06e84084bf12dc650491e235"
+                       "4eb8d908470506ee1fc1c689c4389559e8cef6d9cb00c51d1eab740efd3de64d59375fa5e954876d28ff4d6d7ac7"
+                       "3337c95b003e4fd9cf8cc798e257b5f082a3191757c644f1e81b0a94e4b77145".decode('hex'))
 
     def __init__(self, *args, **kwargs):
         self.tribler_session = kwargs.pop('tribler_session', None)
@@ -23,6 +32,7 @@ class TriblerTunnelCommunity(TunnelCommunity):
 
         self.bittorrent_peers = {}
         self.dispatcher = TunnelDispatcher(self)
+        self.download_states = {}
 
         # Start the SOCKS5 servers
         self.socks_servers = []
@@ -60,7 +70,6 @@ class TriblerTunnelCommunity(TunnelCommunity):
 
         # Send the notification
         if self.tribler_session:
-            from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
             self.tribler_session.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, circuit, circuit.sock_addr)
 
         affected_peers = self.dispatcher.circuit_dead(circuit)
@@ -86,8 +95,6 @@ class TriblerTunnelCommunity(TunnelCommunity):
         # Now we actually remove the circuit
         super(TriblerTunnelCommunity, self).remove_circuit(circuit_id, additional_info=additional_info, destroy=destroy)
 
-        # TODO what about the cleaning of the directions?
-
     def remove_relay(self, circuit_id, additional_info='', destroy=False, got_destroy_from=None, both_sides=True):
         removed_relays = super(TriblerTunnelCommunity, self).remove_relay(circuit_id,
                                                                           additional_info=additional_info,
@@ -97,13 +104,11 @@ class TriblerTunnelCommunity(TunnelCommunity):
 
         if self.tribler_session:
             for removed_relay in removed_relays:
-                from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
                 self.tribler_session.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, removed_relay, removed_relay.sock_addr)
 
     def remove_exit_socket(self, circuit_id, additional_info='', destroy=False):
         if circuit_id in self.exit_sockets and self.tribler_session:
             exit_socket = self.exit_sockets[circuit_id]
-            from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
             self.tribler_session.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, exit_socket, exit_socket.sock_addr)
 
         super(TriblerTunnelCommunity, self).remove_exit_socket(circuit_id, additional_info=additional_info,
@@ -117,7 +122,6 @@ class TriblerTunnelCommunity(TunnelCommunity):
             self.readd_bittorrent_peers()
 
         if self.tribler_session:
-            from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_CREATED, NTFY_EXTENDED
             self.tribler_session.notifier.notify(
                 NTFY_TUNNEL, NTFY_CREATED if len(circuit.hops) == 1 else NTFY_EXTENDED, circuit)
 
@@ -131,12 +135,77 @@ class TriblerTunnelCommunity(TunnelCommunity):
         circuit_id = payload.circuit_id
 
         if self.tribler_session:
-            from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_JOINED
             self.tribler_session.notifier.notify(NTFY_TUNNEL, NTFY_JOINED, source_address, circuit_id)
 
     def handle_raw_data(self, circuit, origin, data):
         anon_seed = circuit.ctype == CIRCUIT_TYPE_RP
         self.dispatcher.on_incoming_from_tunnel(self, circuit, origin, data, anon_seed)
+
+    @call_on_reactor_thread
+    def monitor_downloads(self, dslist):
+        # Monitor downloads with anonymous flag set, and build rendezvous/introduction points when needed.
+        new_states = {}
+        hops = {}
+
+        for ds in dslist:
+            download = ds.get_download()
+            if download.get_hops() > 0:
+                # Convert the real infohash to the infohash used for looking up introduction points
+                real_info_hash = download.get_def().get_infohash()
+                info_hash = self.get_lookup_info_hash(real_info_hash)
+                hops[info_hash] = download.get_hops()
+                self.service_callbacks[info_hash] = download.add_peer
+                new_states[info_hash] = ds.get_status()
+
+        self.hops = hops
+
+        for info_hash in set(new_states.keys() + self.download_states.keys()):
+            new_state = new_states.get(info_hash, None)
+            old_state = self.download_states.get(info_hash, None)
+            state_changed = new_state != old_state
+
+            # Stop creating introduction points if the download doesn't exist anymore
+            if info_hash in self.infohash_ip_circuits and new_state is None:
+                del self.infohash_ip_circuits[info_hash]
+
+            # If the introducing circuit does not exist anymore or timed out: Build a new circuit
+            if info_hash in self.infohash_ip_circuits:
+                for (circuit_id, time_created) in self.infohash_ip_circuits[info_hash]:
+                    if circuit_id not in self.my_intro_points and time_created < time.time() - 30:
+                        self.infohash_ip_circuits[info_hash].remove((circuit_id, time_created))
+                        if self.tribler_session.notifier:
+                            self.tribler_session.notifier.notify(
+                                NTFY_TUNNEL, NTFY_IP_RECREATE, circuit_id, info_hash.encode('hex')[:6])
+                        self.logger.info('Recreate the introducing circuit for %s' % info_hash.encode('hex'))
+                        self.create_introduction_point(info_hash)
+
+            time_elapsed = (time.time() - self.last_dht_lookup.get(info_hash, 0))
+            force_dht_lookup = time_elapsed >= self.settings.dht_lookup_interval
+            if (state_changed or force_dht_lookup) and \
+                    (new_state == DLSTATUS_SEEDING or new_state == DLSTATUS_DOWNLOADING):
+                self.logger.info('Do dht lookup to find hidden services peers for %s' % info_hash.encode('hex'))
+                self.do_dht_lookup(real_info_hash)
+
+            if state_changed and new_state == DLSTATUS_SEEDING:
+                self.create_introduction_point(info_hash)
+
+            elif state_changed and new_state in [DLSTATUS_STOPPED, None]:
+                if info_hash in self.infohash_pex:
+                    self.infohash_pex.pop(info_hash)
+
+                for cid, info_hash_hops in self.my_download_points.items():
+                    if info_hash_hops[0] == info_hash:
+                        self.remove_circuit(cid, 'download stopped', destroy=True)
+
+                for cid, info_hash_list in self.my_intro_points.items():
+                    for i in xrange(len(info_hash_list) - 1, -1, -1):
+                        if info_hash_list[i] == info_hash:
+                            info_hash_list.pop(i)
+
+                    if len(info_hash_list) == 0:
+                        self.remove_circuit(cid, 'all downloads stopped', destroy=True)
+
+        self.download_states = new_states
 
     @inlineCallbacks
     def unload(self):

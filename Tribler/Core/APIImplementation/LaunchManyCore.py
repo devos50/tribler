@@ -12,6 +12,7 @@ from glob import iglob
 from threading import Event, enumerate as enumerate_threads
 from traceback import print_exc
 
+from Tribler.Core.DecentralizedTracking.dht_provider import MainlineDHTProvider
 from Tribler.pyipv8.ipv8.messaging.anonymization.community import TunnelSettings
 from Tribler.pyipv8.ipv8.peer import Peer
 from Tribler.pyipv8.ipv8_service import IPv8
@@ -236,13 +237,13 @@ class TriblerLaunchMany(TaskManager):
             keypair = self.session.trustchain_keypair
 
             tunnel_peer = Peer(keypair)
-            has_hidden_seeding = self.session.config.get_tunnel_community_hidden_seeding
 
-            #from Tribler.community.hiddentunnel.hidden_community import HiddenTunnelCommunity
             from Tribler.community.triblertunnel.community import TriblerTunnelCommunity
-            class_to_load = TriblerTunnelCommunity #HiddenTunnelCommunity if has_hidden_seeding else TunnelCommunity
-            self.tunnel_community = class_to_load(tunnel_peer, self.ipv8.endpoint, self.ipv8.network,
-                                                  tribler_session=self.session, settings=tunnel_settings)
+            self.tunnel_community = TriblerTunnelCommunity(tunnel_peer, self.ipv8.endpoint, self.ipv8.network,
+                                                           tribler_session=self.session, settings=tunnel_settings,
+                                                           dht_provider=MainlineDHTProvider(
+                                                               self.mainline_dht,
+                                                               self.session.config.get_dispersy_port()))
 
         # Use the permanent TrustChain ID for Market community/TradeChain if it's available
         if self.session.config.get_market_community_enabled():

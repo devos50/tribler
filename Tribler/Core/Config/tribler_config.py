@@ -424,12 +424,6 @@ class TriblerConfig(object):
     def get_tunnel_community_enabled(self):
         return self.config['tunnel_community']['enabled']
 
-    def set_tunnel_community_hidden_seeding(self, value):
-        self.config['tunnel_community']['hidden_seeding_enabled'] = value
-
-    def get_tunnel_community_hidden_seeding(self):
-        return self.config['tunnel_community']['hidden_seeding_enabled']
-
     def set_tunnel_community_socks5_listen_ports(self, ports):
         self.config['tunnel_community']['socks5_listen_ports'] = [str(port) for port in ports]
 
