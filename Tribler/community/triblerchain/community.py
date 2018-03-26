@@ -115,17 +115,3 @@ class TriblerChainCommunity(TrustChainCommunity):
         result = {'private_key': tmp_peer.key.key_to_bin().encode('base64'),
                   'transaction': {'up': amount, 'down': 0}, 'block': block}
         return result
-
-
-class TriblerChainCrawlerCommunity(TriblerChainCommunity):
-    """
-    Subclass of TriblerChainCommunity. Specifically, it requests a crawl when it receives an introduction response.
-    """
-
-    def on_introduction_response(self, source_address, data):
-        super(TriblerChainCrawlerCommunity, self).on_introduction_response(source_address, data)
-
-        auth, _, _ = self._ez_unpack_auth(IntroductionResponsePayload, data)
-        peer = Peer(auth.public_key_bin, source_address)
-
-        self.send_crawl_request(peer, peer.public_key.key_to_bin())
