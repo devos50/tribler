@@ -116,6 +116,17 @@ class TriblerChainCommunity(TrustChainCommunity):
                   'transaction': {'up': amount, 'down': 0}, 'block': block}
         return result
 
+    def get_trust(self, peer):
+        """
+        Return the trust score for a specific peer. For TriblerChain, this is simply the token balance.
+        """
+        block = self.persistence.get_latest(peer.public_key.key_to_bin())
+        if block:
+            return max(1, block.transaction["total_up"] - block.transaction["total_down"])
+        else:
+            # We need a minimum of 1 trust to have a chance to be selected in the categorical distribution.
+            return 1
+
 
 class TriblerChainCrawlerCommunity(TriblerChainCommunity):
     """
