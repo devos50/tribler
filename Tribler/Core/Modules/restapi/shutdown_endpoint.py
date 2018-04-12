@@ -3,7 +3,6 @@ import os
 from twisted.internet import reactor, task
 from twisted.web import resource
 
-from Tribler.Core.Modules.process_checker import ProcessChecker
 import Tribler.Core.Utilities.json_util as json
 
 
@@ -16,7 +15,6 @@ class ShutdownEndpoint(resource.Resource):
         resource.Resource.__init__(self)
         self._logger = logging.getLogger(self.__class__.__name__)
         self.session = session
-        self.process_checker = ProcessChecker()
 
     def render_PUT(self, request):
         """
@@ -41,7 +39,6 @@ class ShutdownEndpoint(resource.Resource):
         def shutdown_process(_, code=1):
             reactor.addSystemEventTrigger('after', 'shutdown', os._exit, code)
             reactor.stop()
-            self.process_checker.remove_lock_file()
 
         def log_and_shutdown(failure):
             self._logger.error(failure.value)
