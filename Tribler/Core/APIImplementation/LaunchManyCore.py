@@ -184,15 +184,6 @@ class TriblerLaunchMany(TaskManager):
         # Market Community
         if self.session.config.get_market_community_enabled():
             wallets = {}
-
-            try:
-                from Tribler.community.market.wallet.btc_wallet import BitcoinWallet, BitcoinTestnetWallet
-                wallet_type = BitcoinTestnetWallet if self.session.config.get_btc_testnet() else BitcoinWallet
-                btc_wallet = wallet_type(os.path.join(self.session.config.get_state_dir(), 'wallet'))
-                wallets[btc_wallet.get_identifier()] = btc_wallet
-            except ImportError:
-                self._logger.error("Electrum wallet cannot be found, Bitcoin trading not available!")
-
             mc_wallet = TrustchainWallet(self.triblerchain_community)
             wallets[mc_wallet.get_identifier()] = mc_wallet
 
