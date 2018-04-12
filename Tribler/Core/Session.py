@@ -465,11 +465,6 @@ class Session(object):
 
         self.start_database()
 
-        if self.upgrader_enabled:
-            upgrader = TriblerUpgrader(self, self.sqlite_db)
-            self.readable_status = STATE_UPGRADING_READABLE
-            upgrader.run()
-
         startup_deferred = self.lm.register(self, self.session_lock)
 
         def load_checkpoint(_):
