@@ -23,15 +23,9 @@ from Tribler.community.market.wallet.tc_wallet import TrustchainWallet
 from Tribler.Core.CacheDB.sqlitecachedb import forceDBThread
 from Tribler.Core.DecentralizedTracking.dht_provider import MainlineDHTProvider
 from Tribler.Core.DownloadConfig import DownloadStartupConfig, DefaultDownloadStartupConfig
-from Tribler.Core.Modules.resource_monitor import ResourceMonitor
-from Tribler.Core.Modules.search_manager import SearchManager
 from Tribler.Core.Modules.versioncheck_manager import VersionCheckManager
-from Tribler.Core.Modules.watch_folder import WatchFolder
-from Tribler.Core.TorrentChecker.torrent_checker import TorrentChecker
 from Tribler.Core.TorrentDef import TorrentDef, TorrentDefNoMetainfo
 from Tribler.Core.Utilities.configparser import CallbackConfigParser
-from Tribler.Core.Utilities.install_dir import get_lib_path
-from Tribler.Core.Video.VideoServer import VideoServer
 from Tribler.Core.exceptions import DuplicateDownloadException
 from Tribler.Core.simpledefs import (NTFY_DISPERSY, NTFY_STARTED, NTFY_TORRENTS, NTFY_UPDATE, NTFY_TRIBLER,
                                      NTFY_FINISHED, DLSTATUS_DOWNLOADING, DLSTATUS_STOPPED_ON_ERROR, NTFY_ERROR,
@@ -117,79 +111,6 @@ class TriblerLaunchMany(TaskManager):
             self.session = session
             self.session_lock = session_lock
 
-            # On Mac, we bundle the root certificate for the SSL validation since Twisted is not using the root
-            # certificates provided by the system trust store.
-            if sys.platform == 'darwin':
-                os.environ['SSL_CERT_FILE'] = os.path.join(get_lib_path(), 'root_certs_mac.pem')
-
-            if self.session.config.get_torrent_store_enabled():
-                from Tribler.Core.leveldbstore import LevelDbStore
-                self.torrent_store = LevelDbStore(self.session.config.get_torrent_store_dir())
-                if not self.torrent_store.get_db():
-                    raise RuntimeError("Torrent store (leveldb) is None which should not normally happen")
-
-            if self.session.config.get_metadata_enabled():
-                from Tribler.Core.leveldbstore import LevelDbStore
-                self.metadata_store = LevelDbStore(self.session.config.get_metadata_store_dir())
-                if not self.metadata_store.get_db():
-                    raise RuntimeError("Metadata store (leveldb) is None which should not normally happen")
-
-            # torrent collecting: RemoteTorrentHandler
-            if self.session.config.get_torrent_collecting_enabled():
-                from Tribler.Core.RemoteTorrentHandler import RemoteTorrentHandler
-                self.rtorrent_handler = RemoteTorrentHandler(self.session)
-
-            # TODO(emilon): move this to a megacache component or smth
-            if self.session.config.get_megacache_enabled():
-                from Tribler.Core.CacheDB.SqliteCacheDBHandler import (PeerDBHandler, TorrentDBHandler,
-                                                                       MyPreferenceDBHandler, VoteCastDBHandler,
-                                                                       ChannelCastDBHandler)
-                from Tribler.Core.Category.Category import Category
-
-                self._logger.debug('tlm: Reading Session state from %s', self.session.config.get_state_dir())
-
-                self.category = Category()
-
-                # create DBHandlers
-                self.peer_db = PeerDBHandler(self.session)
-                self.torrent_db = TorrentDBHandler(self.session)
-                self.mypref_db = MyPreferenceDBHandler(self.session)
-                self.votecast_db = VoteCastDBHandler(self.session)
-                self.channelcast_db = ChannelCastDBHandler(self.session)
-
-                # initializes DBHandlers
-                self.peer_db.initialize()
-                self.torrent_db.initialize()
-                self.mypref_db.initialize()
-                self.votecast_db.initialize()
-                self.channelcast_db.initialize()
-
-                from Tribler.Core.Modules.tracker_manager import TrackerManager
-                self.tracker_manager = TrackerManager(self.session)
-
-            if self.session.config.get_video_server_enabled():
-                self.video_server = VideoServer(self.session.config.get_video_server_port(), self.session)
-                self.video_server.start()
-
-            # Dispersy
-            self.tftp_handler = None
-            dispersy_endpoint = None
-            if self.session.config.get_dispersy_enabled():
-                from Tribler.dispersy.dispersy import Dispersy
-                from Tribler.dispersy.endpoint import MIMEndpoint
-
-                # set communication endpoint
-                dispersy_endpoint = MIMEndpoint(self.session.config.get_dispersy_port())
-
-                working_directory = unicode(self.session.config.get_state_dir())
-                self.dispersy = Dispersy(dispersy_endpoint, working_directory)
-
-                # register TFTP service
-                from Tribler.Core.TFTP.handler import TftpHandler
-                self.tftp_handler = TftpHandler(self.session, dispersy_endpoint, "fffffffd".decode('hex'),
-                                                block_size=1024)
-                self.tftp_handler.initialize()
-
             if self.session.config.get_ipv8_enabled():
                 from Tribler.pyipv8.ipv8.configuration import get_default_configuration
                 ipv8_config = get_default_configuration()
@@ -203,19 +124,11 @@ class TriblerLaunchMany(TaskManager):
                     community_file._DEFAULT_ADDRESSES = [("95.211.155.142", 7001)]
                     community_file._DNS_ADDRESSES = []
 
-                if self.session.config.get_dispersy_enabled():
-                    from Tribler.Core.APIImplementation.IPv8EndpointAdapter import IPv8EndpointAdapter
-                    self.ipv8 = IPv8(ipv8_config, IPv8EndpointAdapter(dispersy_endpoint))
-                else:
-                    self.ipv8 = IPv8(ipv8_config)
+                self.ipv8 = IPv8(ipv8_config)
 
                 self.session.config.set_anon_proxy_settings(2, ("127.0.0.1",
                                                                 self.session.
                                                                 config.get_tunnel_community_socks5_listen_ports()))
-
-            if self.session.config.get_torrent_search_enabled() or self.session.config.get_channel_search_enabled():
-                self.search_manager = SearchManager(self.session)
-                self.search_manager.initialize()
 
         if not self.initComplete:
             self.init()
@@ -371,64 +284,12 @@ class TriblerLaunchMany(TaskManager):
 
             self.session.readable_status = STATE_LOADING_COMMUNITIES
 
-        # We should load the mainline DHT before loading the IPv8 overlays since the DHT is used for the tunnel overlay.
-        if self.session.config.get_mainline_dht_enabled():
-            self.session.readable_status = STATE_START_MAINLINE_DHT
-            from Tribler.Core.DecentralizedTracking import mainlineDHT
-            self.mainline_dht = mainlineDHT.init(('127.0.0.1', self.session.config.get_mainline_dht_port()),
-                                                 self.session.config.get_state_dir())
-            self.upnp_ports.append((self.session.config.get_mainline_dht_port(), 'UDP'))
-
         if self.ipv8:
             self.load_ipv8_overlays()
-
-        if self.dispersy:
-            self.load_dispersy_communities()
-
-        tunnel_community_ports = self.session.config.get_tunnel_community_socks5_listen_ports()
-        self.session.config.set_anon_proxy_settings(2, ("127.0.0.1", tunnel_community_ports))
-
-        if self.session.config.get_channel_search_enabled() and self.session.config.get_dispersy_enabled():
-            self.session.readable_status = STATE_INITIALIZE_CHANNEL_MGR
-            from Tribler.Core.Modules.channel.channel_manager import ChannelManager
-            self.channel_manager = ChannelManager(self.session)
-            self.channel_manager.initialize()
-
-        if self.session.config.get_libtorrent_enabled():
-            self.session.readable_status = STATE_START_LIBTORRENT
-            from Tribler.Core.Libtorrent.LibtorrentMgr import LibtorrentMgr
-            self.ltmgr = LibtorrentMgr(self.session)
-            self.ltmgr.initialize()
-            for port, protocol in self.upnp_ports:
-                self.ltmgr.add_upnp_mapping(port, protocol)
-
-        # add task for tracker checking
-        if self.session.config.get_torrent_checking_enabled():
-            self.session.readable_status = STATE_START_TORRENT_CHECKER
-            self.torrent_checker = TorrentChecker(self.session)
-            self.torrent_checker.initialize()
-
-        if self.rtorrent_handler and self.session.config.get_dispersy_enabled():
-            self.session.readable_status = STATE_START_REMOTE_TORRENT_HANDLER
-            self.rtorrent_handler.initialize()
 
         if self.api_manager:
             self.session.readable_status = STATE_START_API_ENDPOINTS
             self.api_manager.root_endpoint.start_endpoints()
-
-        if self.session.config.get_watch_folder_enabled():
-            self.session.readable_status = STATE_START_WATCH_FOLDER
-            self.watch_folder = WatchFolder(self.session)
-            self.watch_folder.start()
-
-        if self.session.config.get_credit_mining_enabled():
-            self.session.readable_status = STATE_START_CREDIT_MINING
-            from Tribler.Core.CreditMining.CreditMiningManager import CreditMiningManager
-            self.credit_mining_manager = CreditMiningManager(self.session)
-
-        if self.session.config.get_resource_monitor_enabled():
-            self.resource_monitor = ResourceMonitor(self.session)
-            self.resource_monitor.start()
 
         self.version_check_manager = VersionCheckManager(self.session)
         self.session.set_download_states_callback(self.sesscb_states_callback)
