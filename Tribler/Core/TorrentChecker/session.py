@@ -3,7 +3,6 @@ import random
 import struct
 import time
 from abc import ABCMeta, abstractmethod, abstractproperty
-from libtorrent import bdecode
 from twisted.internet import reactor, defer
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.protocol import DatagramProtocol

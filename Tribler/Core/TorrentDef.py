@@ -9,8 +9,6 @@ import sys
 from hashlib import sha1
 from types import StringType, ListType, IntType, LongType
 
-from libtorrent import bencode, bdecode
-
 from Tribler.Core.Utilities import maketorrent
 from Tribler.Core.Utilities.utilities import create_valid_metainfo, is_valid_url
 from Tribler.Core.Utilities.unicode import dunno2unicode

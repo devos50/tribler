@@ -421,8 +421,6 @@ def fix_torrent(file_path):
     :param file_path: The torrent file path
     :return: True if the torrent file is now overwritten with valid information, otherwise False
     """
-    from libtorrent import bencode, bdecode
-
     f = open(file_path, 'rb')
     bdata = f.read()
     f.close()

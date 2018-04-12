@@ -9,7 +9,6 @@ from copy import copy
 from hashlib import sha1
 from time import time
 
-from libtorrent import bencode
 import chardet
 
 from Tribler.Core.Utilities.unicode import bin2unicode

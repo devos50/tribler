@@ -10,7 +10,6 @@ import threading
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
 from itertools import chain
-from libtorrent import bencode
 from pprint import pformat
 from struct import unpack_from
 from time import time

@@ -3,7 +3,6 @@ import hashlib
 
 from urllib import url2pathname
 
-from libtorrent import bdecode, bencode
 from twisted.internet.defer import Deferred
 from twisted.internet.error import DNSLookupError, ConnectError
 from twisted.web import http, resource
