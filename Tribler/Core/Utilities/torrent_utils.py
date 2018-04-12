@@ -1,8 +1,6 @@
 import logging
 import os
 
-import libtorrent
-
 logger = logging.getLogger(__name__)
 
 
@@ -25,6 +23,7 @@ def commonprefix(l):
 
 
 def create_torrent_file(file_path_list, params):
+    import libtorrent
     fs = libtorrent.file_storage()
 
     # filter all non-files
