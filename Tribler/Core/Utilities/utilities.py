@@ -11,7 +11,6 @@ from types import StringType, LongType, IntType, ListType, DictType
 from urllib import quote_plus
 from urlparse import urlsplit, parse_qsl
 
-from libtorrent import bencode, bdecode
 from twisted.internet import reactor
 from twisted.internet.defer import fail
 from twisted.web import http
@@ -422,6 +421,8 @@ def fix_torrent(file_path):
     :param file_path: The torrent file path
     :return: True if the torrent file is now overwritten with valid information, otherwise False
     """
+    from libtorrent import bencode, bdecode
+
     f = open(file_path, 'rb')
     bdata = f.read()
     f.close()
