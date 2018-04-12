@@ -4,8 +4,6 @@ from StringIO import StringIO
 import sys
 
 import datetime
-import psutil
-from meliae import scanner
 from twisted.web import http, resource
 
 from Tribler.Core.Utilities.instrumentation import WatchDog
