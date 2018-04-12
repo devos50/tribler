@@ -1,5 +1,4 @@
 import os
-import psutil
 import logging
 
 from glob import glob
@@ -90,6 +89,7 @@ class CreditMiningManager(TaskManager):
         return DeferredList(deferreds)
 
     def get_free_disk_space(self):
+        import psutil
         return psutil.disk_usage(self.settings.save_path).free
 
     def check_disk_space(self):
