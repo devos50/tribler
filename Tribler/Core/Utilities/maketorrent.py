@@ -9,7 +9,6 @@ from copy import copy
 from hashlib import sha1
 from time import time
 
-import chardet
 
 from Tribler.Core.Utilities.unicode import bin2unicode
 from Tribler.Core.Utilities.utilities import create_valid_metainfo
@@ -245,6 +244,7 @@ def pathlist2filename(pathlist):
     try:
         return fullpath.decode('utf-8')
     except UnicodeDecodeError:
+        import chardet
         charenc = chardet.detect(fullpath)['encoding']
         if not charenc:
             return fullpath  # Hope for the best
