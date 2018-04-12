@@ -72,6 +72,7 @@ class MarketServiceMaker(object):
         config.set_video_server_enabled(False)
         config.set_torrent_search_enabled(False)
         config.set_channel_search_enabled(False)
+        config.set_ipv8_use_testnet(True)
 
         msg("Starting Tribler")
 
