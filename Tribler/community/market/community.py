@@ -362,7 +362,7 @@ class MarketCommunity(TrustChainCommunity):
         """
         assert isinstance(trader_id, TraderId), type(trader_id)
         assert isinstance(ip, tuple), type(ip)
-        assert isinstance(ip[0], str)
+        assert isinstance(ip[0], (str, unicode))
         assert isinstance(ip[1], int)
 
         self.logger.debug("Updating ip of trader %s to (%s, %s)", trader_id, ip[0], ip[1])
@@ -455,6 +455,7 @@ class MarketCommunity(TrustChainCommunity):
 
     def received_info(self, source_address, data):
         auth, _, payload = self._ez_unpack_auth(InfoPayload, data)
+        self.update_ip(payload.message_id.trader_id, source_address)
         if payload.is_matchmaker:
             self.add_matchmaker(Peer(auth.public_key_bin, source_address))
 
@@ -1095,7 +1096,7 @@ class MarketCommunity(TrustChainCommunity):
         return succeed(None)
 
     # Proposed trade
-    def send_proposed_trade(self, proposed_trade, match_id):
+    def send_proposed_trade(self, proposed_trade, match_id, peer=None):
         assert isinstance(proposed_trade, ProposedTrade), type(proposed_trade)
         assert isinstance(match_id, str), type(match_id)
         payload = proposed_trade.to_network()
@@ -1111,12 +1112,17 @@ class MarketCommunity(TrustChainCommunity):
         dist = GlobalTimeDistributionPayload(global_time).to_pack_list()
 
         packet = self._ez_pack(self._prefix, 10, [auth, dist, payload])
-        self.endpoint.send(self.lookup_ip(proposed_trade.recipient_order_id.trader_id), packet)
+
+        if peer:
+            peer_addr = peer.address
+        else:
+            peer_addr = self.lookup_ip(proposed_trade.recipient_order_id.trader_id)
+        self.endpoint.send(peer_addr, packet)
 
         self.logger.debug("Sending proposed trade with own order id %s and other order id %s to trader "
                           "%s, quantity: %s (ip: %s, port: %s)", str(proposed_trade.order_id),
                           str(proposed_trade.recipient_order_id), proposed_trade.recipient_order_id.trader_id,
-                          proposed_trade.quantity, *self.lookup_ip(proposed_trade.recipient_order_id.trader_id))
+                          proposed_trade.quantity, *peer_addr)
 
     def check_trade_payload_validity(self, payload):
         if str(payload.recipient_order_id.trader_id) != str(self.mid):
@@ -1133,15 +1139,34 @@ class MarketCommunity(TrustChainCommunity):
                 and cache.proposed_trade.order_id == order_id
                 and cache.proposed_trade.recipient_order_id == partner_order_id]
 
+    def trade(self, peer):
+        """
+        Trade with another peer (FOR EXPERIMENT)
+        """
+        new_order = self.order_manager.create_ask_order(Price(1, 'DUM1'), Quantity(1, 'DUM2'), Timeout(3600))
+        new_order.set_verified()
+        self.order_manager.order_repository.update(new_order)
+
+        self.update_ip(TraderId(peer.mid.encode('hex')), peer.address)
+
+        proposed_trade = ProposedTrade(self.message_repository.next_identity(), new_order.order_id, OrderId(TraderId(peer.mid.encode('hex')), OrderNumber(0)), random.randint(0, 100000000), new_order.price, new_order.total_quantity, Timestamp.now())
+        self.send_proposed_trade(proposed_trade, '', peer=peer)
+
     def received_proposed_trade(self, _, data):
         _, _, payload = self._ez_unpack_auth(TradePayload, data)
 
-        validation = self.check_trade_payload_validity(payload)
-        if not validation[0]:
-            self.logger.warning("Validation of proposed trade payload failed: %s", validation[1])
-            return
+        # validation = self.check_trade_payload_validity(payload)
+        # if not validation[0]:
+        #     self.logger.warning("Validation of proposed trade payload failed: %s", validation[1])
+        #     return
+
+        # Simply create a matching payload now
+        new_order = self.order_manager.create_bid_order(Price(1, 'DUM1'), Quantity(1, 'DUM2'), Timeout(3600))
+        new_order.set_verified()
+        self.order_manager.order_repository.update(new_order)
 
         proposed_trade = ProposedTrade.from_network(payload)
+        proposed_trade._recipient_order_id = new_order.order_id
 
         self.logger.debug("Proposed trade received with id: %s", str(proposed_trade.message_id))
 

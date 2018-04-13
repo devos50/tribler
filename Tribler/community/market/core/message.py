@@ -12,7 +12,7 @@ class TraderId(object):
         """
         super(TraderId, self).__init__()
 
-        if not isinstance(trader_id, str):
+        if not isinstance(trader_id, (str, unicode)):
             raise ValueError("Trader id must be a string")
 
         try:

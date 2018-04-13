@@ -331,3 +331,19 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         self.nodes[0].overlay.get_online_matchmaker()
         yield self.sleep(0.2)
         self.assertFalse(self.nodes[0].overlay.matchmakers)
+
+    @twisted_wrapper
+    def test_trade_without_order(self):
+        """
+        EXPERIMENT: test trade without order
+        """
+        self.nodes[0].overlay.disable_matchmaker()
+        self.nodes[1].overlay.disable_matchmaker()
+        yield self.introduce_nodes()
+
+        self.nodes[0].overlay.trade(self.nodes[1].overlay.my_peer)
+        self.nodes[0].overlay.trade(self.nodes[1].overlay.my_peer)
+        self.nodes[0].overlay.trade(self.nodes[1].overlay.my_peer)
+        self.nodes[0].overlay.trade(self.nodes[1].overlay.my_peer)
+
+        yield self.deliver_messages()

@@ -377,8 +377,8 @@ class Order(object):
         self._logger.debug("Adding trade for order %s with quantity %s (other id: %s)",
                            str(self.order_id), quantity, str(other_order_id))
         self._traded_quantity += quantity
-        self.release_quantity_for_tick(other_order_id, quantity)
-        assert self.available_quantity >= Quantity(0, quantity.wallet_id), str(self.available_quantity)
+        #self.release_quantity_for_tick(other_order_id, quantity)
+        #assert self.available_quantity >= Quantity(0, quantity.wallet_id), str(self.available_quantity)
 
         if self.is_complete():
             self._completed_timestamp = Timestamp.now()
