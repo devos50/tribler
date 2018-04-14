@@ -36,14 +36,13 @@ class Trade(Message):
         self._proposal_id = proposal_id
 
     @classmethod
-    def propose(cls, message_id, order_id, recipient_order_id, price, quantity, timestamp):
+    def propose(cls, message_id, order_id, recipient_order_id, latitude, longitude, quantity, timestamp):
         """
         Propose a trade to another node
 
         :param message_id: A message id to identify the trade
         :param order_id: A order id to identify the order
         :param recipient_order_id: A order id to identify the traded party
-        :param price: A price for the trade
         :param quantity: A quantity to be traded
         :param timestamp: A timestamp wen this trade was created
         :type message_id: MessageId
@@ -58,7 +57,8 @@ class Trade(Message):
             order_id,
             recipient_order_id,
             random.randint(0, 100000000),
-            price,
+            latitude,
+            longitude,
             quantity,
             timestamp
         )
@@ -154,7 +154,7 @@ class ProposedTrade(Trade):
     proposed trade is send first.
     """
 
-    def __init__(self, message_id, order_id, recipient_order_id, proposal_id, price, quantity, timestamp):
+    def __init__(self, message_id, order_id, recipient_order_id, proposal_id, latitude, longitude, quantity, timestamp):
         """
         Don't use this method directly, use the class methods from Trade or use the from_network
 
@@ -162,23 +162,23 @@ class ProposedTrade(Trade):
         :param order_id: A order id to identify the order
         :param recipient_order_id: A order id to identify the traded party
         :param proposal_id: The ID of the trade proposal
-        :param price: A price for the trade
         :param quantity: A quantity to be traded
         :param timestamp: A timestamp wen this trade was created
         :type message_id: MessageId
         :type order_id: OrderId
         :type recipient_order_id: OrderId
         :type proposal_id: int
-        :type price: Price
         :type quantity: Quantity
         :type timestamp: Timestamp
         """
         super(ProposedTrade, self).__init__(message_id, order_id, recipient_order_id, proposal_id, timestamp)
 
-        assert isinstance(price, Price), type(price)
+        assert isinstance(latitude, float), type(latitude)
+        assert isinstance(longitude, float), type(longitude)
         assert isinstance(quantity, Quantity), type(quantity)
 
-        self._price = price
+        self._latitude = latitude
+        self._longitude = longitude
         self._quantity = quantity
 
     @classmethod
@@ -195,18 +195,25 @@ class ProposedTrade(Trade):
             OrderId(data.trader_id, data.order_number),
             data.recipient_order_id,
             data.proposal_id,
-            data.price,
+            data.latitude,
+            data.longitude,
             data.quantity,
             data.timestamp
         )
 
     @property
-    def price(self):
+    def latitude(self):
         """
-        :return: The price
-        :rtype: Price
+        :rtype: float
         """
-        return self._price
+        return self._latitude
+
+    @property
+    def longitude(self):
+        """
+        :rtype: float
+        """
+        return self._longitude
 
     @property
     def quantity(self):
@@ -215,19 +222,6 @@ class ProposedTrade(Trade):
         :rtype: Quantity
         """
         return self._quantity
-
-    def has_acceptable_price(self, is_ask, order_price):
-        """
-        Return whether this trade proposal has an acceptable price.
-        :rtype: bool
-        """
-        def isclose(price_a, price_b):
-            price_a = float(price_a)
-            price_b = float(price_b)
-            return abs(price_a - price_b) <= 1e-06
-
-        return (is_ask and (self.price >= order_price or isclose(self.price, order_price))) or \
-               (not is_ask and (self.price <= order_price or isclose(self.price, order_price)))
 
     def to_network(self):
         """
@@ -239,7 +233,8 @@ class ProposedTrade(Trade):
             self._order_id.order_number,
             self._recipient_order_id,
             self._proposal_id,
-            self._price,
+            self._latitude,
+            self._longitude,
             self._quantity,
         )
 

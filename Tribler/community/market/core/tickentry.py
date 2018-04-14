@@ -168,4 +168,4 @@ class TickEntry(TaskManager):
         format: <quantity>\t@\t<price>
         :rtype: str
         """
-        return "%s\t@\t%s (R: %s)" % (str(self._tick.quantity), str(self._tick.price), str(self.reserved_for_matching))
+        return "%s\t@\t%f, %f (R: %s)" % (str(self._tick.quantity), self._tick.latitude, self._tick.longitude, str(self.reserved_for_matching))

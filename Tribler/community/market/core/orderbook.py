@@ -128,7 +128,7 @@ class OrderBook(TaskManager):
                 self.remove_tick(tick.order_id)
                 self.completed_orders.append(tick.order_id)
         elif not self.tick_exists(ask_order_id) and new_ask_quantity > Quantity(0, ask_order_dict["quantity_type"]):
-            ask = Ask(ask_order_id, Price(ask_order_dict["price"], ask_order_dict["price_type"]),
+            ask = Ask(ask_order_id, ask_order_dict["latitude"], ask_order_dict["longitude"],
                       new_ask_quantity, Timeout(ask_order_dict["timeout"]), Timestamp(ask_order_dict["timestamp"]))
             self.insert_ask(ask)
 
@@ -144,7 +144,7 @@ class OrderBook(TaskManager):
                 self.remove_tick(tick.order_id)
                 self.completed_orders.append(tick.order_id)
         elif not self.tick_exists(bid_order_id) and new_bid_quantity > Quantity(0, bid_order_dict["quantity_type"]):
-            bid = Bid(bid_order_id, Price(bid_order_dict["price"], bid_order_dict["price_type"]),
+            bid = Bid(bid_order_id, bid_order_dict["latitude"], bid_order_dict["longitude"],
                       new_bid_quantity, Timeout(bid_order_dict["timeout"]), Timestamp(bid_order_dict["timestamp"]))
             self.insert_bid(bid)
 

@@ -66,12 +66,13 @@ class OfferPayload(MessagePayload):
     Payload for a message with an offer in the market community.
     """
 
-    format_list = ['varlenI', 'I', 'f', 'I', 'f', 'varlenI', 'f', 'varlenI', 'f', 'varlenI', 'I']
+    format_list = ['varlenI', 'I', 'f', 'I', 'f', 'f', 'f', 'varlenI', 'f', 'varlenI', 'I']
 
-    def __init__(self, message_id, timestamp, order_number, price, quantity, timeout, address):
+    def __init__(self, message_id, timestamp, order_number, latitude, longitude, quantity, timeout, address):
         super(OfferPayload, self).__init__(message_id, timestamp)
         self.order_number = order_number
-        self.price = price
+        self.latitude = latitude
+        self.longitude = longitude
         self.quantity = quantity
         self.timeout = timeout
         self.address = address
@@ -79,8 +80,8 @@ class OfferPayload(MessagePayload):
     def to_pack_list(self):
         data = super(OfferPayload, self).to_pack_list()
         data += [('I', int(self.order_number)),
-                 ('f', float(self.price)),
-                 ('varlenI', self.price.wallet_id),
+                 ('f', float(self.latitude)),
+                 ('f', float(self.longitude)),
                  ('f', float(self.quantity)),
                  ('varlenI', self.quantity.wallet_id),
                  ('f', float(self.timeout)),
@@ -89,10 +90,10 @@ class OfferPayload(MessagePayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, price, price_type, quantity,
-                         quantity_type, timeout, ip, port):
+    def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, latitude, longitude,
+                         quantity, quantity_type, timeout, ip, port):
         return OfferPayload(MessageId(TraderId(trader_id), MessageNumber(message_number)), Timestamp(timestamp),
-                            OrderNumber(order_number), Price(price, price_type), Quantity(quantity, quantity_type),
+                            OrderNumber(order_number), latitude, longitude, Quantity(quantity, quantity_type),
                             Timeout(timeout), SocketAddress(ip, port))
 
 
@@ -103,9 +104,9 @@ class MatchPayload(OfferPayload):
 
     format_list = OfferPayload.format_list + ['I', 'f', 'varlenI', 'varlenI', 'varlenI', 'varlenI']
 
-    def __init__(self, message_id, timestamp, order_number, price, quantity, timeout, address, recipient_order_number,
+    def __init__(self, message_id, timestamp, order_number, latitude, longitude, quantity, timeout, address, recipient_order_number,
                  match_quantity, match_trader_id, matchmaker_trader_id, match_id):
-        super(MatchPayload, self).__init__(message_id, timestamp, order_number, price, quantity, timeout, address)
+        super(MatchPayload, self).__init__(message_id, timestamp, order_number, latitude, longitude, quantity, timeout, address)
         self.recipient_order_number = recipient_order_number
         self.match_quantity = match_quantity
         self.match_trader_id = match_trader_id
@@ -123,11 +124,11 @@ class MatchPayload(OfferPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, price, price_type, quantity,
+    def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, latitude, longitude, quantity,
                          quantity_type, timeout, ip, port, recipient_order_number, match_quantity, match_quantity_type,
                          match_trader_id, matchmaker_trader_id, match_id):
         return MatchPayload(MessageId(TraderId(trader_id), MessageNumber(message_number)), Timestamp(timestamp),
-                            OrderNumber(order_number), Price(price, price_type), Quantity(quantity, quantity_type),
+                            OrderNumber(order_number), latitude, longitude, Quantity(quantity, quantity_type),
                             Timeout(timeout), SocketAddress(ip, port), OrderNumber(recipient_order_number),
                             Quantity(match_quantity, match_quantity_type), TraderId(match_trader_id),
                             TraderId(matchmaker_trader_id), match_id)
@@ -187,14 +188,15 @@ class TradePayload(MessagePayload):
     Payload that contains a trade in the market community.
     """
 
-    format_list = ['varlenI', 'I', 'f', 'I', 'varlenI', 'I', 'I', 'f', 'varlenI', 'f', 'varlenI', 'varlenI', 'I']
+    format_list = ['varlenI', 'I', 'f', 'I', 'varlenI', 'I', 'I', 'f', 'f', 'f', 'varlenI', 'varlenI', 'I']
 
-    def __init__(self, message_id, timestamp, order_number, recipient_order_id, proposal_id, price, quantity, address):
+    def __init__(self, message_id, timestamp, order_number, recipient_order_id, proposal_id, latitude, longitude, quantity, address):
         super(TradePayload, self).__init__(message_id, timestamp)
         self.order_number = order_number
         self.recipient_order_id = recipient_order_id
         self.proposal_id = proposal_id
-        self.price = price
+        self.latitude = latitude
+        self.longitude = longitude
         self.quantity = quantity
         self.address = address
 
@@ -204,8 +206,8 @@ class TradePayload(MessagePayload):
                  ('varlenI', str(self.recipient_order_id.trader_id)),
                  ('I', int(self.recipient_order_id.order_number)),
                  ('I', self.proposal_id),
-                 ('f', float(self.price)),
-                 ('varlenI', self.price.wallet_id),
+                 ('f', float(self.latitude)),
+                 ('f', float(self.longitude)),
                  ('f', float(self.quantity)),
                  ('varlenI', self.quantity.wallet_id),
                  ('varlenI', self.address.ip),
@@ -214,11 +216,11 @@ class TradePayload(MessagePayload):
 
     @classmethod
     def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, recipient_trader_id,
-                         recipient_order_number, proposal_id, price, price_type, quantity, quantity_type, ip, port):
+                         recipient_order_number, proposal_id, latitude, longitude, quantity, quantity_type, ip, port):
         return TradePayload(MessageId(TraderId(trader_id), MessageNumber(message_number)), Timestamp(timestamp),
                             OrderNumber(order_number),
                             OrderId(TraderId(recipient_trader_id), OrderNumber(recipient_order_number)),
-                            proposal_id, Price(price, price_type),
+                            proposal_id, latitude, longitude,
                             Quantity(quantity, quantity_type), SocketAddress(ip, port))
 
 
@@ -280,15 +282,16 @@ class StartTransactionPayload(TransactionPayload):
     """
 
     format_list = ['varlenI', 'I', 'f', 'varlenI', 'I', 'varlenI', 'I', 'varlenI', 'I', 'I', 'f',
-                   'varlenI', 'f', 'varlenI']
+                   'f', 'f', 'varlenI']
 
     def __init__(self, message_id, timestamp, transaction_id, order_id, recipient_order_id,
-                 proposal_id, price, quantity):
+                 proposal_id, latitude, longitude, quantity):
         super(StartTransactionPayload, self).__init__(message_id, timestamp, transaction_id)
         self.order_id = order_id
         self.recipient_order_id = recipient_order_id
         self.proposal_id = proposal_id
-        self.price = price
+        self.latitude = latitude
+        self.longitude = longitude
         self.quantity = quantity
 
     def to_pack_list(self):
@@ -298,8 +301,8 @@ class StartTransactionPayload(TransactionPayload):
                  ('varlenI', str(self.recipient_order_id.trader_id)),
                  ('I', int(self.recipient_order_id.order_number)),
                  ('I', self.proposal_id),
-                 ('f', float(self.price)),
-                 ('varlenI', self.price.wallet_id),
+                 ('f', float(self.latitude)),
+                 ('f', float(self.longitude)),
                  ('f', float(self.quantity)),
                  ('varlenI', self.quantity.wallet_id)]
         return data
@@ -307,13 +310,13 @@ class StartTransactionPayload(TransactionPayload):
     @classmethod
     def from_unpack_list(cls, trader_id, message_number, timestamp, transaction_trader_id, transaction_number,
                          order_trader_id, order_number, recipient_trader_id, recipient_order_number, proposal_id,
-                         price, price_type, quantity, quantity_type):
+                         latitude, longitude, quantity, quantity_type):
         return StartTransactionPayload(MessageId(TraderId(trader_id), MessageNumber(message_number)),
                                        Timestamp(timestamp), TransactionId(TraderId(transaction_trader_id),
                                                                            TransactionNumber(transaction_number)),
                                        OrderId(TraderId(order_trader_id), OrderNumber(order_number)),
                                        OrderId(TraderId(recipient_trader_id), OrderNumber(recipient_order_number)),
-                                       proposal_id, Price(price, price_type), Quantity(quantity, quantity_type))
+                                       proposal_id, latitude, longitude, Quantity(quantity, quantity_type))
 
 
 class WalletInfoPayload(TransactionPayload):
@@ -417,9 +420,9 @@ class OrderStatusResponsePayload(OfferPayload):
 
     format_list = OfferPayload.format_list + ['f', 'varlenI', 'I']
 
-    def __init__(self, message_id, timestamp, order_number, price, quantity, timeout, address,
+    def __init__(self, message_id, timestamp, order_number, latitude, longitude, quantity, timeout, address,
                  traded_quantity, identifier):
-        super(OrderStatusResponsePayload, self).__init__(message_id, timestamp, order_number, price, quantity,
+        super(OrderStatusResponsePayload, self).__init__(message_id, timestamp, order_number, latitude, longitude, quantity,
                                                          timeout, address)
         self.traded_quantity = traded_quantity
         self.identifier = identifier
@@ -432,10 +435,10 @@ class OrderStatusResponsePayload(OfferPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, price, price_type, quantity,
+    def from_unpack_list(cls, trader_id, message_number, timestamp, order_number, latitude, longitude, quantity,
                          quantity_type, timeout, ip, port, traded_quantity, traded_quantity_type, identifier):
         return OrderStatusResponsePayload(MessageId(TraderId(trader_id), MessageNumber(message_number)),
-                                          Timestamp(timestamp), OrderNumber(order_number), Price(price, price_type),
+                                          Timestamp(timestamp), OrderNumber(order_number), latitude, longitude,
                                           Quantity(quantity, quantity_type), Timeout(timeout), SocketAddress(ip, port),
                                           Quantity(traded_quantity, traded_quantity_type), identifier)
 

@@ -1,5 +1,10 @@
 import random
 from base64 import b64decode
+from math import cos
+from math import radians
+from math import sin
+from math import asin
+from math import sqrt
 
 from Tribler.pyipv8.ipv8.deprecated.bloomfilter import BloomFilter
 from twisted.internet import reactor
@@ -9,14 +14,14 @@ from twisted.internet.task import LoopingCall
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_BID, NTFY_MARKET_ON_TRANSACTION_COMPLETE, \
     NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID_TIMEOUT, NTFY_MARKET_ON_PAYMENT_RECEIVED, NTFY_MARKET_ON_PAYMENT_SENT
 from Tribler.Core.simpledefs import NTFY_UPDATE
-from Tribler.community.market.core.matching_engine import MatchingEngine, PriceTimeStrategy
+from Tribler.community.market.core.matching_engine import MatchingEngine, PriceTimeStrategy, TaxiStrategy
 from Tribler.community.market.core import DeclineMatchReason, DeclinedTradeReason
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.message_repository import MemoryMessageRepository
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.order_manager import OrderManager
 from Tribler.community.market.core.order_repository import DatabaseOrderRepository, MemoryOrderRepository
-from Tribler.community.market.core.orderbook import DatabaseOrderBook
+from Tribler.community.market.core.orderbook import DatabaseOrderBook, OrderBook
 from Tribler.community.market.core.payment import Payment
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.price import Price
@@ -71,6 +76,7 @@ class ProposedTradeRequestCache(NumberCache):
             match_message = self.community.incoming_match_messages[self.match_id]
             self.community.send_decline_match_message(self.match_id, match_message.matchmaker_trader_id,
                                                       DeclineMatchReason.OTHER)
+            self.community.parse_match_message(order.order_id)
 
 
 class OrderStatusRequestCache(RandomNumberCache):
@@ -145,6 +151,7 @@ class MarketCommunity(TrustChainCommunity):
         self.request_cache = RequestCache()
         self.cancelled_orders = set()  # Keep track of cancelled orders so we don't add them again to the orderbook.
         self.broadcast_block = False
+        self.pending_matches = {}
 
         if use_database:
             order_repository = DatabaseOrderRepository(self.mid, self.market_database)
@@ -163,7 +170,8 @@ class MarketCommunity(TrustChainCommunity):
             self.update_ip(TraderId(str(trader[0])), (str(trader[1]), trader[2]))
 
         # Determine the reputation of peers every five minutes
-        self.register_task("calculate_reputation", LoopingCall(self.compute_reputation)).start(300.0, now=False)
+        #self.register_task("calculate_reputation", LoopingCall(self.compute_reputation)).start(300.0, now=False)
+        self.register_task("periodic_match", LoopingCall(self.periodic_match)).start(2, now=False)
 
         # Register messages
         self.decode_map.update({
@@ -185,6 +193,28 @@ class MarketCommunity(TrustChainCommunity):
         })
 
         self.logger.info("Market community initialized with mid %s", self.mid)
+
+    def periodic_match(self):
+        if self.is_matchmaker:
+            bid_ids = self.order_book.get_bid_ids()
+            for bid_id in bid_ids:
+                self.match(self.order_book.get_tick(bid_id).tick)
+
+    def haversine(self, lon1, lat1, lon2, lat2):
+        """
+        Calculate the great circle distance between two points
+        on the earth (specified in decimal degrees)
+        """
+        # convert decimal degrees to radians
+        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+        # haversine formula
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * asin(sqrt(a))
+        r = 6371  # Radius of earth in kilometers. Use 3956 for miles
+        return c * r
 
     def should_sign(self, block):
         """
@@ -210,9 +240,8 @@ class MarketCommunity(TrustChainCommunity):
         """
         Enable this node to be a matchmaker
         """
-        self.order_book = DatabaseOrderBook(self.market_database)
-        self.order_book.restore_from_database()
-        self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
+        self.order_book = OrderBook()
+        self.matching_engine = MatchingEngine(TaxiStrategy(self.order_book))
         self.is_matchmaker = True
 
     def disable_matchmaker(self):
@@ -278,7 +307,7 @@ class MarketCommunity(TrustChainCommunity):
             self.market_database.add_trader_identity(trader_id, sock_addr[0], sock_addr[1])
 
         # Save the ticks to the database
-        if self.is_matchmaker:
+        if self.is_matchmaker and isinstance(self.order_book, DatabaseOrderBook):
             self.order_book.save_to_database()
             self.order_book.shutdown_task_manager()
         yield super(MarketCommunity, self).unload()
@@ -305,11 +334,11 @@ class MarketCommunity(TrustChainCommunity):
         Return a tuple of incoming and outgoing payment address of an order.
         """
         if order.is_ask():
-            return WalletAddress(self.wallets[order.price.wallet_id].get_address()),\
+            return WalletAddress(self.wallets['taxi'].get_address()),\
                    WalletAddress(self.wallets[order.total_quantity.wallet_id].get_address())
         else:
             return WalletAddress(self.wallets[order.total_quantity.wallet_id].get_address()), \
-                   WalletAddress(self.wallets[order.price.wallet_id].get_address())
+                   WalletAddress(self.wallets['taxi'].get_address())
 
     def match_order_ids(self, order_ids):
         """
@@ -550,9 +579,9 @@ class MarketCommunity(TrustChainCommunity):
             raise RuntimeError("The quantity should be higher than or equal to the minimum unit of this currency (%f)."
                                % quantity_min_unit)
 
-    def create_ask(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
+    def create_ride_offer(self, latitude, longitude, timeout):
         """
-        Create an ask order (sell order)
+        Create a ride offer order (sell order)
 
         :param price: The price for the order in btc
         :param price_wallet_id: The type of the price (i.e. EUR, BTC)
@@ -567,22 +596,20 @@ class MarketCommunity(TrustChainCommunity):
         :return: The created order
         :rtype: Order
         """
-        self.verify_offer_creation(price, price_wallet_id, quantity, quantity_wallet_id)
 
         # Convert values to value objects
-        price = Price(price, price_wallet_id)
-        quantity = Quantity(quantity, quantity_wallet_id)
+        quantity = Quantity(1, 'taxi')
         timeout = Timeout(timeout)
 
         # Create the order
-        order = self.order_manager.create_ask_order(price, quantity, timeout)
+        order = self.order_manager.create_ride_offer(latitude, longitude, quantity, timeout)
 
         # Create the tick
         tick = Tick.from_order(order)
         assert isinstance(tick, Ask), type(tick)
 
         def on_verified_ask(blocks):
-            self.logger.info("Ask verified with price %s and quantity %s", price, quantity)
+            self.logger.debug("Ride offer verified (lat: %f, long: %f)", latitude, longitude)
             order.set_verified()
             self.order_manager.order_repository.update(order)
             self.send_block_pair(*blocks)
@@ -595,13 +622,13 @@ class MarketCommunity(TrustChainCommunity):
 
             return order
 
-        self.logger.info("Ask created with price %s and quantity %s", price, quantity)
+        self.logger.debug("Ride offer created (lat: %f, long: %f)", latitude, longitude)
 
         return self.create_new_tick_block(tick).addCallback(on_verified_ask)
 
-    def create_bid(self, price, price_wallet_id, quantity, quantity_wallet_id, timeout):
+    def create_ride_request(self, latitude, longitude, timeout):
         """
-        Create an ask order (sell order)
+        Create a ride request order (sell order)
 
         :param price: The price for the order in btc
         :param price_wallet_id: The type of the price (i.e. EUR, BTC)
@@ -616,22 +643,20 @@ class MarketCommunity(TrustChainCommunity):
         :return: The created order
         :rtype: Order
         """
-        self.verify_offer_creation(price, price_wallet_id, quantity, quantity_wallet_id)
 
         # Convert values to value objects
-        price = Price(price, price_wallet_id)
-        quantity = Quantity(quantity, quantity_wallet_id)
+        quantity = Quantity(1, 'taxi')
         timeout = Timeout(timeout)
 
         # Create the order
-        order = self.order_manager.create_bid_order(price, quantity, timeout)
+        order = self.order_manager.create_ride_request(latitude, longitude, quantity, timeout)
 
         # Create the tick
         tick = Tick.from_order(order)
         assert isinstance(tick, Bid), type(tick)
 
         def on_verified_bid(blocks):
-            self.logger.info("Bid verified with price %s and quantity %s", price, quantity)
+            self.logger.debug("Ride request created (lat: %f, long: %f)", latitude, longitude)
             order.set_verified()
             self.order_manager.order_repository.update(order)
             self.send_block_pair(*blocks)
@@ -644,7 +669,7 @@ class MarketCommunity(TrustChainCommunity):
 
             return order
 
-        self.logger.info("Bid created with price %s and quantity %s", price, quantity)
+        self.logger.debug("Ride request created (lat: %f, long: %f)", latitude, longitude)
 
         return self.create_new_tick_block(tick).addCallback(on_verified_bid)
 
@@ -864,8 +889,8 @@ class MarketCommunity(TrustChainCommunity):
         :param tick: the received tick to process
         :param address: tuple of (ip_address, port) defining the internet address of the creator of the tick
         """
-        self.logger.debug("%s received from trader %s (price: %s, quantity: %s)", type(tick),
-                          str(tick.order_id.trader_id), tick.price, tick.quantity)
+        self.logger.debug("%s received from trader %s (lat: %f, long: %f)", type(tick),
+                          str(tick.order_id.trader_id), tick.latitude, tick.longitude)
 
         # Update the mid register with the current address
         self.update_ip(tick.order_id.trader_id, address)
@@ -876,8 +901,8 @@ class MarketCommunity(TrustChainCommunity):
 
             if not self.order_book.tick_exists(tick.order_id) and tick.quantity > Quantity(0, tick.quantity.wallet_id) \
                     and tick.order_id not in self.cancelled_orders:
-                self.logger.debug("Inserting %s from %s (price: %s, quantity: %s)",
-                                  tick, tick.order_id, tick.price, tick.quantity)
+                self.logger.debug("Inserting %s from %s (lat: %f, long: %f)",
+                                  tick, tick.order_id, tick.latitude, tick.longitude)
                 insert_method(tick).addCallback(timeout_method)
                 if self.tribler_session:
                     subject = NTFY_MARKET_ON_ASK if isinstance(tick, Ask) else NTFY_MARKET_ON_BID
@@ -885,12 +910,13 @@ class MarketCommunity(TrustChainCommunity):
 
                 if self.order_book.tick_exists(tick.order_id):
                     # Check for new matches against the orders of this node
-                    for order in self.order_manager.order_repository.find_all():
-                        order_tick_entry = self.order_book.get_tick(order.order_id)
-                        if not order.is_valid() or not order_tick_entry:
-                            continue
-
-                        self.match(order_tick_entry.tick)
+                    # Martijn: As taxi driver, we cannot be selfish since this may lead to bad matching
+                    # for order in self.order_manager.order_repository.find_all():
+                    #     order_tick_entry = self.order_book.get_tick(order.order_id)
+                    #     if not order.is_valid() or not order_tick_entry:
+                    #         continue
+                    #
+                    #     self.match(order_tick_entry.tick)
 
                     # Only after we have matched our own orders, do the matching with other ticks if necessary
                     self.match(tick)
@@ -944,6 +970,67 @@ class MarketCommunity(TrustChainCommunity):
         packet = self._ez_pack(self._prefix, 7, [auth, dist, payload])
         self.endpoint.send(address, packet)
 
+    def parse_match_message(self, order_id):
+        """
+        Attempt to parse a match message
+        """
+        self._logger.debug("Parsing match message with order id %s", order_id)
+        if order_id not in self.pending_matches:
+            return
+
+        if len(self.pending_matches[order_id]) == 0:
+            del self.pending_matches[order_id]
+            return
+
+        order = self.order_manager.order_repository.find_by_id(order_id)
+        if order.status != "open":
+            # We are already done!
+            self.decline_all_match_messages(order_id)
+            return
+
+        min_match_msg = None
+        min_distance = 100000000
+        for match_payload in self.pending_matches[order_id]:
+            distance = self.haversine(order.longitude, order.latitude,
+                                      match_payload.longitude, match_payload.latitude)
+            if distance < min_distance:
+                min_distance = distance
+                min_match_msg = match_payload
+
+        # Now send responses -> accept first
+        other_order_id = OrderId(min_match_msg.trader_id, min_match_msg.order_number)
+        propose_quantity = Quantity(min(float(order.available_quantity), float(min_match_msg.match_quantity)),
+                                    order.available_quantity.wallet_id)
+
+        # Reserve the quantity
+        order.reserve_quantity_for_tick(other_order_id, propose_quantity)
+        self.order_manager.order_repository.update(order)
+
+        propose_trade = Trade.propose(
+            self.message_repository.next_identity(),
+            order.order_id,
+            other_order_id,
+            order.latitude,
+            order.longitude,
+            propose_quantity,
+            Timestamp.now()
+        )
+        self.send_proposed_trade(propose_trade, min_match_msg.match_id)
+
+        self.pending_matches[order_id].remove(min_match_msg)
+
+    def decline_all_match_messages(self, order_id):
+        """
+        Decline all saved match messages
+        """
+        for match_payload in self.pending_matches[order_id]:
+            # Send a declined trade back
+            self.send_decline_match_message(match_payload.match_id,
+                                            match_payload.matchmaker_trader_id,
+                                            DeclineMatchReason.ORDER_COMPLETED)
+
+        del self.pending_matches[order_id]
+
     def received_match(self, source_address, data):
         """
         We received a match message from a matchmaker.
@@ -978,22 +1065,14 @@ class MarketCommunity(TrustChainCommunity):
                                             decline_reason)
             return
 
-        propose_quantity = Quantity(min(float(order.available_quantity), float(payload.match_quantity)),
-                                    order.available_quantity.wallet_id)
+        if order_id not in self.pending_matches:
+            self.pending_matches[order_id] = []
+            self.register_task("parse_match_%s" % order_id, reactor.callLater(2, self.parse_match_message, order_id))
 
-        # Reserve the quantity
-        order.reserve_quantity_for_tick(other_order_id, propose_quantity)
-        self.order_manager.order_repository.update(order)
+        self.pending_matches[order_id].append(payload)
 
-        propose_trade = Trade.propose(
-            self.message_repository.next_identity(),
-            order.order_id,
-            other_order_id,
-            payload.price,
-            propose_quantity,
-            Timestamp.now()
-        )
-        self.send_proposed_trade(propose_trade, payload.match_id)
+    def get_broadcast_peers(self):
+        return random.sample(self.matchmakers, min(len(self.matchmakers), self.BROADCAST_FANOUT))
 
     def send_accept_match_message(self, match_id, matchmaker_trader_id, quantity):
         address = self.lookup_ip(matchmaker_trader_id)
@@ -1172,8 +1251,6 @@ class MarketCommunity(TrustChainCommunity):
             decline_reason = DeclinedTradeReason.ORDER_EXPIRED
         elif order.available_quantity == Quantity(0, order.available_quantity.wallet_id):
             decline_reason = DeclinedTradeReason.ORDER_RESERVED
-        elif not proposed_trade.has_acceptable_price(order.is_ask(), order.price):
-            decline_reason = DeclinedTradeReason.UNACCEPTABLE_PRICE
         else:
             should_decline = False
 
@@ -1248,6 +1325,7 @@ class MarketCommunity(TrustChainCommunity):
             match_decline_reason = DeclineMatchReason.OTHER_ORDER_COMPLETED
 
         self.send_decline_match_message(request.match_id, match_payload.matchmaker_trader_id, match_decline_reason)
+        self.parse_match_message(order.order_id)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
@@ -1287,8 +1365,6 @@ class MarketCommunity(TrustChainCommunity):
         decline_reason = 0
         if not order.is_valid:
             decline_reason = DeclinedTradeReason.ORDER_INVALID
-        elif not counter_trade.has_acceptable_price(order.is_ask(), order.price):
-            decline_reason = DeclinedTradeReason.UNACCEPTABLE_PRICE
         else:
             should_decline = False
 
@@ -1316,7 +1392,7 @@ class MarketCommunity(TrustChainCommunity):
         start_transaction = StartTransaction(self.message_repository.next_identity(),
                                              transaction.transaction_id, order.order_id,
                                              proposed_trade.order_id, proposed_trade.proposal_id,
-                                             proposed_trade.price, proposed_trade.quantity, Timestamp.now())
+                                             order.latitude, order.longitude, proposed_trade.quantity, Timestamp.now())
         self.send_start_transaction(transaction, start_transaction)
 
     # Start transaction
@@ -1417,8 +1493,8 @@ class MarketCommunity(TrustChainCommunity):
         order_dict = {
             "trader_id": str(payload.message_id.trader_id),
             "order_number": int(payload.order_number),
-            "price": float(payload.price),
-            "price_type": payload.price.wallet_id,
+            "latitude": float(payload.latitude),
+            "longitude": float(payload.longitude),
             "quantity": float(payload.quantity),
             "quantity_type": payload.quantity.wallet_id,
             "traded_quantity": float(payload.traded_quantity),
@@ -1475,7 +1551,7 @@ class MarketCommunity(TrustChainCommunity):
 
     def send_payment(self, transaction):
         order = self.order_manager.order_repository.find_by_id(transaction.order_id)
-        wallet_id = transaction.total_quantity.wallet_id if order.is_ask() else transaction.price.wallet_id
+        wallet_id = 'taxi'
 
         wallet = self.wallets[wallet_id]
         if not wallet or not wallet.created:
@@ -1484,10 +1560,10 @@ class MarketCommunity(TrustChainCommunity):
         transfer_amount = transaction.next_payment(order.is_ask(), wallet.min_unit(), self.use_incremental_payments)
         if order.is_ask():
             transfer_quantity = transfer_amount
-            transfer_price = Price(0.0, transaction.price.wallet_id)
+            transfer_price = Price(0.0, 'taxi')
         else:
             transfer_quantity = Quantity(0.0, transaction.total_quantity.wallet_id)
-            transfer_price = transfer_amount
+            transfer_price = Price(1, 'taxi')
 
         payment_tup = (transfer_quantity, transfer_price)
 

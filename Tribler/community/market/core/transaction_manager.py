@@ -35,8 +35,8 @@ class TransactionManager(object):
         transaction.match_id = match_id
         self.transaction_repository.add(transaction)
 
-        self._logger.info("Transaction created with id: %s, quantity: %s, price: %s",
-                          str(transaction.transaction_id), str(transaction.total_quantity), str(transaction.price))
+        self._logger.info("Transaction created with id: %s, quantity: %s",
+                          str(transaction.transaction_id), str(transaction.total_quantity))
         return transaction
 
     def create_from_start_transaction(self, start_transaction, match_id):
@@ -47,13 +47,14 @@ class TransactionManager(object):
         """
         assert isinstance(start_transaction, StartTransaction), type(start_transaction)
 
-        transaction = Transaction(start_transaction.transaction_id, start_transaction.price, start_transaction.quantity,
+        transaction = Transaction(start_transaction.transaction_id, start_transaction.latitude,
+                                  start_transaction.longitude, start_transaction.quantity,
                                   start_transaction.recipient_order_id, start_transaction.order_id, Timestamp.now())
         transaction.match_id = match_id
         self.transaction_repository.add(transaction)
 
-        self._logger.info("Transaction created with id: %s, quantity: %s, price: %s",
-                          str(transaction.transaction_id), str(transaction.total_quantity), str(transaction.price))
+        self._logger.info("Transaction created with id: %s, quantity: %s",
+                          str(transaction.transaction_id), str(transaction.total_quantity))
 
         return transaction
 
