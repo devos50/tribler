@@ -1,6 +1,7 @@
 import random
 from base64 import b64decode
 
+import time
 from Tribler.pyipv8.ipv8.deprecated.bloomfilter import BloomFilter
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, succeed, Deferred, returnValue
@@ -581,7 +582,10 @@ class MarketCommunity(TrustChainCommunity):
         tick = Tick.from_order(order)
         assert isinstance(tick, Ask), type(tick)
 
+        print "ASK ORDER CREATED: %s" % time.time()
+
         def on_verified_ask(blocks):
+            print "ASK VERIFIED: %s" % time.time()
             self.logger.info("Ask verified with price %s and quantity %s", price, quantity)
             order.set_verified()
             self.order_manager.order_repository.update(order)
@@ -630,7 +634,10 @@ class MarketCommunity(TrustChainCommunity):
         tick = Tick.from_order(order)
         assert isinstance(tick, Bid), type(tick)
 
+        print "BID ORDER CREATED: %s" % time.time()
+
         def on_verified_bid(blocks):
+            print "BID VERIFIED: %s" % time.time()
             self.logger.info("Bid verified with price %s and quantity %s", price, quantity)
             order.set_verified()
             self.order_manager.order_repository.update(order)
@@ -948,6 +955,7 @@ class MarketCommunity(TrustChainCommunity):
         """
         We received a match message from a matchmaker.
         """
+        print "RECEIVED MATCH: %s" % time.time()
         auth, _, payload = self._ez_unpack_auth(MatchPayload, data)
         peer = Peer(auth.public_key_bin, source_address)
 
@@ -1134,6 +1142,7 @@ class MarketCommunity(TrustChainCommunity):
                 and cache.proposed_trade.recipient_order_id == partner_order_id]
 
     def received_proposed_trade(self, _, data):
+        print "RECEIVED PROPOSED TRADE: %s" % time.time()
         _, _, payload = self._ez_unpack_auth(TradePayload, data)
 
         validation = self.check_trade_payload_validity(payload)
@@ -1332,6 +1341,7 @@ class MarketCommunity(TrustChainCommunity):
         self.endpoint.send(self.lookup_ip(transaction.partner_order_id.trader_id), packet)
 
     def received_start_transaction(self, source_address, data):
+        print "RECEIVED START TRANSACTION: %s" % time.time()
         auth, _, payload = self._ez_unpack_auth(StartTransactionPayload, data)
         peer = Peer(auth.public_key_bin, source_address)
 
@@ -1617,6 +1627,7 @@ class MarketCommunity(TrustChainCommunity):
 
         # Record this payment on TradeChain
         def on_payment_recorded(_):
+            print "PAYMENT RECORDED: %s" % time.time()
             if not transaction.is_payment_complete():
                 self.send_payment(transaction)
             else:
@@ -1647,6 +1658,7 @@ class MarketCommunity(TrustChainCommunity):
         :param transaction: The completed transaction.
         :param block: The block created by this peer defining the transaction.
         """
+        print "TRANSACTION COMPLETED!: %s" % time.time()
         if not transaction.match_id or transaction.match_id not in self.incoming_match_messages:
             return
 
@@ -1660,6 +1672,7 @@ class MarketCommunity(TrustChainCommunity):
         self.send_block_pair(block, linked_block, address=self.lookup_ip(match_payload.matchmaker_trader_id))
 
     def on_transaction_completed_message(self, block1, block2):
+        print "MATCHMAKER KNOWS TRANSACTION IS COMPLETED: %s" % time.time()
         tx_dict = block1.transaction
         self.logger.debug("Received transaction-completed message")
         if not self.is_matchmaker:
