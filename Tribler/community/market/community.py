@@ -735,11 +735,7 @@ class MarketCommunity(TrustChainCommunity):
             if not self.matchmakers:
                 break
             random_matchmaker = random.sample(self.matchmakers, 1)[0]
-            online = yield self.ping_peer(random_matchmaker)
-            if not online:
-                self.matchmakers.remove(random_matchmaker)
-            else:
-                returnValue(random_matchmaker)
+            returnValue(random_matchmaker)
 
         # We didn't find an online matchmaker; wait until we find one
         self.logger.info("No matchmaker found, wait until there's one available")
