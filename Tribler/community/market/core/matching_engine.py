@@ -263,7 +263,13 @@ class PriceTimeStrategy(MatchingStrategy):
             matching_ticks = [(self.get_unique_match_id(), tick_entry, matched_quantity)]
 
         # Search the next tick
-        matching_ticks += self._search_for_quantity_in_price_level(order_id, tick_entry.next_tick, quantity_to_trade,
+
+        # OPTIMIZATION: skip reserved ticks!
+        cur_entry = tick_entry.next_tick
+        while cur_entry and float(cur_entry._reserved_for_matching) == float(cur_entry.quantity):
+            cur_entry = cur_entry.next_tick
+
+        matching_ticks += self._search_for_quantity_in_price_level(order_id, cur_entry, quantity_to_trade,
                                                                    tick_price, is_ask)
         return matching_ticks
 

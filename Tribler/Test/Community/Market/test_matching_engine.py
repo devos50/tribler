@@ -374,3 +374,19 @@ class MatchingEngineTestSuite(AbstractServer):
         self.assertEqual(len(matching_ticks), 3)
         total_matched = sum([float(quantity) for _, _, quantity in matching_ticks])
         self.assertEqual(Quantity(total_matched, 'MC'), Quantity(100, 'MC'))
+
+    def test_recurse(self):
+        """
+        Test improvement
+        """
+        for ind in xrange(1000):
+            ask = self.create_ask(1, 1)
+            self.order_book.insert_ask(ask)
+            ask_entry = self.order_book.get_ask(ask.order_id)
+            if ind != 999:
+                ask_entry.reserve_for_matching(Quantity(1, 'MC'))
+
+        my_bid = self.create_bid(1, 1)
+        self.order_book.insert_bid(my_bid)
+        matching_ticks = self.matching_engine.match(self.order_book.get_bid(my_bid.order_id))
+        self.assertTrue(matching_ticks)
