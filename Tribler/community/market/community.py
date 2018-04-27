@@ -91,7 +91,7 @@ class PingRequestCache(RandomNumberCache):
     """
     This request cache keeps track of outstanding ping messages to matchmakers.
     """
-    TIMEOUT_DELAY = 5.0
+    TIMEOUT_DELAY = 1.0
 
     def __init__(self, community, request_deferred):
         super(PingRequestCache, self).__init__(community.request_cache, u"ping")
