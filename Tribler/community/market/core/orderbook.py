@@ -52,9 +52,9 @@ class OrderBook(TaskManager):
         """
         :type ask: Ask
         """
-        assert isinstance(ask, Ask), type(ask)
+        #assert isinstance(ask, Ask), type(ask)
 
-        if not self._asks.tick_exists(ask.order_id) and ask.order_id not in self.completed_orders and ask.is_valid():
+        if not self._asks.tick_exists(ask.order_id) and str(ask.order_id) not in self.completed_orders and ask.is_valid():
             self._asks.insert_tick(ask)
             timeout_delay = float(ask.timestamp) + float(ask.timeout) - time.time()
             task = deferLater(reactor, timeout_delay, self.timeout_ask, ask.order_id)
@@ -76,9 +76,9 @@ class OrderBook(TaskManager):
         """
         :type bid: Bid
         """
-        assert isinstance(bid, Bid), type(bid)
+        #assert isinstance(bid, Bid), type(bid)
 
-        if not self._bids.tick_exists(bid.order_id) and bid.order_id not in self.completed_orders and bid.is_valid():
+        if not self._bids.tick_exists(bid.order_id) and str(bid.order_id) not in self.completed_orders and bid.is_valid():
             self._bids.insert_tick(bid)
             timeout_delay = float(bid.timestamp) + float(bid.timeout) - time.time()
             task = deferLater(reactor, timeout_delay, self.timeout_bid, bid.order_id)
@@ -126,7 +126,7 @@ class OrderBook(TaskManager):
                 tick.release_for_matching(traded_quantity)
             if tick.quantity <= Quantity(0, ask_order_dict["quantity_type"]):
                 self.remove_tick(tick.order_id)
-                self.completed_orders.append(tick.order_id)
+                self.completed_orders.append(str(tick.order_id))
         elif not self.tick_exists(ask_order_id) and new_ask_quantity > Quantity(0, ask_order_dict["quantity_type"]):
             ask = Ask(ask_order_id, Price(ask_order_dict["price"], ask_order_dict["price_type"]),
                       new_ask_quantity, Timeout(ask_order_dict["timeout"]), Timestamp(ask_order_dict["timestamp"]))
@@ -142,7 +142,7 @@ class OrderBook(TaskManager):
                 tick.release_for_matching(traded_quantity)
             if tick.quantity <= Quantity(0, bid_order_dict["quantity_type"]):
                 self.remove_tick(tick.order_id)
-                self.completed_orders.append(tick.order_id)
+                self.completed_orders.append(str(tick.order_id))
         elif not self.tick_exists(bid_order_id) and new_bid_quantity > Quantity(0, bid_order_dict["quantity_type"]):
             bid = Bid(bid_order_id, Price(bid_order_dict["price"], bid_order_dict["price_type"]),
                       new_bid_quantity, Timeout(bid_order_dict["timeout"]), Timestamp(bid_order_dict["timestamp"]))

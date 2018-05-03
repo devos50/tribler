@@ -72,23 +72,23 @@ class TickEntry(TaskManager):
         """
         Temporarily block an order id for matching
         """
-        if order_id in self._blocked_for_matching:
+        if str(order_id) in self._blocked_for_matching:
             self._logger.debug("Not blocking %s for matching; already blocked", order_id)
             return
 
         def unblock_order_id(unblock_id):
             self._logger.debug("Unblocking order id %s", unblock_id)
-            self._blocked_for_matching.remove(unblock_id)
+            self._blocked_for_matching.remove(str(unblock_id))
 
         self._logger.debug("Blocking %s for tick %s", order_id, self.order_id)
-        self._blocked_for_matching.append(order_id)
+        self._blocked_for_matching.append(str(order_id))
         self.register_task("unblock_%s" % order_id, reactor.callLater(10, unblock_order_id, order_id))
 
     def is_blocked_for_matching(self, order_id):
         """
         Return whether the order_id is blocked for matching
         """
-        return order_id in self._blocked_for_matching
+        return str(order_id) in self._blocked_for_matching
 
     def reserve_for_matching(self, reserve_quantity):
         """
