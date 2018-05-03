@@ -40,8 +40,9 @@ class Side(object):
         :return: The tick
         :rtype: TickEntry
         """
-        assert isinstance(order_id, OrderId), type(order_id)
-        return self._tick_map[order_id] if order_id in self._tick_map else None
+        #assert isinstance(order_id, OrderId), type(order_id)
+        str_order_id = str(order_id)
+        return self._tick_map[str_order_id] if str_order_id in self._tick_map else None
 
     def _create_price_level(self, price, quantity_wallet_id):
         """
@@ -89,8 +90,8 @@ class Side(object):
         :return: True if the tick exists, False otherwise
         :rtype: bool
         """
-        assert isinstance(order_id, OrderId), type(order_id)
-        return order_id in self._tick_map
+        #assert isinstance(order_id, OrderId), type(order_id)
+        return str(order_id) in self._tick_map
 
     def insert_tick(self, tick):
         """
@@ -107,7 +108,7 @@ class Side(object):
             self._create_price_level(tick.price, tick.quantity.wallet_id)
         tick_entry = TickEntry(tick, self._price_map[tick.price])
         self.get_price_level(tick.price).append_tick(tick_entry)
-        self._tick_map[tick.order_id] = tick_entry
+        self._tick_map[str(tick.order_id)] = tick_entry
 
     def remove_tick(self, order_id):
         """
@@ -122,7 +123,7 @@ class Side(object):
             tick.price_level().remove_tick(tick)
             if len(tick.price_level()) == 0:  # Last tick for that price
                 self._remove_price_level(tick.price, tick.quantity.wallet_id)
-            del self._tick_map[order_id]
+            del self._tick_map[str(order_id)]
 
     def get_price_level_list(self, price_wallet_id, quantity_wallet_id):
         """
