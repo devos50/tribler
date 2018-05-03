@@ -933,19 +933,18 @@ class MarketCommunity(TrustChainCommunity):
                           str(tick.order_id), recipient_order_id.trader_id, *address)
 
         global_time = self.claim_global_time()
-        auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
         payload = MatchPayload(*payload).to_pack_list()
         dist = GlobalTimeDistributionPayload(global_time).to_pack_list()
 
-        packet = self._ez_pack(self._prefix, 7, [auth, dist, payload])
+        packet = self._ez_pack(self._prefix, 7, [dist, payload], False)
         self.endpoint.send(address, packet)
 
     def received_match(self, source_address, data):
         """
         We received a match message from a matchmaker.
         """
-        auth, _, payload = self._ez_unpack_auth(MatchPayload, data)
-        peer = Peer(auth.public_key_bin, source_address)
+        _, payload = self._ez_unpack_noauth(MatchPayload, data)
+        #peer = Peer(auth.public_key_bin, source_address)
 
         self.logger.debug("We received a match message for order %s.%s (matched quantity: %s)",
                           TraderId(self.mid), payload.recipient_order_number, payload.match_quantity)
@@ -953,7 +952,7 @@ class MarketCommunity(TrustChainCommunity):
         # We got a match, check whether we can respond to this match
         self.update_ip(payload.matchmaker_trader_id, source_address)
         self.update_ip(payload.trader_id, (payload.address.ip, payload.address.port))
-        self.add_matchmaker(peer)
+        #self.add_matchmaker(peer)
 
         order_id = OrderId(TraderId(self.mid), payload.recipient_order_number)
         other_order_id = OrderId(payload.trader_id, payload.order_number)
@@ -1036,16 +1035,15 @@ class MarketCommunity(TrustChainCommunity):
                           "%s (ip: %s, port: %s)", str(match_id), str(matchmaker_trader_id), *address)
 
         global_time = self.claim_global_time()
-        auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
         payload = (self.message_repository.next_identity(), Timestamp.now(), match_id, decline_reason)
         payload = DeclineMatchPayload(*payload).to_pack_list()
         dist = GlobalTimeDistributionPayload(global_time).to_pack_list()
 
-        packet = self._ez_pack(self._prefix, 9, [auth, dist, payload])
+        packet = self._ez_pack(self._prefix, 9, [dist, payload], False)
         self.endpoint.send(address, packet)
 
     def received_decline_match(self, _, data):
-        _, _, payload = self._ez_unpack_auth(DeclineMatchPayload, data)
+        _, payload = self._ez_unpack_noauth(DeclineMatchPayload, data)
         order_id, matched_order_id, quantity = self.matching_engine.matches[payload.match_id]
         self.logger.debug("Received decline-match message for tick %s matched with %s", order_id, matched_order_id)
 
