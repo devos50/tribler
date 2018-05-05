@@ -649,10 +649,7 @@ class MarketCommunity(TrustChainCommunity):
         return self.create_new_tick_block(tick).addCallback(on_verified_bid)
 
     def received_half_block(self, source_address, data):
-        super(MarketCommunity, self).received_half_block(source_address, data)
-
-        _, payload = self._ez_unpack_noauth(HalfBlockPayload, data)
-        block = TrustChainBlock.from_payload(payload, self.serializer)
+        block = super(MarketCommunity, self).received_half_block(source_address, data)
 
         if "type" not in block.transaction:  # Every market block needs a type
             return
@@ -671,12 +668,12 @@ class MarketCommunity(TrustChainCommunity):
             self.process_market_block(block)
 
     def received_half_block_broadcast(self, source_address, data):
-        super(MarketCommunity, self).received_half_block_broadcast(source_address, data)
+        block = super(MarketCommunity, self).received_half_block_broadcast(source_address, data)
 
-        _, payload = self._ez_unpack_noauth(HalfBlockBroadcastPayload, data)
-        block = TrustChainBlock.from_payload(payload, self.serializer)
-
-        self.process_market_block(block)
+        if block.transaction["type"] == "tx_done":
+            self.on_transaction_completed_bc_message(block)
+        else:
+            self.process_market_block(block)
 
     def process_market_block(self, block):
         if block.transaction["type"] == "tick":
@@ -689,10 +686,7 @@ class MarketCommunity(TrustChainCommunity):
             self.process_cancel_order_block(block)
 
     def received_half_block_pair(self, source_address, data):
-        super(MarketCommunity, self).received_half_block_pair(source_address, data)
-
-        _, payload = self._ez_unpack_noauth(HalfBlockPairPayload, data)
-        block1, block2 = TrustChainBlock.from_pair_payload(payload, self.serializer)
+        block1, block2 = super(MarketCommunity, self).received_half_block_pair(source_address, data)
 
         if block1.transaction["type"] == "tx_done" and block2.transaction["type"] == "tx_done":
             self.on_transaction_completed_message(block1, block2)
@@ -701,10 +695,8 @@ class MarketCommunity(TrustChainCommunity):
             self.process_tick_block(block2)
 
     def received_half_block_pair_broadcast(self, source_address, data):
-        super(MarketCommunity, self).received_half_block_pair_broadcast(source_address, data)
+        block1, block2 = super(MarketCommunity, self).received_half_block_pair_broadcast(source_address, data)
 
-        _, payload = self._ez_unpack_noauth(HalfBlockPairBroadcastPayload, data)
-        block1, block2 = TrustChainBlock.from_pair_payload(payload, self.serializer)
         if block1.transaction["type"] == "tx_done" and block2.transaction["type"] == "tx_done":
             self.on_transaction_completed_bc_message(block1, block2)
         elif block1.transaction["type"] == "tick" and block2.transaction["type"] == "tick":
@@ -1667,19 +1659,19 @@ class MarketCommunity(TrustChainCommunity):
         self.match_order_ids([ask_order_id, bid_order_id])
 
         # Broadcast the pair of blocks
-        self.send_block_pair(block1, block2)
+        self.send_block(block1)
 
         order_id = OrderId(TraderId(tx_dict["tx"]["trader_id"]), OrderNumber(tx_dict["tx"]["order_number"]))
         tick_entry_sender = self.order_book.get_tick(order_id)
         if tick_entry_sender:
             self.match(tick_entry_sender.tick)
 
-    def on_transaction_completed_bc_message(self, block1, _):
+    def on_transaction_completed_bc_message(self, block):
         self.logger.debug("Received transaction-completed-bc message")
-        if not self.is_matchmaker or not self.persistence.get_linked(block1):
+        if not self.is_matchmaker:
             return
 
-        tx_dict = block1.transaction
+        tx_dict = block.transaction
 
         self.notify_transaction_complete(tx_dict["tx"])
 
