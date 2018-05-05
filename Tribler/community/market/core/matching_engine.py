@@ -266,7 +266,7 @@ class PriceTimeStrategy(MatchingStrategy):
 
         # OPTIMIZATION: skip reserved ticks!
         cur_entry = tick_entry.next_tick
-        while cur_entry and float(cur_entry._reserved_for_matching) == float(cur_entry.quantity):
+        while cur_entry and float(cur_entry._reserved_for_matching) > 0:
             cur_entry = cur_entry.next_tick
 
         matching_ticks += self._search_for_quantity_in_price_level(order_id, cur_entry, quantity_to_trade,
