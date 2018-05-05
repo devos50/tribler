@@ -398,8 +398,8 @@ class MarketCommunity(TrustChainCommunity):
         """
         tick = Ask.from_block(block) if block.transaction["tick"]["is_ask"] else Bid.from_block(block)
 
-        if self.persistence.get_linked(block):
-            self.on_tick(tick, (block.transaction["tick"]["address"], block.transaction["tick"]["port"]))
+        #if self.persistence.get_linked(block):
+        self.on_tick(tick, (block.transaction["tick"]["address"], block.transaction["tick"]["port"]))
 
     def process_tx_init_block(self, block):
         """
@@ -585,7 +585,7 @@ class MarketCommunity(TrustChainCommunity):
             self.logger.info("Ask verified with price %s and quantity %s", price, quantity)
             order.set_verified()
             self.order_manager.order_repository.update(order)
-            self.send_block_pair(*blocks)
+            self.send_block(blocks[0])
 
             if self.is_matchmaker:
                 tick.block_hash = blocks[0].hash
@@ -634,7 +634,7 @@ class MarketCommunity(TrustChainCommunity):
             self.logger.info("Bid verified with price %s and quantity %s", price, quantity)
             order.set_verified()
             self.order_manager.order_repository.update(order)
-            self.send_block_pair(*blocks)
+            self.send_block(blocks[0])
 
             if self.is_matchmaker:
                 tick.block_hash = blocks[0].hash
