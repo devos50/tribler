@@ -30,7 +30,7 @@ class OrderBook(TaskManager):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._bids = Side()
         self._asks = Side()
-        self.completed_orders = []
+        self.completed_orders = set()
 
     def timeout_ask(self, order_id):
         ask = self.get_ask(order_id).tick
@@ -126,7 +126,7 @@ class OrderBook(TaskManager):
                 tick.release_for_matching(traded_quantity)
             if tick.quantity <= Quantity(0, ask_order_dict["quantity_type"]):
                 self.remove_tick(tick.order_id)
-                self.completed_orders.append(str(tick.order_id))
+                self.completed_orders.add(str(tick.order_id))
         elif not self.tick_exists(ask_order_id) and new_ask_quantity > Quantity(0, ask_order_dict["quantity_type"]):
             ask = Ask(ask_order_id, Price(ask_order_dict["price"], ask_order_dict["price_type"]),
                       new_ask_quantity, Timeout(ask_order_dict["timeout"]), Timestamp(ask_order_dict["timestamp"]))
@@ -142,7 +142,7 @@ class OrderBook(TaskManager):
                 tick.release_for_matching(traded_quantity)
             if tick.quantity <= Quantity(0, bid_order_dict["quantity_type"]):
                 self.remove_tick(tick.order_id)
-                self.completed_orders.append(str(tick.order_id))
+                self.completed_orders.add(str(tick.order_id))
         elif not self.tick_exists(bid_order_id) and new_bid_quantity > Quantity(0, bid_order_dict["quantity_type"]):
             bid = Bid(bid_order_id, Price(bid_order_dict["price"], bid_order_dict["price_type"]),
                       new_bid_quantity, Timeout(bid_order_dict["timeout"]), Timestamp(bid_order_dict["timestamp"]))

@@ -133,13 +133,6 @@ class PriceTimeStrategy(MatchingStrategy):
         if price_level is None:  # Last price level
             return []
 
-        assert isinstance(order_id, OrderId), type(order_id)
-        assert isinstance(price, Price), type(price)
-        assert isinstance(price_level, PriceLevel), type(price_level)
-        assert isinstance(quantity_to_trade, Quantity), type(quantity_to_trade)
-        assert isinstance(tick_price, Price), type(tick_price)
-        assert isinstance(is_ask, bool), type(is_ask)
-
         self._logger.debug("Searching in price level: %f (depth: %f, reserved: %f)",
                            float(price), float(price_level.depth), float(price_level.reserved))
 
@@ -226,12 +219,6 @@ class PriceTimeStrategy(MatchingStrategy):
         if tick_entry is None:  # Last tick
             return []
 
-        assert isinstance(order_id, OrderId), type(order_id)
-        assert isinstance(tick_entry, TickEntry), type(tick_entry)
-        assert isinstance(quantity_to_trade, Quantity), type(quantity_to_trade)
-        assert isinstance(tick_price, Price), type(tick_price)
-        assert isinstance(is_ask, bool), type(is_ask)
-
         if quantity_to_trade <= tick_entry.quantity - tick_entry.reserved_for_matching \
                 and not tick_entry.is_blocked_for_matching(order_id):
             # All the quantity can be matched in this tick
@@ -266,7 +253,7 @@ class PriceTimeStrategy(MatchingStrategy):
 
         # OPTIMIZATION: skip reserved ticks!
         cur_entry = tick_entry.next_tick
-        while cur_entry and float(cur_entry._reserved_for_matching) > 0:
+        while cur_entry and (float(cur_entry._reserved_for_matching) > 0 or cur_entry.is_blocked_for_matching(order_id)):
             cur_entry = cur_entry.next_tick
 
         matching_ticks += self._search_for_quantity_in_price_level(order_id, cur_entry, quantity_to_trade,

@@ -27,7 +27,7 @@ class TickEntry(TaskManager):
         self._prev_tick = None
         self._next_tick = None
         self._reserved_for_matching = Quantity(0, tick.quantity.wallet_id)
-        self._blocked_for_matching = []
+        self._blocked_for_matching = set()
 
     @property
     def tick(self):
@@ -81,8 +81,8 @@ class TickEntry(TaskManager):
             self._blocked_for_matching.remove(str(unblock_id))
 
         self._logger.debug("Blocking %s for tick %s", order_id, self.order_id)
-        self._blocked_for_matching.append(str(order_id))
-        self.register_task("unblock_%s" % order_id, reactor.callLater(10, unblock_order_id, order_id))
+        self._blocked_for_matching.add(str(order_id))
+        self.register_task("unblock_%s" % order_id, reactor.callLater(3, unblock_order_id, order_id))
 
     def is_blocked_for_matching(self, order_id):
         """

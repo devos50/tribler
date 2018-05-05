@@ -1058,11 +1058,11 @@ class MarketCommunity(TrustChainCommunity):
 
         if matched_tick_entry and payload.decline_reason == DeclineMatchReason.OTHER_ORDER_COMPLETED:
             self.order_book.remove_tick(matched_tick_entry.order_id)
-            self.order_book.completed_orders.append(matched_tick_entry.order_id)
+            self.order_book.completed_orders.add(str(matched_tick_entry.order_id))
 
         if payload.decline_reason == DeclineMatchReason.ORDER_COMPLETED and tick_entry:
             self.order_book.remove_tick(tick_entry.order_id)
-            self.order_book.completed_orders.append(tick_entry.order_id)
+            self.order_book.completed_orders.add(str(tick_entry.order_id))
         elif tick_entry:
             # Search for a new match
             self.match(tick_entry.tick)
