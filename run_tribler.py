@@ -88,7 +88,7 @@ if __name__ == "__main__":
         # Exit if we cant read/write files, etc.
         check_environment()
 
-        should_kill_other_tribler_instances()
+        #should_kill_other_tribler_instances()
 
         check_free_space()
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                 for arg in sys.argv[1:]:
                     if os.path.exists(arg) and arg.endswith(".torrent"):
                         app.send_message("file:%s" % arg)
-                    elif arg.startswith('magnet'):
+                    elif arg.startswith('magnet') or arg.startswith('code'):
                         app.send_message(arg)
                 sys.exit(1)
 
