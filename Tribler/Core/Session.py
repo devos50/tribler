@@ -11,6 +11,7 @@ import time
 from binascii import hexlify
 from twisted.internet import threads
 from twisted.internet.defer import inlineCallbacks, fail
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.log import addObserver
 from twisted.python.threadable import isInIOThread
@@ -59,6 +60,7 @@ class Session(object):
         :param autoload_discovery: only false in the Tunnel community tests
         """
         addObserver(self.unhandled_error_observer)
+        log.startLogging(sys.stdout)
 
         patch_crypto_be_discovery()
 
