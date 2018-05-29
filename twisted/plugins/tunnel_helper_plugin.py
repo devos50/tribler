@@ -8,7 +8,8 @@ import signal
 import threading
 import re
 
-
+import time
+from meliae import scanner
 from twisted.application.service import MultiService, IServiceMaker
 from twisted.conch import manhole_tap
 from twisted.internet import reactor
@@ -78,7 +79,8 @@ class Options(usage.Options):
         ["socks5", "p", None, "Socks5 port", check_socks5_port],
         ["ipv8_port", "d", -1, 'IPv8 port', check_ipv8_port],
         ["ipv8_address", "i", "0.0.0.0", 'IPv8 listening address', check_ipv8_address],
-        ["ipv8_bootstrap_override", "b", "", "Force the usage of specific IPv8 bootstrap server (ip:port)", check_ipv8_bootstrap_override]
+        ["ipv8_bootstrap_override", "b", "", "Force the usage of specific IPv8 bootstrap server (ip:port)", check_ipv8_bootstrap_override],
+        ["memdump", "e", 0, "Periodically dump the memory contents with meliae", int]
     ]
 
 if not os.path.exists("logger.conf"):
@@ -110,6 +112,7 @@ class Tunnel(object):
         self.clean_messages_lc.start(1800)
         self.clean_messages_lc = LoopingCall(self.periodic_bootstrap)
         self.clean_messages_lc.start(30, now=False)
+        self.dump_memory_lc = None
 
     def clean_messages(self):
         clean_twisted_observers()
@@ -163,12 +166,20 @@ class Tunnel(object):
         if "ipv8_bootstrap_override" in self.options:
             config.set_ipv8_bootstrap_override(self.options["ipv8_bootstrap_override"])
 
+        mem_dump_interval = self.options["memdump"]
+        if mem_dump_interval > 0:
+            self.dump_memory_lc = LoopingCall(self.dump_memory)
+            self.dump_memory_lc.start(mem_dump_interval)
+
         self.session = Session(config)
         logger.info("Using IPv8 port %d" % self.session.config.get_dispersy_port())
 
         self.session.notifier.add_observer(self.circuit_removed, NTFY_TUNNEL, [NTFY_REMOVE])
 
         return self.session.start().addCallback(self.tribler_started)
+
+    def dump_memory(self):
+        scanner.dump_all_objects("memory-%d.out" % int(time.time()))
 
     def stop(self):
         if self.clean_messages_lc:
