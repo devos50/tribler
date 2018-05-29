@@ -161,6 +161,8 @@ class Tunnel(object):
         config.set_credit_mining_enabled(False)
         config.set_market_community_enabled(False)
         config.set_mainline_dht_enabled(False)
+        config.set_http_api_enabled(True)
+        config.set_http_api_port(1237)
         config.set_tunnel_community_exitnode_enabled(bool(self.options["exit"]))
 
         if "ipv8_bootstrap_override" in self.options:
