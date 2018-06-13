@@ -82,9 +82,9 @@ class TriblerWindow(QMainWindow):
         exception_text = "".join(traceback.format_exception(*exc_info))
         logging.error(exception_text)
 
-        dialog = FeedbackDialog(self, exception_text, self.core_manager.events_manager.tribler_version,
-                                self.start_time)
-        dialog.show()
+        self.error_dialog = FeedbackDialog(self, exception_text, self.core_manager.events_manager.tribler_version,
+                                           self.start_time)
+        self.error_dialog.show()
 
     def __init__(self, core_args=None, core_env=None, api_port=None):
         QMainWindow.__init__(self)
@@ -120,6 +120,7 @@ class TriblerWindow(QMainWindow):
         self.start_time = time.time()
         self.exception_handler_called = False
         self.token_refresh_timer = None
+        self.error_dialog = None
 
         sys.excepthook = self.on_exception
 
