@@ -197,6 +197,12 @@ class TriblerLaunchMany(TaskManager):
                 from Tribler.dispersy.endpoint import MIMEndpoint
                 from Tribler.dispersy.endpoint import IPv8toDispersyAdapter
 
+                # We should also update the bootstrap servers of Dispersy if we are custom bootstrap servers
+                if self.session.config.get_ipv8_bootstrap_override():
+                    import Tribler.dispersy.discovery.bootstrap as community_file
+                    community_file._DEFAULT_ADDRESSES = [self.session.config.get_ipv8_bootstrap_override()]
+                    community_file._DNS_ADDRESSES = []
+
                 # set communication endpoint
                 if self.session.config.get_ipv8_enabled():
                     dispersy_endpoint = IPv8toDispersyAdapter(self.ipv8.endpoint)
