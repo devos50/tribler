@@ -196,7 +196,7 @@ class TriblerConfig(object):
         self.config['general']['testnet'] = value
 
     def get_testnet(self):
-        return self.config['general']['testnet']
+        return True
 
     # Version Checker
     def set_version_checker_enabled(self, value):
