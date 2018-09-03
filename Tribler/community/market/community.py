@@ -455,6 +455,7 @@ class MarketCommunity(Community, BlockListener):
         Process a TradeChain block containing a transaction completion
         :param block: The TradeChain block containing the transaction completion
         """
+        self._logger.error("PROCESSING TX DONEZZ")
         if not block.is_valid_tx_init_done_block():
             self._logger.warning("Invalid tx_done block received!")
             return
