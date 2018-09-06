@@ -12,7 +12,7 @@ import time
 from binascii import hexlify
 from traceback import print_exc
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, CancelledError, succeed
+from twisted.internet.defer import Deferred, CancelledError, succeed, inlineCallbacks
 from twisted.internet.task import LoopingCall
 from twisted.python.failure import Failure
 
@@ -20,6 +20,8 @@ import libtorrent as lt
 
 from Tribler.Core import NoDispersyRLock
 from Tribler.Core.DownloadConfig import DownloadStartupConfig, DownloadConfigInterface, get_default_dest_dir
+
+from Tribler.Core.Config.download_config import TriblerDownloadConfig
 from Tribler.Core.DownloadState import DownloadState
 from Tribler.Core.Libtorrent import checkHandleAndSynchronize
 from Tribler.Core.TorrentDef import TorrentDefNoMetainfo, TorrentDef
@@ -101,9 +103,10 @@ class VODFile(object):
         return self._file.closed
 
 
-class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
-
-    """ Download subclass that represents a libtorrent download."""
+class LibtorrentDownloadImpl(TaskManager):
+    """
+    This class represents a libtorrent download.
+    """
 
     def __init__(self, session, tdef):
         super(LibtorrentDownloadImpl, self).__init__()
@@ -111,18 +114,14 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         self.dllock = NoDispersyRLock()
+        self.dl_mode = DLMODE_NORMAL
+        self.config = None
         self.session = session
         self.tdef = tdef
         self.handle = None
         self.vod_index = None
         self.orig_files = None
 
-        # To be able to return the progress of a stopped torrent, how far it got.
-        self.progressbeforestop = 0.0
-        self.filepieceranges = []
-
-        # Libtorrent session manager, can be None at this point as the core could have
-        # not been started. Will set in create_engine wrapper
         self.ltmgr = None
 
         # Libtorrent status
@@ -145,7 +144,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         self.askmoreinfo = False
 
         self.correctedinfoname = u""
-        self._checkpoint_disabled = False
 
         self.deferreds_resume = []
         self.deferreds_handle = []
@@ -155,20 +153,13 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         self.handle_check_lc = self.register_task("handle_check", LoopingCall(self.check_handle))
 
     def __str__(self):
-        return "LibtorrentDownloadImpl <name: '%s' hops: %d checkpoint_disabled: %d>" % \
-               (self.correctedinfoname, self.get_hops(), self._checkpoint_disabled)
+        return "LibtorrentDownloadImpl <name: '%s' hops: %d>" % (self.correctedinfoname, self.config.get_hops())
 
     def __repr__(self):
         return self.__str__()
 
     def get_def(self):
         return self.tdef
-
-    def set_checkpoint_disabled(self, disabled=True):
-        self._checkpoint_disabled = disabled
-
-    def get_checkpoint_disabled(self):
-        return self._checkpoint_disabled
 
     def check_handle(self):
         """
@@ -191,7 +182,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         self.deferreds_handle.append(deferred)
         return deferred
 
-    def setup(self, dcfg=None, pstate=None, wrapperDelay=0, share_mode=False, checkpoint_disabled=False):
+    def setup(self, dcfg=None, pstate=None, wrapperDelay=0, share_mode=False):
         """
         Create a Download object. Used internally by Session.
         @param dcfg DownloadStartupConfig or None (in which case
@@ -201,32 +192,21 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         network_create_engine_wrapper.
         """
         # Called by any thread, assume sessionlock is held
-        self.set_checkpoint_disabled(checkpoint_disabled)
-
         try:
             # The deferred to be returned
             deferred = Deferred()
             with self.dllock:
-                # Copy dlconfig, from default if not specified
-                if dcfg is None:
-                    cdcfg = DownloadStartupConfig()
-                else:
-                    cdcfg = dcfg
-                self.dlconfig = cdcfg.dlconfig.copy()
-                self.dlconfig.lock = self.dllock
-                self.dlconfig.set_callback(self.dlconfig_changed_callback)
+                self.config = TriblerDownloadConfig(self.tdef.get_infohash())
 
                 if not isinstance(self.tdef, TorrentDefNoMetainfo):
                     self.set_corrected_infoname()
-                    self.set_filepieceranges()
 
                 self._logger.debug(u"setup: %s", hexlify(self.tdef.get_infohash()))
 
                 def schedule_create_engine():
                     self.cew_scheduled = True
                     create_engine_wrapper_deferred = self.network_create_engine_wrapper(
-                        (pstate or self.pstate_for_restart), share_mode=share_mode,
-                        checkpoint_disabled=checkpoint_disabled)
+                        (pstate or self.pstate_for_restart), share_mode=share_mode)
                     create_engine_wrapper_deferred.chainDeferred(deferred)
 
                 def schedule_create_engine_call(_):
@@ -258,13 +238,13 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
                     self.ltmgr = self.session.lm.ltmgr
                     dht_ok = not isinstance(self.tdef, TorrentDefNoMetainfo) or self.ltmgr.is_dht_ready()
                     tunnel_community = self.ltmgr.tribler_session.lm.tunnel_community
-                    tunnels_ready = tunnel_community.tunnels_ready(self.get_hops()) if tunnel_community else 1
+                    tunnels_ready = tunnel_community.tunnels_ready(self.config.get_hops()) if tunnel_community else 1
 
                     if not self.ltmgr or not dht_ok or tunnels_ready < 1:
                         self._logger.info(u"LTMGR/DHT/session not ready, rescheduling create_engine_wrapper")
 
                         if tunnels_ready < 1:
-                            tunnel_community.build_tunnels(self.get_hops())
+                            tunnel_community.build_tunnels(self.config.get_hops())
 
                         # Schedule this function call to be called again in 5 seconds
                         self.register_task("check_create_wrapper", reactor.callLater(5, do_check))
@@ -277,7 +257,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         do_check()
         return can_create_deferred
 
-    def network_create_engine_wrapper(self, pstate, checkpoint_disabled=False, share_mode=False):
+    def network_create_engine_wrapper(self, pstate, share_mode=False):
         with self.dllock:
             self._logger.debug("LibtorrentDownloadImpl: network_create_engine_wrapper()")
 
@@ -291,8 +271,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
 
             if share_mode:
                 atp["flags"] = lt.add_torrent_params_flags_t.flag_share_mode
-
-            self.set_checkpoint_disabled(checkpoint_disabled)
 
             resume_data = pstate.get('state', 'engineresumedata') if pstate else None
             if not isinstance(self.tdef, TorrentDefNoMetainfo):
@@ -338,7 +316,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
                     # If we only needed to perform checking, pause download after it is complete
                     self.pause_after_next_hashcheck = user_stopped
 
-                self.set_vod_mode(self.get_mode() == DLMODE_VOD)
+                self.set_vod_mode(self.dl_mode == DLMODE_VOD)
 
                 # Limit the amount of connections if we have specified that
                 self.handle.set_max_connections(self.session.config.get_libtorrent_max_conn_download())
@@ -354,7 +332,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         return self.ltmgr.add_torrent(self, atp).addCallbacks(on_torrent_added, on_torrent_failed)
 
     def get_anon_mode(self):
-        return self.get_hops() > 0
+        return self.config.get_hops() > 0
 
     def set_vod_mode(self, enable=True):
         self._logger.debug("LibtorrentDownloadImpl: set_vod_mode for %s (enable = %s)", self.tdef.get_name(), enable)
@@ -362,7 +340,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         if enable:
             self.vod_seekpos = 0
 
-            filename = self.get_selected_files()[0] if self.tdef.is_multifile_torrent() else self.tdef.get_name()
+            filename = self.config.get_selected_files()[0] if self.tdef.is_multifile_torrent() else self.tdef.get_name()
             self.vod_index = self.tdef.get_index_of_file_in_files(filename) if self.tdef.is_multifile_torrent() else 0
 
             self.prebuffsize = max(int(self.get_vod_filesize() * 0.05), self.max_prebuffsize)
@@ -377,7 +355,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
             self._logger.debug("LibtorrentDownloadImpl: going into VOD mode %s", filename)
         else:
             self.handle.set_sequential_download(False)
-            self.handle.set_priority(0 if self.get_credit_mining() else 1)
+            self.handle.set_priority(0 if self.config.get_credit_mining() else 1)
             if self.get_vod_fileindex() >= 0:
                 self.set_byte_priority([(self.get_vod_fileindex(), 0, -1)], 1)
 
@@ -510,9 +488,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         Callback for the alert that contains the resume data of a specific download.
         This resume data will be written to a file on disk.
         """
-        if self._checkpoint_disabled:
-            return
-
         resume_data = alert.resume_data
 
         self.pstate_for_restart = self.get_persistent_download_config()
@@ -592,7 +567,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
 
         self.orig_files = [torrent_file.path.decode('utf-8') for torrent_file in torrent_files]
         self.set_corrected_infoname()
-        self.set_filepieceranges()
         self.set_selected_files()
 
         if self.session.lm.rtorrent_handler:
@@ -643,7 +617,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
     def on_torrent_finished_alert(self, alert):
         self.update_lt_status(self.handle.status())
         progress = self.get_state().get_progress()
-        if self.get_mode() == DLMODE_VOD:
+        if self.dl_mode == DLMODE_VOD:
             if progress == 1.0:
                 self.handle.set_sequential_download(False)
                 self.handle.set_priority(0)
@@ -688,62 +662,65 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
 
     @checkHandleAndSynchronize()
     def set_selected_files(self, selected_files=None):
-        if not isinstance(self.tdef, TorrentDefNoMetainfo):
+        if isinstance(self.tdef, TorrentDefNoMetainfo):
+            return
 
-            if selected_files is None:
-                selected_files = self.get_selected_files()
+        if selected_files is None:
+            selected_files = self.config.get_selected_files()
+        elif self.dl_mode == DLMODE_VOD and len(selected_files) > 1:
+            raise ValueError("In Video-On-Demand mode only 1 file can be selected for download")
+        else:
+            self.config.set_selected_files(self, selected_files)
+
+        is_multifile = len(self.orig_files) > 1
+        commonprefix = os.path.commonprefix(self.orig_files) if is_multifile else u''
+        swarmname = commonprefix.partition(os.path.sep)[0]
+        unwanteddir = os.path.join(swarmname, u'.unwanted')
+        unwanteddir_abs = os.path.join(self.get_save_path().decode('utf-8'), unwanteddir)
+
+        filepriorities = []
+        torrent_storage = get_info_from_handle(self.handle).files()
+
+        for index, orig_path in enumerate(self.orig_files):
+            filename = orig_path[len(swarmname) + 1:] if swarmname else orig_path
+
+            if filename in selected_files or not selected_files:
+                filepriorities.append(1)
+                new_path = orig_path
             else:
-                DownloadConfigInterface.set_selected_files(self, selected_files)
+                filepriorities.append(0)
+                new_path = os.path.join(unwanteddir, '%s%d' % (hexlify(self.tdef.get_infohash()), index))
 
-            is_multifile = len(self.orig_files) > 1
-            commonprefix = os.path.commonprefix(self.orig_files) if is_multifile else u''
-            swarmname = commonprefix.partition(os.path.sep)[0]
-            unwanteddir = os.path.join(swarmname, u'.unwanted')
-            unwanteddir_abs = os.path.join(self.get_save_path().decode('utf-8'), unwanteddir)
+            # as from libtorrent 1.0, files returning file_storage (lazy-iterable)
+            if hasattr(lt, 'file_storage') and isinstance(torrent_storage, lt.file_storage):
+                cur_path = torrent_storage.at(index).path.decode('utf-8')
+            else:
+                cur_path = torrent_storage[index].path.decode('utf-8')
 
-            filepriorities = []
-            torrent_storage = get_info_from_handle(self.handle).files()
-
-            for index, orig_path in enumerate(self.orig_files):
-                filename = orig_path[len(swarmname) + 1:] if swarmname else orig_path
-
-                if filename in selected_files or not selected_files:
-                    filepriorities.append(1)
-                    new_path = orig_path
-                else:
-                    filepriorities.append(0)
-                    new_path = os.path.join(unwanteddir, '%s%d' % (hexlify(self.tdef.get_infohash()), index))
-
-                # as from libtorrent 1.0, files returning file_storage (lazy-iterable)
-                if hasattr(lt, 'file_storage') and isinstance(torrent_storage, lt.file_storage):
-                    cur_path = torrent_storage.at(index).path.decode('utf-8')
-                else:
-                    cur_path = torrent_storage[index].path.decode('utf-8')
-
-                if cur_path != new_path:
-                    if not os.path.exists(unwanteddir_abs) and unwanteddir in new_path:
-                        try:
-                            os.makedirs(unwanteddir_abs)
-                            if sys.platform == "win32":
-                                ctypes.windll.kernel32.SetFileAttributesW(
-                                    unwanteddir_abs, 2)  # 2 = FILE_ATTRIBUTE_HIDDEN
-                        except OSError:
-                            self._logger.error("LibtorrentDownloadImpl: could not create %s" % unwanteddir_abs)
-                            # Note: If the destination directory can't be accessed, libtorrent will not be able to store the files.
-                            # This will result in a DLSTATUS_STOPPED_ON_ERROR.
-
-                    # Path should be unicode if Libtorrent is using std::wstring (on Windows),
-                    # else we use str (on Linux).
+            if cur_path != new_path:
+                if not os.path.exists(unwanteddir_abs) and unwanteddir in new_path:
                     try:
-                        self.handle.rename_file(index, new_path)
-                    except TypeError:
-                        self.handle.rename_file(index, new_path.encode("utf-8"))
+                        os.makedirs(unwanteddir_abs)
+                        if sys.platform == "win32":
+                            ctypes.windll.kernel32.SetFileAttributesW(
+                                unwanteddir_abs, 2)  # 2 = FILE_ATTRIBUTE_HIDDEN
+                    except OSError:
+                        self._logger.error("LibtorrentDownloadImpl: could not create %s" % unwanteddir_abs)
+                        # Note: If the destination directory can't be accessed, libtorrent will not be able to store the files.
+                        # This will result in a DLSTATUS_STOPPED_ON_ERROR.
 
-            # if in share mode, don't change priority of the file
-            if not self.get_share_mode():
-                self.handle.prioritize_files(filepriorities)
+                # Path should be unicode if Libtorrent is using std::wstring (on Windows),
+                # else we use str (on Linux).
+                try:
+                    self.handle.rename_file(index, new_path)
+                except TypeError:
+                    self.handle.rename_file(index, new_path.encode("utf-8"))
 
-            self.unwanteddir_abs = unwanteddir_abs
+        # if in share mode, don't change priority of the file
+        if not self.get_share_mode():
+            self.handle.prioritize_files(filepriorities)
+
+        self.unwanteddir_abs = unwanteddir_abs
 
     @checkHandleAndSynchronize(False)
     def move_storage(self, new_dir):
@@ -801,8 +778,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         return defer_resume
 
     def set_moreinfo_stats(self, enable):
-        """ Called by any thread """
-
         self.askmoreinfo = enable
 
     def calc_prebuf_frac(self, consecutive=False):
@@ -975,13 +950,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         """ Returns the file to which the downloaded content is saved. """
         return os.path.join(self.get_dest_dir(), self.correctedinfoname)
 
-    def set_filepieceranges(self):
-        """ Determine which file maps to which piece ranges for progress info """
-        self._logger.debug("LibtorrentDownloadImpl: set_filepieceranges: %s", self.get_selected_files())
-
-        metainfo = self.tdef.get_metainfo()
-        self.filepieceranges = maketorrent.get_length_filepieceranges_from_metainfo(metainfo, [])[1]
-
     def restart(self):
         """ Restart the Download """
         self.set_user_stopped(False)
@@ -1002,7 +970,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
                 can_create_engine_deferred.addCallback(schedule_create_engine)
             else:
                 self.handle.resume()
-                self.set_vod_mode(self.get_mode() == DLMODE_VOD)
+                self.set_vod_mode(self.dl_mode == DLMODE_VOD)
 
     @checkHandleAndSynchronize([])
     def get_dest_files(self, exts=None):
@@ -1025,10 +993,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         """
         Checkpoint this download. Returns a deferred that fires when the checkpointing is completed.
         """
-        if self._checkpoint_disabled:
-            self._logger.warning("Ignoring checkpoint() call as checkpointing is disabled for this download")
-            return succeed(None)
-
         if not self.handle or not self.handle.is_valid():
             # Libtorrent hasn't received or initialized this download yet
             # 1. Check if we have data for this infohash already (don't overwrite it if we do!)
@@ -1093,9 +1057,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
     def get_magnet_link(self):
         return lt.make_magnet_uri(self.handle)
 
-    #
-    # External addresses
-    #
     def add_peer(self, addr):
         """ Add a peer address from 3rd source (not tracker, not DHT) to this download.
         @param (hostname_ip,port) tuple
@@ -1104,15 +1065,6 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
 
     def set_priority(self, prio):
         self.get_handle().addCallback(lambda handle: handle.set_priority(prio))
-
-    def dlconfig_changed_callback(self, section, name, new_value, old_value):
-        if section == 'libtorrent' and name == 'max_upload_rate':
-            self.get_handle().addCallback(lambda handle: handle.set_upload_limit(int(new_value * 1024)))
-        elif section == 'libtorrent' and name == 'max_download_rate':
-            self.get_handle().addCallback(lambda handle: handle.set_download_limit(int(new_value * 1024)))
-        elif section == 'download_defaults' and name in ['correctedfilename', 'super_seeder']:
-            return False
-        return True
 
     @checkHandleAndSynchronize()
     def get_share_mode(self):

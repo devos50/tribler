@@ -482,8 +482,7 @@ class TriblerLaunchMany(TaskManager):
 
         self.initComplete = True
 
-    def add(self, tdef, dscfg, pstate=None, setupDelay=0, hidden=False,
-            share_mode=False, checkpoint_disabled=False):
+    def add(self, tdef, dscfg, pstate=None, setupDelay=0, hidden=False, share_mode=False):
         """ Called by any thread """
         d = None
         with self.session_lock:
@@ -517,8 +516,7 @@ class TriblerLaunchMany(TaskManager):
 
             # Store in list of Downloads, always.
             self.downloads[infohash] = d
-            setup_deferred = d.setup(dscfg, pstate, wrapperDelay=setupDelay,
-                                     share_mode=share_mode, checkpoint_disabled=checkpoint_disabled)
+            setup_deferred = d.setup(dscfg, pstate, wrapperDelay=setupDelay, share_mode=share_mode)
             setup_deferred.addCallback(self.on_download_handle_created)
 
         if d and not hidden and self.session.config.get_megacache_enabled():
@@ -681,8 +679,7 @@ class TriblerLaunchMany(TaskManager):
         """
         dslist = []
         for d in self.downloads.values():
-            d.set_moreinfo_stats(True in self.get_peer_list or d.get_def().get_infohash() in
-                                 self.get_peer_list)
+            d.set_moreinfo_stats(True in self.get_peer_list or d.get_def().get_infohash() in self.get_peer_list)
             ds = d.network_get_state(None)
             dslist.append(ds)
 

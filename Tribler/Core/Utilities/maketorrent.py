@@ -278,33 +278,6 @@ def get_length_from_metainfo(metainfo, selectedfiles):
         return total
 
 
-def get_length_filepieceranges_from_metainfo(metainfo, selectedfiles):
-
-    if 'files' not in metainfo['info']:
-        # single-file torrent
-        return metainfo['info']['length'], None
-    else:
-        # multi-file torrent
-        files = metainfo['info']['files']
-        piecesize = metainfo['info']['piece length']
-
-        offset = 0
-        total = 0
-        filepieceranges = []
-        for i in xrange(len(files)):
-            path = files[i]['path']
-            length = files[i]['length']
-            filename = pathlist2filename(path)
-
-            if length > 0 and (not selectedfiles or (selectedfiles and filename in selectedfiles)):
-                pieces_range = (offset_to_piece(offset, piecesize, False), offset_to_piece(offset + length, piecesize),
-                                (offset - offset_to_piece(offset, piecesize, False) * piecesize), filename)
-                filepieceranges.append(pieces_range)
-                total += length
-            offset += length
-        return total, filepieceranges
-
-
 def offset_to_piece(offset, piece_size, endpoint=True):
     p = offset / piece_size
     if endpoint and offset % piece_size > 0:

@@ -13,6 +13,7 @@ from threading import RLock
 from Tribler.Core.exceptions import OperationNotPossibleAtRuntimeException
 
 
+# TODO REMOVE THIS!!!
 class CallbackConfigParser(RawConfigParser):
 
     def __init__(self, *args, **kwargs):
