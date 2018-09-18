@@ -12,7 +12,6 @@ import re
 import shutil
 import string
 import time
-from tempfile import mkdtemp
 from threading import enumerate as enumerate_threads
 
 import twisted
@@ -47,6 +46,7 @@ class BaseTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(BaseTestCase, self).__init__(*args, **kwargs)
+        self._tempdirs = []
         self.maxDiff = None  # So we see full diffs when using assertEquals
 
         def wrap(fun):
@@ -65,6 +65,19 @@ class BaseTestCase(unittest.TestCase):
             if name.startswith("test_"):
                 setattr(self, name, wrap(method))
 
+    def tearDown(self):
+        while self._tempdirs:
+            temp_dir = self._tempdirs.pop()
+            os.chmod(temp_dir, 0700)
+            shutil.rmtree(temp_dir, ignore_errors=False)
+
+    def temporary_directory(self, suffix=''):
+        random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+        temp = os.path.join(TESTS_DIR, "temp", self.__class__.__name__ + suffix + random_string)
+        self._tempdirs.append(temp)
+        os.makedirs(temp)
+        return temp
+
 
 class AbstractServer(BaseTestCase):
 
@@ -76,11 +89,12 @@ class AbstractServer(BaseTestCase):
 
         self.watchdog = WatchDog()
         self.selected_socks5_ports = set()
-        self._tempdirs = []
 
         # Enable Deferred debugging
-        from twisted.internet.defer import setDebugging
-        setDebugging(True)
+        # from twisted.internet.defer import setDebugging
+        # setDebugging(True)
+        from twisted.internet.base import DelayedCall
+        DelayedCall.debug = True
 
     @inlineCallbacks
     def setUp(self):
@@ -94,8 +108,6 @@ class AbstractServer(BaseTestCase):
         reactor_deferred = Deferred()
         reactor.callWhenRunning(reactor_deferred.callback, None)
 
-        self.setUpCleanup()
-        os.makedirs(self.session_base_dir)
         self.annotate_dict = {}
 
         self.file_server = None
@@ -105,23 +117,12 @@ class AbstractServer(BaseTestCase):
         self.watchdog.start()
         yield reactor_deferred
 
-    def setUpCleanup(self):
-        while self._tempdirs:
-            shutil.rmtree(self._tempdirs.pop(), ignore_errors=False)
-
     def setUpFileServer(self, port, path):
         # Create a local file server, can be used to serve local files. This is preferred over an external network
         # request in order to get files.
         resource = File(path)
         factory = Site(resource)
         self.file_server = reactor.listenTCP(port, factory)
-
-    def temporary_directory(self, suffix=''):
-        random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-        temp = os.path.join(TESTS_DIR, "temp", self.__class__.__name__ + suffix + random_string)
-        self._tempdirs.append(temp)
-        os.makedirs(temp)
-        return temp
 
     @inlineCallbacks
     def checkReactor(self, phase, *_):
@@ -160,7 +161,6 @@ class AbstractServer(BaseTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        self.tearDownCleanup()
         self.annotate(self._testMethodName, start=False)
 
         process_unhandled_exceptions()
@@ -177,8 +177,7 @@ class AbstractServer(BaseTestCase):
         else:
             yield self.checkReactor("tearDown")
 
-    def tearDownCleanup(self):
-        self.setUpCleanup()
+        super(AbstractServer, self).tearDown()
 
     def getStateDir(self, nr=0):
         state_dir = self.state_dir + (str(nr) if nr else '')
