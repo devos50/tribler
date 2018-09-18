@@ -7,8 +7,10 @@ import functools
 import inspect
 import logging
 import os
+import random
 import re
 import shutil
+import string
 import time
 from tempfile import mkdtemp
 from threading import enumerate as enumerate_threads
@@ -74,6 +76,7 @@ class AbstractServer(BaseTestCase):
 
         self.watchdog = WatchDog()
         self.selected_socks5_ports = set()
+        self._tempdirs = []
 
         # Enable Deferred debugging
         from twisted.internet.defer import setDebugging
@@ -83,7 +86,7 @@ class AbstractServer(BaseTestCase):
     def setUp(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        self.session_base_dir = mkdtemp(suffix="_tribler_test_session")
+        self.session_base_dir = self.temporary_directory(suffix="_tribler_test_session_")
         self.state_dir = os.path.join(self.session_base_dir, u"dot.Tribler")
         self.dest_dir = os.path.join(self.session_base_dir, u"TriblerDownloads")
 
@@ -103,9 +106,8 @@ class AbstractServer(BaseTestCase):
         yield reactor_deferred
 
     def setUpCleanup(self):
-        # Change to an existing dir before cleaning up.
-        os.chdir(TESTS_DIR)
-        shutil.rmtree(unicode(self.session_base_dir), ignore_errors=True)
+        while self._tempdirs:
+            shutil.rmtree(self._tempdirs.pop(), ignore_errors=False)
 
     def setUpFileServer(self, port, path):
         # Create a local file server, can be used to serve local files. This is preferred over an external network
@@ -113,6 +115,13 @@ class AbstractServer(BaseTestCase):
         resource = File(path)
         factory = Site(resource)
         self.file_server = reactor.listenTCP(port, factory)
+
+    def temporary_directory(self, suffix=''):
+        random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+        temp = os.path.join(TESTS_DIR, "temp", self.__class__.__name__ + suffix + random_string)
+        self._tempdirs.append(temp)
+        os.makedirs(temp)
+        return temp
 
     @inlineCallbacks
     def checkReactor(self, phase, *_):
