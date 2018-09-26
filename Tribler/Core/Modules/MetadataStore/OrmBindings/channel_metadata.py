@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from libtorrent import file_storage, add_files, create_torrent, set_piece_hashes, bencode, torrent_info
@@ -146,6 +147,8 @@ def define_binding(db):
             :param metadata_list: The list of metadata entries to add to the torrent dir
             :return The new infohash, should be used to update the downloads
             """
+            logger = logging.getLogger(self.__class__.__name__)
+            logger.info("Starting to create torrent...")
             # Create dir for metadata files
             channel_dir = os.path.abspath(os.path.join(self._channels_dir, self.dir_name))
             if not os.path.isdir(channel_dir):
