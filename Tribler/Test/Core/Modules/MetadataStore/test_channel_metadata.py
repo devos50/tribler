@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+from datetime import datetime, time
+from time import sleep
 
 from pony.orm import db_session
 from twisted.internet.defer import inlineCallbacks
@@ -107,7 +108,7 @@ class TestChannelMetadata(TestAsServer):
             "tags": "eee",
             "title": "qqq"
         }
-        channel_metadata.update_metadata(my_key, update_dict=update_dict)
+        channel_metadata.update_channel_state(my_key, update_dict=update_dict)
         self.assertDictContainsSubset(update_dict, channel_metadata.to_dict())
 
     @db_session
@@ -158,11 +159,11 @@ class TestChannelMetadata(TestAsServer):
         """
         my_key = self.session.trustchain_keypair
         channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
-        torrent1_metadata = self.session.lm.mds.TorrentMetadata.from_dict(
+        self.session.lm.mds.TorrentMetadata.from_dict(
             dict(self.torrent_template, public_key=channel_metadata.public_key))
-        channel_metadata.add_metadata_to_channel(my_key, self.session.lm.mds.channels_dir, [torrent1_metadata])
+        channel_metadata.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
 
-        self.assertEqual(channel_metadata.version, 2)
+        self.assertEqual(channel_metadata.version, 1)
         self.assertEqual(channel_metadata.size, 1)
 
     @db_session
@@ -173,26 +174,29 @@ class TestChannelMetadata(TestAsServer):
         my_key = self.session.trustchain_keypair
         channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
-        channel_metadata.add_torrent_to_channel(my_key, tdef, None, self.session.lm.mds.channels_dir)
+        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
         self.assertTrue(channel_metadata.contents_list)
-        self.assertRaises(DuplicateTorrentFileError, channel_metadata.add_torrent_to_channel,
-                          my_key, tdef, None, self.session.lm.mds.channels_dir)
+        self.assertRaises(DuplicateTorrentFileError, channel_metadata.add_torrent_to_channel, my_key, tdef, None)
 
     @db_session
     def test_delete_torrent_from_channel(self):
         """
         Test deleting a torrent from your channel
         """
+        channels_dir = self.session.lm.mds.channels_dir
         my_key = self.session.trustchain_keypair
         channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
-        channel_metadata.add_torrent_to_channel(my_key, tdef, None, self.session.lm.mds.channels_dir)
 
-        old_infohash, new_infohash = channel_metadata.delete_torrent_from_channel(
-            my_key, 'a' * 20, self.session.lm.mds.channels_dir)
-        self.assertEqual(old_infohash, new_infohash)
+        # Check that nothing is committed when deleting uncommited torrent metadata
+        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
+        channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
+        self.assertEqual(0, len(channel_metadata.contents_list))
 
-        old_infohash, new_infohash = channel_metadata.delete_torrent_from_channel(
-            my_key, tdef.get_infohash(), self.session.lm.mds.channels_dir)
-        self.assertNotEqual(old_infohash, new_infohash)
-        self.assertFalse(channel_metadata.contents_list)
+        # Check append-only deletion process
+        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
+        channel_metadata.commit_channel_torrent(my_key, channels_dir)
+        self.assertEqual(1, len(channel_metadata.contents_list))
+        channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
+        channel_metadata.commit_channel_torrent(my_key, channels_dir)
+        self.assertEqual(0, len(channel_metadata.contents_list))

@@ -2,7 +2,8 @@ from datetime import datetime
 
 from pony import orm
 
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, time2float, float2time
+from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, time2float, float2time, \
+    DeletedMetadataPayload
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
 
@@ -20,6 +21,18 @@ def define_binding(db):
         tc_pointer = orm.Optional(int, size=64, default=0)
         public_key = orm.Optional(buffer, default='\x00' * 74)
         addition_timestamp = orm.Optional(datetime, default=datetime.utcnow)
+        deleted = orm.Optional(bool, default=False)
+
+        def serialized_delete(self, signature=True):
+            """
+            Encode for transport the special command to delete this metadata.
+            """
+            serializer = Serializer()
+            delete_signature = self.signature
+            payload = DeletedMetadataPayload(self.type, str(self.public_key), time2float(self.timestamp),
+                                             self.tc_pointer, str(self.signature) if signature else EMPTY_SIG,
+                                             str(delete_signature))
+            return serializer.pack_multiple(payload.to_pack_list())[0]
 
         def serialized(self, signature=True):
             """
