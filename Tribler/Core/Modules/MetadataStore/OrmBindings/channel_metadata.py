@@ -63,21 +63,21 @@ def define_binding(db):
 
         @classmethod
         @db_session
-        def process_channel_metadata_payload(cls, metadata_channel_payload):
+        def process_channel_metadata_payload(cls, payload):
             """
             Process some channel metadata.
-            :param metadata_channel_payload: The channel metadata, in serialized form.
+            :param payload: The channel metadata, in serialized form.
             :return: The ChannelMetadata object that contains the latest version of the channel
             """
-            existing_channel_metadata = ChannelMetadata.get_channel_with_id(metadata_channel_payload.public_key)
-            if existing_channel_metadata:
-                if metadata_channel_payload.version > existing_channel_metadata.version:
-                    existing_channel_metadata.delete()
-                    return ChannelMetadata.from_payload(metadata_channel_payload)
+            channel = ChannelMetadata.get_channel_with_id(payload.public_key)
+            if channel:
+                if payload.version > channel.version:
+                    channel.delete()
+                    return ChannelMetadata.from_payload(payload)
                 else:
-                    return existing_channel_metadata
+                    return channel
             else:
-                return ChannelMetadata.from_payload(metadata_channel_payload)
+                return ChannelMetadata.from_payload(payload)
 
         @property
         @db_session
@@ -110,6 +110,25 @@ def define_binding(db):
                              tags=description, subscribed=True)
             my_channel.sign(key)
             return my_channel
+
+        def consolidate_channel_torrent(self, key, channels_dir):
+            """
+            Delete the channel dir contents and create it anew.
+            Use it to consolidate fragmented channel torrent directories.
+            :param key: The public/private key, used to sign the data
+            :param channels_dir: The directory where all channels are stored
+            """
+
+            self.commit_channel_torrent(key, channels_dir)
+
+            folder = os.path.join(channels_dir, self.dir_name)
+            for filename in os.listdir(folder):
+                file_path = os.path.join(folder, filename)
+                if filename.endswith(BLOB_EXTENSION):
+                    os.unlink(file_path)
+                else:
+                    raise ValueError
+            self.update_channel_torrent(key, channels_dir, self.contents_list)
 
         def update_channel_torrent(self, key, channels_dir, metadata_list):
             """
@@ -155,7 +174,7 @@ def define_binding(db):
             try:
                 new_infohash = self.update_channel_torrent(key, channels_dir, self.staged_entries_list)
             except:
-                print ("Error during channel torrent commit, not going to garbage collect the DB")
+                print ("Error during channel torrent commit, not going to garbage collect the channel")
             else:
                 # Clean up obsolete entries
                 self.garbage_collect()
@@ -224,7 +243,7 @@ def define_binding(db):
             else:
                 return False
             if torrent_metadata.timestamp > self.timestamp:
-                # Uncommited metadata: delete immediately
+                # Uncommited metadata. Delete immediately
                 torrent_metadata.delete()
             else:
                 torrent_metadata.deleted = True

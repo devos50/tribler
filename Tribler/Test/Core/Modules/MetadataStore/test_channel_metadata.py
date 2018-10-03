@@ -2,6 +2,7 @@ import os
 from datetime import datetime, time
 from time import sleep
 
+from pony import orm
 from pony.orm import db_session
 from twisted.internet.defer import inlineCallbacks
 
@@ -200,3 +201,30 @@ class TestChannelMetadata(TestAsServer):
         channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
         channel_metadata.commit_channel_torrent(my_key, channels_dir)
         self.assertEqual(0, len(channel_metadata.contents_list))
+
+
+    @db_session
+    def test_consolidate_channel_torrent(self):
+        """
+        Test completely re-commit your channel
+        """
+        channels_dir = self.session.lm.mds.channels_dir
+        my_key = self.session.trustchain_keypair
+        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
+        my_dir = os.path.abspath(os.path.join(channels_dir, channel_metadata.dir_name))
+        tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
+
+        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
+        self.session.lm.mds.TorrentMetadata.from_dict(
+            dict(self.torrent_template, public_key=channel_metadata.public_key))
+        channel_metadata.commit_channel_torrent(my_key, channels_dir)
+        channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
+
+        self.assertEqual(2, len(channel_metadata.contents_list))
+        channel_metadata.consolidate_channel_torrent(my_key, channels_dir)
+        self.assertEqual(1, len(os.listdir(my_dir)))
+
+
+
+
+
