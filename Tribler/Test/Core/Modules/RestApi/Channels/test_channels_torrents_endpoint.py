@@ -480,7 +480,7 @@ class TestChannelTorrentsChantEndpoint(AbstractTestChantEndpoint):
         """
         my_channel = self.create_my_channel('test', 'test')
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
-        my_channel.add_torrent_to_channel(self.session.trustchain_keypair, tdef, None, self.session.lm.mds.channels_dir)
+        my_channel.add_torrent_to_channel(self.session.trustchain_keypair, tdef, None)
 
         with open(TORRENT_UBUNTU_FILE, mode='rb') as torrent_file:
             torrent_64 = base64.b64encode(torrent_file.read())

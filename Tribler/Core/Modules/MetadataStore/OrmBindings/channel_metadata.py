@@ -49,7 +49,7 @@ def define_binding(db):
             return serializer.pack_multiple(payload.to_pack_list())[0]
 
         @db_session
-        def update_channel_state(self, key, update_dict=None):
+        def update_metadata(self, key, update_dict=None):
             now = datetime.utcnow()
             channel_dict = self.to_dict()
             channel_dict.update(update_dict or {})
@@ -150,12 +150,12 @@ def define_binding(db):
             for metadata in metadata_list:
                 new_version += 1
                 with open(os.path.join(channel_dir, str(new_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
-                    serialized = metadata.serialized_delete() if metadata.deleted else metadata.serialized()
+                    serialized = metadata.serialized_delete(key) if metadata.deleted else metadata.serialized()
                     f.write(serialized)
 
             # Make torrent out of dir with metadata files
             infohash = create_torrent_from_dir(channel_dir, os.path.join(channels_dir, self.dir_name + ".torrent"))
-            self.update_channel_state(key, update_dict={"infohash": infohash, "version": new_version})
+            self.update_metadata(key, update_dict={"infohash": infohash, "version": new_version})
 
             # Write the channel mdblob away
             with open(os.path.join(channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
@@ -259,10 +259,10 @@ def define_binding(db):
             """
             return cls.get(public_key=buffer(channel_id))
 
-        @classmethod
-        @db_session
-        def from_payload(cls, payload):
-            metadata_dict = {
+
+        @staticmethod
+        def payload_to_dict(payload):
+            return {
                 "type": payload.metadata_type,
                 "public_key": payload.public_key,
                 "timestamp": float2time(payload.timestamp),
@@ -274,6 +274,10 @@ def define_binding(db):
                 "tags": payload.tags,
                 "version": payload.version
             }
-            return cls(**metadata_dict)
+
+        @classmethod
+        @db_session
+        def from_payload(cls, payload):
+            return cls(**cls.payload_to_dict(payload))
 
     return ChannelMetadata

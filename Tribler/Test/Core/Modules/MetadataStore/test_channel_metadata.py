@@ -109,7 +109,7 @@ class TestChannelMetadata(TestAsServer):
             "tags": "eee",
             "title": "qqq"
         }
-        channel_metadata.update_channel_state(my_key, update_dict=update_dict)
+        channel_metadata.update_metadata(my_key, update_dict=update_dict)
         self.assertDictContainsSubset(update_dict, channel_metadata.to_dict())
 
     @db_session

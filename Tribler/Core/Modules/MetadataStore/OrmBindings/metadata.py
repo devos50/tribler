@@ -4,6 +4,7 @@ from pony import orm
 
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, time2float, float2time, \
     DeletedMetadataPayload
+from Tribler.Core.exceptions import InvalidSignatureException
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
 
@@ -23,14 +24,18 @@ def define_binding(db):
         addition_timestamp = orm.Optional(datetime, default=datetime.utcnow)
         deleted = orm.Optional(bool, default=False)
 
-        def serialized_delete(self, signature=True):
+        def serialized_delete(self, key):
             """
             Encode for transport the special command to delete this metadata.
             """
             serializer = Serializer()
             delete_signature = self.signature
-            payload = DeletedMetadataPayload(self.type, str(self.public_key), time2float(self.timestamp),
-                                             self.tc_pointer, str(self.signature) if signature else EMPTY_SIG,
+            type = MetadataTypes.DELETED.value
+            signature = ECCrypto().create_signature(key, self.serialized_delete(key=None))\
+                if key is not None else EMPTY_SIG
+            payload = DeletedMetadataPayload(type, str(self.public_key), time2float(self.timestamp),
+                                             self.tc_pointer,
+                                             str(signature),
                                              str(delete_signature))
             return serializer.pack_multiple(payload.to_pack_list())[0]
 
@@ -47,11 +52,17 @@ def define_binding(db):
             with open(filename, 'wb') as output_file:
                 output_file.write(self.serialized())
 
+        def to_delete_file(self, key, filename):
+            with open(filename, 'wb') as output_file:
+                output_file.write(self.serialized_delete(key))
+
         def sign(self, key):
             self.public_key = buffer(key.pub().key_to_bin())
             serialized_data = self.serialized(signature=False)
             signature = ECCrypto().create_signature(key, serialized_data)
             self.signature = signature
+            if not self.has_valid_signature():
+                raise InvalidSignatureException("BLA")
 
         def has_valid_signature(self):
             crypto = ECCrypto()

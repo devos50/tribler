@@ -161,9 +161,10 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
         if self.is_chant_channel:
             try:
                 torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
-                old_infohash, new_infohash = channel.add_torrent_to_channel(
-                    key, torrent_def, extra_info, self.session.lm.mds.channels_dir)
-                self.session.lm.updated_my_channel(old_infohash, new_infohash, torrent_path)
+                channel.add_torrent_to_channel(key, torrent_def, extra_info)
+                #TODO: add a separate button for publishing the channel
+                channel.commit_channel_torrent(key, self.session.lm.mds.channels_dir)
+                self.session.lm.updated_my_channel(torrent_path)
             except DuplicateTorrentFileError as exc:
                 return BaseChannelsEndpoint.return_500(self, request, exc)
         else:
@@ -246,9 +247,10 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
                 with db_session:
                     channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
                     torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
-                    old_infohash, new_infohash = channel.add_torrent_to_channel(
-                        my_key, torrent_def, extra_info, self.session.lm.mds.channels_dir)
-                    self.session.lm.updated_my_channel(old_infohash, new_infohash, torrent_path)
+                    channel.add_torrent_to_channel(my_key, torrent_def, extra_info)
+                    #TODO: make this run separately from the GUI
+                    channel.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
+                    self.session.lm.updated_my_channel(torrent_path)
             else:
                 channel = self.get_channel_from_db(self.cid)
                 self.session.add_torrent_def_to_channel(channel[0], torrent_def, extra_info, forward=True)
@@ -331,16 +333,18 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
 
             with db_session:
                 for torrent_path in self.path.split(","):
+                    infohash = torrent_path.decode('hex')
                     torrent_metadata = self.session.lm.mds.TorrentMetadata.get(
-                        public_key=self.cid, infohash=torrent_path.decode('hex'))
+                        public_key=self.cid, infohash=infohash)
                     if torrent_metadata is None:
                         failed_torrents.append(torrent_path)
                     else:
-                        old_infohash, new_infohash = my_channel.delete_torrent_from_channel(
-                            my_key, torrent_path.decode('hex'), self.session.lm.mds.channels_dir)
+                        my_channel.delete_torrent_from_channel(infohash)
+                        #TODO: move this to separate call/method/endpoint
+                        my_channel.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
                         new_torrent_path = os.path.join(self.session.lm.mds.channels_dir,
                                                         my_channel.dir_name + ".torrent")
-                        self.session.lm.updated_my_channel(old_infohash, new_infohash, new_torrent_path)
+                        self.session.lm.updated_my_channel(new_torrent_path)
 
             if failed_torrents:
                 return json.dumps({"removed": False, "failed_torrents": failed_torrents})

@@ -4,8 +4,7 @@ import os
 from pony import orm
 from pony.orm import db_session
 
-from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, deleted_metadata, torrent_metadata,\
-    channel_metadata
+from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, torrent_metadata, channel_metadata
 from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, DeletedMetadataPayload, \
     TorrentMetadataPayload, ChannelMetadataPayload
@@ -63,7 +62,6 @@ class MetadataStore(object):
 
         # Accessors for ORM-managed classes
         self.Metadata = metadata.define_binding(self._db)
-        self.DeletedMetadata = deleted_metadata.define_binding(self._db)
         self.TorrentMetadata = torrent_metadata.define_binding(self._db)
         self.ChannelMetadata = channel_metadata.define_binding(self._db)
 
@@ -103,31 +101,38 @@ class MetadataStore(object):
         """
         with open(filepath, 'rb') as f:
             serialized_data = f.read()
-            metadata_payload = self.serializer.unpack_to_serializables([MetadataPayload, ], serialized_data)[0]
+        payload = self.serializer.unpack_to_serializables([MetadataPayload, ], serialized_data)[0]
 
-            if metadata_payload.metadata_type != MetadataTypes.DELETED.value and \
-                    self.Metadata.exists(signature=metadata_payload.signature):
-                # We already have this gossip.
-                return self.Metadata.get(signature=metadata_payload.signature)
-            if metadata_payload.metadata_type == MetadataTypes.DELETED.value:
-                # We only allow people to delete their own entries, thus PKs must match
-                deleted_metadata_payload = self.serializer.unpack_to_serializables(
-                    [DeletedMetadataPayload, ], serialized_data)[0]
-                if not deleted_metadata_payload.has_valid_signature():
-                    raise InvalidSignatureException("The delete payload has an invalid signature!")
+        # Don't touch me! Workaround for Pony bug https://github.com/ponyorm/pony/issues/386 !
+        orm.flush()
 
-                existing_metadata = self.Metadata.get(signature=deleted_metadata_payload.delete_signature,
-                                                      public_key=deleted_metadata_payload.public_key)
-                if existing_metadata:
-                    existing_metadata.delete()
-                return None
-            elif metadata_payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
-                metadata_torrent_payload = self.serializer.unpack_to_serializables(
-                    [TorrentMetadataPayload, ], serialized_data)[0]
+        if self.Metadata.exists(signature=payload.signature):
+            return self.Metadata.get(signature=payload.signature)
 
-                if not metadata_torrent_payload.has_valid_signature():
-                    raise InvalidSignatureException("The delete payload has an invalid signature!")
-                return self.TorrentMetadata.from_payload(metadata_torrent_payload)
+        # We have to copypaste the payload check for each type of metadata out there, because at the moment
+        # our serializer requires us to know the payload type to check the signature
+        if payload.metadata_type == MetadataTypes.DELETED.value:
+            payload = self.serializer.unpack_to_serializables([DeletedMetadataPayload, ], serialized_data)[0]
+            if not payload.has_valid_signature():
+                raise InvalidSignatureException("The payload has an invalid signature! ")
+            # We only allow people to delete their own entries, thus PKs must match
+            existing_metadata = self.Metadata.get(signature=payload.delete_signature,
+                                                  public_key=payload.public_key)
+            if existing_metadata:
+                existing_metadata.delete()
+            return None
 
-            # Unknown metadata type, raise exception
-            raise UnknownBlobTypeException
+        elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
+            payload = self.serializer.unpack_to_serializables([TorrentMetadataPayload, ], serialized_data)[0]
+            if not payload.has_valid_signature():
+                raise InvalidSignatureException("The payload has an invalid signature! ")
+            return self.TorrentMetadata.from_payload(payload)
+
+        elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
+            if not payload.has_valid_signature():
+                raise InvalidSignatureException("The payload has an invalid signature! ")
+            payload = self.serializer.unpack_to_serializables([ChannelMetadataPayload, ], serialized_data)[0]
+            return self.ChannelMetadata.from_payload(payload)
+
+        # Unknown metadata type, raise exception
+        raise UnknownBlobTypeException

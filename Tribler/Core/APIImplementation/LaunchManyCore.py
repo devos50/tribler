@@ -13,6 +13,8 @@ from glob import iglob
 from threading import Event, enumerate as enumerate_threads
 from traceback import print_exc
 
+from pony.orm import db_session
+
 from Tribler.Core.CacheDB.sqlitecachedb import forceDBThread
 from Tribler.Core.DecentralizedTracking.dht_provider import MainlineDHTProvider
 from Tribler.Core.DownloadConfig import DownloadStartupConfig, DefaultDownloadStartupConfig
@@ -504,20 +506,25 @@ class TriblerLaunchMany(TaskManager):
             if finished_deferred:
                 finished_deferred.callback(download)
 
-    def update_channel(self, channel_metadata_payload):
+    @db_session
+    def update_channel(self, payload):
         """
         We received some channel metadata, possibly over the network.
         Validate the signature, update the local metadata store and start downloading this channel if needed.
-        :param channel_metadata_payload: The channel metadata, in serialized form.
+        :param payload: The channel metadata, in serialized form.
         """
-        if not channel_metadata_payload.has_valid_signature():
+        if not payload.has_valid_signature():
             raise InvalidSignatureException("The signature of the channel metadata is invalid.")
 
-        channel_metadata = self.mds.ChannelMetadata.process_channel_metadata_payload(channel_metadata_payload)
+        channel = self.mds.ChannelMetadata.get_channel_with_id(payload.public_key)
+        if channel:
+            # Update the channel that is already there.
+            channel.set(**self.mds.ChannelMetadata.payload_to_dict(payload))
+        else:
+            # Add new channel object to DB
+            channel = self.mds.ChannelMetadata.from_payload(payload)
 
-        if self.download_exists(channel_metadata_payload.infohash):
-            self.session.remove_download(self.get_download(channel_metadata_payload.infohash))
-        return self.download_channel(channel_metadata)
+        return self.download_channel(channel)
 
     def download_channel(self, channel_metadata):
         """
@@ -534,16 +541,11 @@ class TriblerLaunchMany(TaskManager):
         download.finished_callback = lambda dl: self.on_channel_download_finished(dl, finished_deferred)
         return download, finished_deferred
 
-    def updated_my_channel(self, old_infohash, _, new_torrent_path):
+    def updated_my_channel(self, new_torrent_path):
         """
         Notify the core that we updated our channel.
-        :param old_infohash: the infohash of the previous my channel download
         :param new_torrent_path: path to the new torrent file
         """
-        if old_infohash != '\x00' * 20 and self.download_exists(old_infohash):
-            # Remove the current download
-            self.session.remove_download(self.get_download(old_infohash))
-
         # Start the new download
         tdef = TorrentDef.load(new_torrent_path)
         dcfg = DownloadStartupConfig()

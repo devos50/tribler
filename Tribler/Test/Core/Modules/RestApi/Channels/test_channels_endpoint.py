@@ -56,12 +56,10 @@ class AbstractTestChantEndpoint(AbstractApiTest):
         """
         my_key = self.session.trustchain_keypair
         my_channel_id = my_key.pub().key_to_bin()
-        my_channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
         random_torrent = self.session.lm.mds.TorrentMetadata(public_key=buffer(my_channel_id),
                                                              title='test' if not name else name,
                                                              infohash='a' * 20)
         random_torrent.sign(my_key)
-        my_channel.add_metadata_to_channel(my_key, self.session.lm.mds.channels_dir, [random_torrent])
         return random_torrent
 
     @db_session

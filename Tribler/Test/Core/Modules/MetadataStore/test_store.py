@@ -42,21 +42,15 @@ class TestMetadataStore(TriblerCoreTest):
         test_torrent_metadata.sign(my_key)
         metadata_path = os.path.join(self.session_base_dir, 'metadata.data')
         test_torrent_metadata.to_file(metadata_path)
-
-        # We should get the existing TorrentMetadata object now
-        loaded_metadata = self.metadata_store.process_channel_dir_file(metadata_path)
-        self.assertEqual(loaded_metadata.title, 'test')
+        test_torrent_metadata.delete()
 
         # We delete this TorrentMeta info now, it should be added again to the database when loading it
-        test_torrent_metadata.delete()
         loaded_metadata = self.metadata_store.process_channel_dir_file(metadata_path)
         self.assertEqual(loaded_metadata.title, 'test')
-
         # Test whether we delete existing metadata when loading a DeletedMetadata blob
-        self.metadata_store.ChannelMetadata(version=1337, signature='c' * 64)
-        deleted_metadata = self.metadata_store.DeletedMetadata(delete_signature='c' * 64, public_key=pub_key_bin)
-        deleted_metadata.sign(my_key)
-        deleted_metadata.to_file(metadata_path)
+        metadata = self.metadata_store.ChannelMetadata(version=1337, signature='c' * 64)
+        metadata.sign(my_key)
+        metadata.to_delete_file(my_key, metadata_path)
         loaded_metadata = self.metadata_store.process_channel_dir_file(metadata_path)
         self.assertIsNone(loaded_metadata)
 

@@ -113,11 +113,11 @@ class MyChannelEndpoint(BaseChannelsEndpoint):
                     "title": unicode(get_parameter(parameters, 'name'), 'utf-8')
                 })
 
-                if my_channel.contents_list:  # Update torrent if we have torrents in the channel
+                if my_channel.staged_entries_list:  # Update torrent if we have uncommitted content in the channel
+                    #TODO: make this a separate button
+                    my_channel.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
                     torrent_path = os.path.join(self.session.lm.mds.channels_dir, my_channel.dir_name + ".torrent")
-                    old_infohash, new_infohash = my_channel.add_metadata_to_channel(
-                        my_key, self.session.lm.mds.channels_dir, [])
-                    self.session.lm.updated_my_channel(old_infohash, new_infohash, torrent_path)
+                    self.session.lm.updated_my_channel(torrent_path)
 
             return json.dumps({'modified': True})
         else:
