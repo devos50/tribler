@@ -5,8 +5,6 @@ from pony.orm import db_session
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataPayload
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
-from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
-
 
 class TestMetadata(TestAsServer):
     """
@@ -76,7 +74,7 @@ class TestMetadata(TestAsServer):
         """
         Test converting a metadata payload to a metadata object
         """
-        serializer = Serializer()
         metadata = self.session.lm.mds.Metadata.from_dict({})
-        metadata_payload = serializer.unpack_to_serializables([MetadataPayload, ], metadata.serialized())[0]
+
+        metadata_payload = MetadataPayload(**metadata.to_dict())
         self.assertTrue(self.session.lm.mds.Metadata.from_payload(metadata_payload))

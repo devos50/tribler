@@ -12,6 +12,11 @@ from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
 EPOCH = datetime(1970, 1, 1)
 INFOHASH_SIZE = 20  # bytes
 
+SIGNATURE_SIZE = 64
+
+crypto = ECCrypto()
+serializer = Serializer()
+
 
 @unique
 class MetadataTypes(Enum):
@@ -25,6 +30,7 @@ TYPELESS = MetadataTypes.TYPELESS
 REGULAR_TORRENT = MetadataTypes.REGULAR_TORRENT
 CHANNEL_TORRENT = MetadataTypes.CHANNEL_TORRENT
 DELETED = MetadataTypes.DELETED
+
 
 # We have to write our own serialization procedure for timestamps, since
 # there is no standard for this, except Unix time, and that is
@@ -62,45 +68,67 @@ def float2time(timestamp, epoch=EPOCH):
     return dt
 
 
+class InvalidSignatureException(Exception):
+    pass
+
+
+def deserialize(classname, data, check_signature=True):
+    payload = serializer.unpack_to_serializables([classname, ], data)[0]
+    if check_signature:
+        signature = data[-SIGNATURE_SIZE:]
+        data_unsigned = data[:-SIGNATURE_SIZE]
+        key = crypto.key_from_public_bin(payload.public_key)
+        if not crypto.is_valid_signature(key, data_unsigned, signature):
+            raise InvalidSignatureException
+    return payload
+
+
+
+
+
 class MetadataPayload(Payload):
     """
     Payload for metadata.
     """
 
-    format_list = ['I', '74s', 'f', 'I', '64s']
+    format_list = ['I', '74s', 'f', 'I']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature):
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature=EMPTY_SIG, **kwargs):
         super(MetadataPayload, self).__init__()
         self.metadata_type = metadata_type
-        self.public_key = public_key
-        self.timestamp = timestamp
+        self.public_key = str(public_key)
+        self.timestamp = time2float(timestamp)
         self.tc_pointer = tc_pointer
-        self.signature = signature
+        self.signature = str(signature)
 
     def has_valid_signature(self):
-        crypto = ECCrypto()
-        serializer = Serializer()
-        original_signature = self.signature
-
-        # Make a payload where the signature is zero
-        self.signature = EMPTY_SIG
         sig_data = serializer.pack_multiple(self.to_pack_list())[0]
-        valid = crypto.is_valid_signature(crypto.key_from_public_bin(self.public_key), sig_data, original_signature)
-        self.signature = original_signature
-        return valid
+        return crypto.is_valid_signature(crypto.key_from_public_bin(self.public_key), sig_data, self.signature)
 
     def to_pack_list(self):
         data = [('I', self.metadata_type),
                 ('74s', self.public_key),
                 ('f', self.timestamp),
-                ('I', self.tc_pointer),
-                ('64s', self.signature)]
-
+                ('I', self.tc_pointer)]
         return data
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, signature):
-        return MetadataPayload(metadata_type, public_key, timestamp, tc_pointer, signature)
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer):
+        return MetadataPayload(metadata_type, public_key, timestamp, tc_pointer)
+
+    def to_dict(self):
+        return {
+            "metadata_type": self.metadata_type,
+            "public_key": self.public_key,
+            "timestamp": float2time(self.timestamp),
+            "tc_pointer": self.tc_pointer,
+            "signature": self.signature
+        }
+
+    def serialized(self, key=None):
+        serialized_data = serializer.pack_multiple(self.to_pack_list())[0]
+        signature = (ECCrypto().create_signature(key, serialized_data) if key else self.signature)
+        return str(serialized_data), str(signature)
 
 
 class TorrentMetadataPayload(MetadataPayload):
@@ -109,12 +137,14 @@ class TorrentMetadataPayload(MetadataPayload):
     """
     format_list = MetadataPayload.format_list + ['20s', 'I', 'varlenI', 'varlenI']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature, infohash, size, title, tags):
-        super(TorrentMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer, signature)
-        self.infohash = infohash
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags,
+                 signature=EMPTY_SIG, **kwargs):
+        super(TorrentMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
+                                                     signature=signature, **kwargs)
+        self.infohash = str(infohash)
         self.size = size
-        self.title = title
-        self.tags = tags
+        self.title = str(title)
+        self.tags = str(tags)
 
     def to_pack_list(self):
         data = super(TorrentMetadataPayload, self).to_pack_list()
@@ -125,9 +155,18 @@ class TorrentMetadataPayload(MetadataPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, signature, infohash, size, title, tags):
-        return TorrentMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, signature, infohash, size,
-                                      title, tags)
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags):
+        return TorrentMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags)
+
+    def to_dict(self):
+        dct = super(TorrentMetadataPayload, self).to_dict()
+        dct.update({
+            "infohash": self.infohash,
+            "size": self.size,
+            "title": self.title,
+            "tags": self.tags
+        })
+        return dct
 
 
 class ChannelMetadataPayload(TorrentMetadataPayload):
@@ -136,10 +175,10 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
     """
     format_list = TorrentMetadataPayload.format_list + ['I']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature, infohash, size, title, tags,
-                 version):
-        super(ChannelMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer, signature,
-                                                     infohash, size, title, tags)
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, version,
+                 signature=EMPTY_SIG, **kwargs):
+        super(ChannelMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
+                                                     infohash, size, title, tags, signature=signature, **kwargs)
         self.version = version
 
     def to_pack_list(self):
@@ -150,15 +189,18 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
     @classmethod
     def from_file(cls, filepath):
         with open(filepath, 'rb') as f:
-            serializer = Serializer()
             serialized_data = f.read()
             return serializer.unpack_to_serializables([cls, ], serialized_data)[0]
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, signature, infohash, size, title, tags,
-                         version):
-        return ChannelMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, signature, infohash, size,
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, version):
+        return ChannelMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size,
                                       title, tags, version)
+
+    def to_dict(self):
+        dct = super(ChannelMetadataPayload, self).to_dict()
+        dct.update({"version": self.version})
+        return dct
 
 
 class DeletedMetadataPayload(MetadataPayload):
@@ -167,9 +209,11 @@ class DeletedMetadataPayload(MetadataPayload):
     """
     format_list = MetadataPayload.format_list + ['64s']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature, delete_signature):
-        super(DeletedMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer, signature)
-        self.delete_signature = delete_signature
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, delete_signature,
+                 signature=EMPTY_SIG, **kwargs):
+        super(DeletedMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
+                                                     signature=signature, **kwargs)
+        self.delete_signature = str(delete_signature)
 
     def to_pack_list(self):
         data = super(DeletedMetadataPayload, self).to_pack_list()
@@ -177,5 +221,10 @@ class DeletedMetadataPayload(MetadataPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, signature, delete_signature):
-        return DeletedMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, signature, delete_signature)
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, delete_signature):
+        return DeletedMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, delete_signature)
+
+    def to_dict(self):
+        dct = super(DeletedMetadataPayload, self).to_dict()
+        dct.update({"delete_signature": self.delete_signature})
+        return dct

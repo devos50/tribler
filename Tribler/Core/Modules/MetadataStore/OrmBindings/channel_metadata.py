@@ -5,11 +5,8 @@ from libtorrent import file_storage, add_files, create_torrent, set_piece_hashes
 from pony import orm
 from pony.orm import db_session
 
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, ChannelMetadataPayload, time2float, \
-    float2time, MetadataPayload, TorrentMetadataPayload
+from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, ChannelMetadataPayload
 from Tribler.Core.exceptions import DuplicateTorrentFileError, DuplicateChannelNameError
-from Tribler.pyipv8.ipv8.attestation.trustchain.block import EMPTY_SIG
-from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
 
 CHANNEL_DIR_NAME_LENGTH = 60  # Its not 40 so it could be distinguished from infohash
 BLOB_EXTENSION = '.mdblob'
@@ -39,14 +36,7 @@ def define_binding(db):
         version = orm.Optional(int, size=64, default=0)
         subscribed = orm.Optional(bool, default=False)
         votes = orm.Optional(int, size=64, default=0)
-
-        def serialized(self, signature=True):
-            serializer = Serializer()
-            payload = ChannelMetadataPayload(self.type, str(self.public_key), time2float(self.timestamp),
-                                             self.tc_pointer, str(self.signature) if signature else EMPTY_SIG,
-                                             str(self.infohash), self.size, str(self.title), str(self.tags),
-                                             self.version)
-            return serializer.pack_multiple(payload.to_pack_list())[0]
+        _payload_class = ChannelMetadataPayload
 
         @db_session
         def update_metadata(self, key, update_dict=None):
@@ -151,7 +141,7 @@ def define_binding(db):
                 new_version += 1
                 with open(os.path.join(channel_dir, str(new_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
                     serialized = metadata.serialized_delete(key) if metadata.deleted else metadata.serialized()
-                    f.write(serialized)
+                    f.write(''.join(serialized))
 
             # Make torrent out of dir with metadata files
             infohash = create_torrent_from_dir(channel_dir, os.path.join(channels_dir, self.dir_name + ".torrent"))
@@ -159,7 +149,7 @@ def define_binding(db):
 
             # Write the channel mdblob away
             with open(os.path.join(channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
-                out_file.write(self.serialized())
+                out_file.write(''.join(self.serialized()))
             return infohash
 
         def commit_channel_torrent(self, key, channels_dir):
@@ -173,7 +163,7 @@ def define_binding(db):
             new_infohash = None
             try:
                 new_infohash = self.update_channel_torrent(key, channels_dir, self.staged_entries_list)
-            except:
+            except IOError:
                 print ("Error during channel torrent commit, not going to garbage collect the channel")
             else:
                 # Clean up obsolete entries
@@ -258,26 +248,5 @@ def define_binding(db):
             :return: the ChannelMetadata object, or None if it is not available.
             """
             return cls.get(public_key=buffer(channel_id))
-
-
-        @staticmethod
-        def payload_to_dict(payload):
-            return {
-                "type": payload.metadata_type,
-                "public_key": payload.public_key,
-                "timestamp": float2time(payload.timestamp),
-                "tc_pointer": payload.tc_pointer,
-                "signature": payload.signature,
-                "infohash": payload.infohash,
-                "size": payload.size,
-                "title": payload.title,
-                "tags": payload.tags,
-                "version": payload.version
-            }
-
-        @classmethod
-        @db_session
-        def from_payload(cls, payload):
-            return cls(**cls.payload_to_dict(payload))
 
     return ChannelMetadata
