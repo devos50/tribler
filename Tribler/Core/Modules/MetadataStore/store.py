@@ -101,7 +101,7 @@ class MetadataStore(object):
         """
         with open(filepath, 'rb') as f:
             serialized_data = f.read()
-        payload = self.serializer.unpack_to_serializables([MetadataPayload, ], serialized_data)[0]
+        payload = MetadataPayload.from_signed_blob(serialized_data)
 
         # Don't touch me! Workaround for Pony bug https://github.com/ponyorm/pony/issues/386 !
         orm.flush()
@@ -109,12 +109,8 @@ class MetadataStore(object):
         if self.Metadata.exists(signature=payload.signature):
             return self.Metadata.get(signature=payload.signature)
 
-        # We have to copypaste the payload check for each type of metadata out there, because at the moment
-        # our serializer requires us to know the payload type to check the signature
         if payload.metadata_type == MetadataTypes.DELETED.value:
-            payload = self.serializer.unpack_to_serializables([DeletedMetadataPayload, ], serialized_data)[0]
-            if not payload.has_valid_signature():
-                raise InvalidSignatureException("The payload has an invalid signature! ")
+            payload = DeletedMetadataPayload.from_signed_blob(serialized_data, check_signature=False)
             # We only allow people to delete their own entries, thus PKs must match
             existing_metadata = self.Metadata.get(signature=payload.delete_signature,
                                                   public_key=payload.public_key)
@@ -123,15 +119,11 @@ class MetadataStore(object):
             return None
 
         elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
-            payload = self.serializer.unpack_to_serializables([TorrentMetadataPayload, ], serialized_data)[0]
-            if not payload.has_valid_signature():
-                raise InvalidSignatureException("The payload has an invalid signature! ")
+            payload = TorrentMetadataPayload.from_signed_blob(serialized_data, check_signature=False)
             return self.TorrentMetadata.from_payload(payload)
 
         elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
-            if not payload.has_valid_signature():
-                raise InvalidSignatureException("The payload has an invalid signature! ")
-            payload = self.serializer.unpack_to_serializables([ChannelMetadataPayload, ], serialized_data)[0]
+            payload = ChannelMetadataPayload.from_signed_blob(serialized_data, check_signature=False)
             return self.ChannelMetadata.from_payload(payload)
 
         # Unknown metadata type, raise exception

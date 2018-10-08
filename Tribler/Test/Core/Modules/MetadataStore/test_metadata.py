@@ -42,16 +42,6 @@ class TestMetadata(TestAsServer):
         self.assertTrue(os.path.exists(file_path))
 
     @db_session
-    def test_sign(self):
-        """
-        Test whether metadata is signed correctly
-        """
-        rand_key = ECCrypto().generate_key('low')
-        metadata = self.session.lm.mds.Metadata.from_dict({})
-        metadata.sign(rand_key)
-        self.assertTrue(metadata.has_valid_signature())
-
-    @db_session
     def test_has_valid_signature(self):
         """
         Test whether a signature can be validated correctly
@@ -59,6 +49,7 @@ class TestMetadata(TestAsServer):
         rand_key = ECCrypto().generate_key('low')
         metadata = self.session.lm.mds.Metadata.from_dict({})
         metadata.sign(rand_key)
+        self.assertTrue(metadata.has_valid_signature())
 
         # Mess with the public key
         metadata.public_key = 'a'
@@ -78,3 +69,4 @@ class TestMetadata(TestAsServer):
 
         metadata_payload = MetadataPayload(**metadata.to_dict())
         self.assertTrue(self.session.lm.mds.Metadata.from_payload(metadata_payload))
+

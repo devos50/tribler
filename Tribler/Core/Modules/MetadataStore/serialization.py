@@ -71,20 +71,8 @@ def float2time(timestamp, epoch=EPOCH):
 class InvalidSignatureException(Exception):
     pass
 
-
-def deserialize(classname, data, check_signature=True):
-    payload = serializer.unpack_to_serializables([classname, ], data)[0]
-    if check_signature:
-        signature = data[-SIGNATURE_SIZE:]
-        data_unsigned = data[:-SIGNATURE_SIZE]
-        key = crypto.key_from_public_bin(payload.public_key)
-        if not crypto.is_valid_signature(key, data_unsigned, signature):
-            raise InvalidSignatureException
-    return payload
-
-
-
-
+class KeysMismatchException(Exception):
+    pass
 
 class MetadataPayload(Payload):
     """
@@ -97,7 +85,7 @@ class MetadataPayload(Payload):
         super(MetadataPayload, self).__init__()
         self.metadata_type = metadata_type
         self.public_key = str(public_key)
-        self.timestamp = time2float(timestamp)
+        self.timestamp = time2float(timestamp) if isinstance(timestamp, datetime) else timestamp
         self.tc_pointer = tc_pointer
         self.signature = str(signature)
 
@@ -116,6 +104,17 @@ class MetadataPayload(Payload):
     def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer):
         return MetadataPayload(metadata_type, public_key, timestamp, tc_pointer)
 
+    @classmethod
+    def from_signed_blob(cls, data, check_signature=True):
+        payload = serializer.unpack_to_serializables([cls, ], data)[0]
+        payload.signature = data[-SIGNATURE_SIZE:]
+        data_unsigned = data[:-SIGNATURE_SIZE]
+        if check_signature:
+            key = crypto.key_from_public_bin(payload.public_key)
+            if not crypto.is_valid_signature(key, data_unsigned, payload.signature):
+                raise InvalidSignatureException
+        return payload
+
     def to_dict(self):
         return {
             "metadata_type": self.metadata_type,
@@ -126,9 +125,19 @@ class MetadataPayload(Payload):
         }
 
     def serialized(self, key=None):
+        # If we are going to sign it, we must provide a matching key
+        if key and self.public_key != str(key.pub().key_to_bin()):
+                raise KeysMismatchException(self.public_key, str(key.pub().key_to_bin()))
+
         serialized_data = serializer.pack_multiple(self.to_pack_list())[0]
-        signature = (ECCrypto().create_signature(key, serialized_data) if key else self.signature)
+        signature = ECCrypto().create_signature(key, serialized_data) if key else self.signature
+        #self.from_signed_blob(''.join(str(serialized_data)+str(signature)))
         return str(serialized_data), str(signature)
+
+    @classmethod
+    def from_file(cls, filepath):
+        with open(filepath, 'rb') as f:
+            return cls.from_signed_blob(f.read())
 
 
 class TorrentMetadataPayload(MetadataPayload):
@@ -187,12 +196,6 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
         return data
 
     @classmethod
-    def from_file(cls, filepath):
-        with open(filepath, 'rb') as f:
-            serialized_data = f.read()
-            return serializer.unpack_to_serializables([cls, ], serialized_data)[0]
-
-    @classmethod
     def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, version):
         return ChannelMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size,
                                       title, tags, version)
@@ -228,3 +231,4 @@ class DeletedMetadataPayload(MetadataPayload):
         dct = super(DeletedMetadataPayload, self).to_dict()
         dct.update({"delete_signature": self.delete_signature})
         return dct
+
