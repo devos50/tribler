@@ -21,30 +21,35 @@ def define_binding(db):
         deleted = orm.Optional(bool, default=False)
         _payload_class = MetadataPayload
 
-        def serialized(self, key=None):
-            return self._payload_class(**self.to_dict()).serialized(key)
+        def _serialized(self, key=None):
+            return self._payload_class(**self.to_dict())._serialized(key)
 
-        def serialized_delete(self, key):
+        def serialized(self, key=None):
+            return ''.join(self._serialized(key))
+
+        def _serialized_delete(self, key):
             """
             Create a special command to delete this metadata and encode it for transfer.
             """
             my_dict = Metadata.to_dict(self)
             my_dict.update({"metadata_type": MetadataTypes.DELETED.value,
                             "delete_signature": self.signature})
-            print my_dict
-            return DeletedMetadataPayload(**my_dict).serialized(key)
+            return DeletedMetadataPayload(**my_dict)._serialized(key)
+
+        def serialized_delete(self, key):
+            return ''.join(self._serialized_delete(key))
 
         def to_file(self, filename, key=None):
             with open(filename, 'wb') as output_file:
-                output_file.write(''.join(self.serialized(key)))
+                output_file.write(self.serialized(key))
 
         def to_delete_file(self, key, filename):
             with open(filename, 'wb') as output_file:
-                output_file.write(''.join(self.serialized_delete(key)))
+                output_file.write(self.serialized_delete(key))
 
         def sign(self, key):
             self.public_key = buffer(key.pub().key_to_bin())
-            _, self.signature = self.serialized(key)
+            _, self.signature = self._serialized(key)
 
         def has_valid_signature(self):
             crypto = ECCrypto()

@@ -564,13 +564,13 @@ class TestMetadataDownloadEndpoint(AbstractApiTest):
     @trial_timeout(10)
     def test_add_metadata_download(self):
         """
-        Test adding a metadata download to the Tribler core
+        Test adding a channel metadata download to the Tribler core
         """
         def verify_download(_):
             self.assertGreaterEqual(len(self.session.get_downloads()), 1)
 
         post_data = {'uri': 'file:%s' % os.path.join(TESTS_DATA_DIR, 'sample.mdblob'), 'metadata_download': '1'}
-        expected_json = {'started': True, 'infohash': '31' * 20}
+        expected_json = {'started': True, 'infohash': '3ee395bc1edb6f84ccfc605fee77644753bd1226'}
         return self.do_request('downloads', expected_code=200, request_type='PUT', post_data=post_data,
                                expected_json=expected_json).addCallback(verify_download)
 

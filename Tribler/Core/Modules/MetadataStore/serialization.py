@@ -124,7 +124,7 @@ class MetadataPayload(Payload):
             "signature": self.signature
         }
 
-    def serialized(self, key=None):
+    def _serialized(self, key=None):
         # If we are going to sign it, we must provide a matching key
         if key and self.public_key != str(key.pub().key_to_bin()):
                 raise KeysMismatchException(self.public_key, str(key.pub().key_to_bin()))
@@ -133,6 +133,9 @@ class MetadataPayload(Payload):
         signature = ECCrypto().create_signature(key, serialized_data) if key else self.signature
         #self.from_signed_blob(''.join(str(serialized_data)+str(signature)))
         return str(serialized_data), str(signature)
+
+    def serialized(self, key=None):
+        return ''.join(self._serialized(key))
 
     @classmethod
     def from_file(cls, filepath):

@@ -153,5 +153,4 @@ class TestTorrentMetadata(TestAsServer):
         rand_key = ECCrypto().generate_key('low')
         metadata = self.session.lm.mds.TorrentMetadata.from_dict({"timestamp":datetime.utcnow()})
         metadata.sign(rand_key)
-        metadata.to_file("/tmp/m1.mdblob")
         self.assertTrue(metadata.has_valid_signature())
