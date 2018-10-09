@@ -137,7 +137,7 @@ def define_binding(db):
             for metadata in metadata_list:
                 new_version += 1
                 with open(os.path.join(channel_dir, str(new_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
-                    serialized = metadata.serialized_delete(self._my_key) if metadata.deleted else metadata.serialized()
+                    serialized = metadata.serialized_delete() if metadata.deleted else metadata.serialized()
                     f.write(''.join(serialized))
 
             # Make torrent out of dir with metadata files

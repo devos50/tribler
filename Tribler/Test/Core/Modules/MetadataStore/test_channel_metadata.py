@@ -1,8 +1,6 @@
 import os
-from datetime import datetime, time
-from time import sleep
+from datetime import datetime
 
-from pony import orm
 from pony.orm import db_session
 from twisted.internet.defer import inlineCallbacks
 
@@ -12,7 +10,6 @@ from Tribler.Core.exceptions import DuplicateTorrentFileError, DuplicateChannelN
 from Tribler.Test.common import TORRENT_UBUNTU_FILE
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
-from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
 
 
 class TestChannelMetadata(TestAsServer):

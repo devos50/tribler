@@ -131,7 +131,6 @@ class MetadataPayload(Payload):
 
         serialized_data = serializer.pack_multiple(self.to_pack_list())[0]
         signature = ECCrypto().create_signature(key, serialized_data) if key else self.signature
-        #self.from_signed_blob(''.join(str(serialized_data)+str(signature)))
         return str(serialized_data), str(signature)
 
     def serialized(self, key=None):
@@ -155,8 +154,8 @@ class TorrentMetadataPayload(MetadataPayload):
                                                      signature=signature, **kwargs)
         self.infohash = str(infohash)
         self.size = size
-        self.title = str(title)
-        self.tags = str(tags)
+        self.title = title.encode("utf-8")
+        self.tags = tags.encode("utf-8")
 
     def to_pack_list(self):
         data = super(TorrentMetadataPayload, self).to_pack_list()

@@ -42,11 +42,8 @@ class TestMetadataStore(TriblerCoreTest):
         """
         Test whether we are able to process files in a directory containing torrent metadata
         """
-        my_key = ECCrypto().generate_key(u"curve25519")
-        pub_key_bin = my_key.pub().key_to_bin()
 
-        test_torrent_metadata = self.metadata_store.TorrentMetadata(title='test', public_key=pub_key_bin)
-        test_torrent_metadata.sign(my_key)
+        test_torrent_metadata = self.metadata_store.TorrentMetadata(title='test')
         metadata_path = os.path.join(self.session_base_dir, 'metadata.data')
         test_torrent_metadata.to_file(metadata_path)
         # We delete this TorrentMeta info now, it should be added again to the database when loading it
@@ -56,8 +53,7 @@ class TestMetadataStore(TriblerCoreTest):
 
         # Test whether we delete existing metadata when loading a DeletedMetadata blob
         metadata = self.metadata_store.TorrentMetadata(infohash='1'*20)
-        metadata.sign(my_key)
-        metadata.to_delete_file(my_key, metadata_path)
+        metadata.to_delete_file(metadata_path)
         loaded_metadata = self.metadata_store.process_channel_dir_file(metadata_path)
         # Make sure the original metadata is deleted
         self.assertIsNone(loaded_metadata)

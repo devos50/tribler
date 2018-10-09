@@ -22,31 +22,37 @@ def define_binding(db):
         _payload_class = MetadataPayload
         _my_key = None
 
+        def __init__(self, *args, **kwargs):
+            super(Metadata, self).__init__(*args, **kwargs)
+            # If no key/signature given, sign with our own key.
+            if "public_key" not in kwargs or (kwargs["public_key"]==self._my_key and "signature" not in kwargs):
+                self.sign(self._my_key)
+
         def _serialized(self, key=None):
             return self._payload_class(**self.to_dict())._serialized(key)
 
         def serialized(self, key=None):
             return ''.join(self._serialized(key))
 
-        def _serialized_delete(self, key):
+        def _serialized_delete(self):
             """
             Create a special command to delete this metadata and encode it for transfer.
             """
             my_dict = Metadata.to_dict(self)
             my_dict.update({"metadata_type": MetadataTypes.DELETED.value,
                             "delete_signature": self.signature})
-            return DeletedMetadataPayload(**my_dict)._serialized(key)
+            return DeletedMetadataPayload(**my_dict)._serialized(self._my_key)
 
-        def serialized_delete(self, key):
-            return ''.join(self._serialized_delete(key))
+        def serialized_delete(self):
+            return ''.join(self._serialized_delete())
 
         def to_file(self, filename, key=None):
             with open(filename, 'wb') as output_file:
                 output_file.write(self.serialized(key))
 
-        def to_delete_file(self, key, filename):
+        def to_delete_file(self, filename):
             with open(filename, 'wb') as output_file:
-                output_file.write(self.serialized_delete(key))
+                output_file.write(self.serialized_delete())
 
         def sign(self, key=None):
             if not key:

@@ -245,11 +245,11 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
             if self.is_chant_channel:
                 # We have to get my channel again since we are in a different database session now
                 with db_session:
-                    channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
-                    torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
+                    channel = self.session.lm.mds.get_my_channel()
                     channel.add_torrent_to_channel(torrent_def, extra_info)
                     #TODO: make this run separately from the GUI
                     channel.commit_channel_torrent()
+                    torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
                     self.session.lm.updated_my_channel(torrent_path)
             else:
                 channel = self.get_channel_from_db(self.cid)
@@ -327,15 +327,14 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
                 request.setResponseCode(http.NOT_ALLOWED)
                 return json.dumps({"error": "you can only add torrents to your own chant channel"})
 
-            my_channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
+            my_channel = self.session.lm.mds.get_my_channel()
             if not my_channel:
                 return ChannelsTorrentsEndpoint.return_404(request)
 
             with db_session:
                 for torrent_path in self.path.split(","):
                     infohash = torrent_path.decode('hex')
-                    torrent_metadata = self.session.lm.mds.TorrentMetadata.get(
-                        public_key=self.cid, infohash=infohash)
+                    torrent_metadata = self.session.lm.mds.TorrentMetadata.get(public_key=self.cid, infohash=infohash)
                     if torrent_metadata is None:
                         failed_torrents.append(torrent_path)
                     else:

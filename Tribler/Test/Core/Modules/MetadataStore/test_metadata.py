@@ -4,7 +4,6 @@ from pony.orm import db_session
 
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataPayload
 from Tribler.Test.test_as_server import TestAsServer
-from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 
 class TestMetadata(TestAsServer):
     """
@@ -46,17 +45,16 @@ class TestMetadata(TestAsServer):
         """
         Test whether a signature can be validated correctly
         """
-        rand_key = ECCrypto().generate_key('low')
         metadata = self.session.lm.mds.Metadata.from_dict({})
-        metadata.sign(rand_key)
         self.assertTrue(metadata.has_valid_signature())
 
+        saved_key = metadata.public_key
         # Mess with the public key
         metadata.public_key = 'a'
         self.assertFalse(metadata.has_valid_signature())
 
         # Mess with the signature
-        metadata.public_key = rand_key.pub().key_to_bin()
+        metadata.public_key = saved_key
         metadata.signature = 'a'
         self.assertFalse(metadata.has_valid_signature())
 

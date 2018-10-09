@@ -144,13 +144,3 @@ class TestTorrentMetadata(TestAsServer):
         autocomplete_terms = self.session.lm.mds.TorrentMetadata.get_auto_complete_terms("sheep", 2)
         self.assertEqual(len(autocomplete_terms), 1)
 
-    @db_session
-    def test_has_valid_signature(self):
-        """
-        Test whether a signature can be validated correctly
-        """
-        from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
-        rand_key = ECCrypto().generate_key('low')
-        metadata = self.session.lm.mds.TorrentMetadata.from_dict({"timestamp":datetime.utcnow()})
-        metadata.sign(rand_key)
-        self.assertTrue(metadata.has_valid_signature())
