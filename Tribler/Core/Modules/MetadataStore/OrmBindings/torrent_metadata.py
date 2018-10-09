@@ -3,9 +3,7 @@ from datetime import datetime
 from pony import orm
 from pony.orm import db_session
 
-from Tribler.Core.Modules.MetadataStore.OrmBindings.metadata import EMPTY_SIG
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, TorrentMetadataPayload
-from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
 
 
 def define_binding(db):

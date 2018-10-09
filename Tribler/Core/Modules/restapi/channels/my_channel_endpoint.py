@@ -108,14 +108,14 @@ class MyChannelEndpoint(BaseChannelsEndpoint):
                     request.setResponseCode(http.NOT_FOUND)
                     return json.dumps({"error": NO_CHANNEL_CREATED_RESPONSE_MSG})
 
-                my_channel.update_metadata(my_key, update_dict={
+                my_channel.update_metadata(update_dict={
                     "tags": unicode(get_parameter(parameters, 'description'), 'utf-8'),
                     "title": unicode(get_parameter(parameters, 'name'), 'utf-8')
                 })
 
                 if my_channel.staged_entries_list:  # Update torrent if we have uncommitted content in the channel
                     #TODO: make this a separate button
-                    my_channel.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
+                    my_channel.commit_channel_torrent()
                     torrent_path = os.path.join(self.session.lm.mds.channels_dir, my_channel.dir_name + ".torrent")
                     self.session.lm.updated_my_channel(torrent_path)
 

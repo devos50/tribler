@@ -161,9 +161,9 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
         if self.is_chant_channel:
             try:
                 torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
-                channel.add_torrent_to_channel(key, torrent_def, extra_info)
+                channel.add_torrent_to_channel(torrent_def, extra_info)
                 #TODO: add a separate button for publishing the channel
-                channel.commit_channel_torrent(key, self.session.lm.mds.channels_dir)
+                channel.commit_channel_torrent()
                 self.session.lm.updated_my_channel(torrent_path)
             except DuplicateTorrentFileError as exc:
                 return BaseChannelsEndpoint.return_500(self, request, exc)
@@ -247,9 +247,9 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
                 with db_session:
                     channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
                     torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
-                    channel.add_torrent_to_channel(my_key, torrent_def, extra_info)
+                    channel.add_torrent_to_channel(torrent_def, extra_info)
                     #TODO: make this run separately from the GUI
-                    channel.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
+                    channel.commit_channel_torrent()
                     self.session.lm.updated_my_channel(torrent_path)
             else:
                 channel = self.get_channel_from_db(self.cid)
@@ -341,7 +341,7 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
                     else:
                         my_channel.delete_torrent_from_channel(infohash)
                         #TODO: move this to separate call/method/endpoint
-                        my_channel.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
+                        my_channel.commit_channel_torrent()
                         new_torrent_path = os.path.join(self.session.lm.mds.channels_dir,
                                                         my_channel.dir_name + ".torrent")
                         self.session.lm.updated_my_channel(new_torrent_path)

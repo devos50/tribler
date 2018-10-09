@@ -20,6 +20,7 @@ def define_binding(db):
         addition_timestamp = orm.Optional(datetime, default=datetime.utcnow)
         deleted = orm.Optional(bool, default=False)
         _payload_class = MetadataPayload
+        _my_key = None
 
         def _serialized(self, key=None):
             return self._payload_class(**self.to_dict())._serialized(key)
@@ -47,7 +48,9 @@ def define_binding(db):
             with open(filename, 'wb') as output_file:
                 output_file.write(self.serialized_delete(key))
 
-        def sign(self, key):
+        def sign(self, key=None):
+            if not key:
+                key = self._my_key
             self.public_key = buffer(key.pub().key_to_bin())
             _, self.signature = self._serialized(key)
 

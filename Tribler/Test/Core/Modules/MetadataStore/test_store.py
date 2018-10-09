@@ -27,8 +27,10 @@ class TestMetadataStore(TriblerCoreTest):
     @inlineCallbacks
     def setUp(self):
         yield super(TestMetadataStore, self).setUp()
+        my_key = ECCrypto().generate_key(u"curve25519")
 
-        self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'), self.session_base_dir)
+        self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'),
+                                            self.session_base_dir, my_key)
 
     @inlineCallbacks
     def tearDown(self):

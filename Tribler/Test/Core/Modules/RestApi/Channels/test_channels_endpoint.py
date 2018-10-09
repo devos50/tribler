@@ -46,8 +46,7 @@ class AbstractTestChantEndpoint(AbstractApiTest):
         """
         Create your channel, with a given name and description.
         """
-        my_key = self.session.trustchain_keypair
-        return self.session.lm.mds.ChannelMetadata.create_channel(my_key, name, description)
+        return self.session.lm.mds.ChannelMetadata.create_channel(name, description)
 
     @db_session
     def add_random_torrent_to_my_channel(self, name=None):

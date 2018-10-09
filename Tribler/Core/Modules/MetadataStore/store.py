@@ -47,10 +47,11 @@ class UnknownBlobTypeException(Exception):
 
 class MetadataStore(object):
 
-    def __init__(self, db_filename, channels_dir):
+    def __init__(self, db_filename, channels_dir, my_key):
         self.db_filename = db_filename
         self.channels_dir = channels_dir
         self.serializer = Serializer()
+        self.my_key = my_key
         self._logger = logging.getLogger(self.__class__.__name__)
 
         create_db = (db_filename == ":memory:" or not os.path.isfile(self.db_filename))
@@ -64,6 +65,9 @@ class MetadataStore(object):
         self.Metadata = metadata.define_binding(self._db)
         self.TorrentMetadata = torrent_metadata.define_binding(self._db)
         self.ChannelMetadata = channel_metadata.define_binding(self._db)
+
+        self.Metadata._my_key = my_key
+        self.ChannelMetadata._channels_dir = channels_dir
 
         self._db.bind(provider='sqlite', filename=db_filename, create_db=create_db)
         if create_db:
@@ -128,3 +132,7 @@ class MetadataStore(object):
 
         # Unknown metadata type, raise exception
         raise UnknownBlobTypeException
+
+    @db_session
+    def get_my_channel(self):
+        return self.ChannelMetadata.get_channel_with_id(self.my_key.pub().key_to_bin())

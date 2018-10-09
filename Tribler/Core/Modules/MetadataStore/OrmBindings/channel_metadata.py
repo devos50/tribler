@@ -37,9 +37,10 @@ def define_binding(db):
         subscribed = orm.Optional(bool, default=False)
         votes = orm.Optional(int, size=64, default=0)
         _payload_class = ChannelMetadataPayload
+        _channels_dir = None
 
         @db_session
-        def update_metadata(self, key, update_dict=None):
+        def update_metadata(self, update_dict=None):
             now = datetime.utcnow()
             channel_dict = self.to_dict()
             channel_dict.update(update_dict or {})
@@ -49,7 +50,7 @@ def define_binding(db):
                 "torrent_date": now
             })
             self.set(**channel_dict)
-            self.sign(key)
+            self.sign()
 
         @classmethod
         @db_session
@@ -85,52 +86,48 @@ def define_binding(db):
 
         @classmethod
         @db_session
-        def create_channel(cls, key, title, description):
+        def create_channel(cls, title, description):
             """
             Create a channel and sign it with a given key.
-            :param key: The key to sign the channel metadata with
             :param title: The title of the channel
             :param description: The description of the channel
             :return: The channel metadata
             """
-            if ChannelMetadata.get_channel_with_id(key.pub().key_to_bin()):
+            if ChannelMetadata.get_channel_with_id(cls._my_key.pub().key_to_bin()):
                 raise DuplicateChannelNameError()
 
-            my_channel = cls(public_key=buffer(key.pub().key_to_bin()), title=title,
+            my_channel = cls(public_key=buffer(cls._my_key.pub().key_to_bin()), title=title,
                              tags=description, subscribed=True)
-            my_channel.sign(key)
+            my_channel.sign()
             return my_channel
 
-        def consolidate_channel_torrent(self, key, channels_dir):
+        def consolidate_channel_torrent(self):
             """
             Delete the channel dir contents and create it anew.
             Use it to consolidate fragmented channel torrent directories.
             :param key: The public/private key, used to sign the data
-            :param channels_dir: The directory where all channels are stored
             """
 
-            self.commit_channel_torrent(key, channels_dir)
+            self.commit_channel_torrent()
 
-            folder = os.path.join(channels_dir, self.dir_name)
+            folder = os.path.join(self._channels_dir, self.dir_name)
             for filename in os.listdir(folder):
                 file_path = os.path.join(folder, filename)
                 if filename.endswith(BLOB_EXTENSION):
                     os.unlink(file_path)
                 else:
                     raise ValueError
-            self.update_channel_torrent(key, channels_dir, self.contents_list)
+            self.update_channel_torrent(self.contents_list)
 
-        def update_channel_torrent(self, key, channels_dir, metadata_list):
+        def update_channel_torrent(self, metadata_list):
             """
             Channel torrents are append-only to support seeding the old versions
             from the same dir and avoid updating already downloaded blobs.
-            :param key: The public/private key, used to sign the data
-            :param channels_dir: The directory where all channels are stored
             :param metadata_list: The list of metadata entries to add to the torrent dir
             :return The new infohash, should be used to update the downloads
             """
             # Create dir for metadata files
-            channel_dir = os.path.abspath(os.path.join(channels_dir, self.dir_name))
+            channel_dir = os.path.abspath(os.path.join(self._channels_dir, self.dir_name))
             if not os.path.isdir(channel_dir):
                 os.makedirs(channel_dir)
 
@@ -140,29 +137,27 @@ def define_binding(db):
             for metadata in metadata_list:
                 new_version += 1
                 with open(os.path.join(channel_dir, str(new_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
-                    serialized = metadata.serialized_delete(key) if metadata.deleted else metadata.serialized()
+                    serialized = metadata.serialized_delete(self._my_key) if metadata.deleted else metadata.serialized()
                     f.write(''.join(serialized))
 
             # Make torrent out of dir with metadata files
-            infohash = create_torrent_from_dir(channel_dir, os.path.join(channels_dir, self.dir_name + ".torrent"))
-            self.update_metadata(key, update_dict={"infohash": infohash, "version": new_version})
+            infohash = create_torrent_from_dir(channel_dir, os.path.join(self._channels_dir, self.dir_name + ".torrent"))
+            self.update_metadata(update_dict={"infohash": infohash, "version": new_version})
 
             # Write the channel mdblob away
-            with open(os.path.join(channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
+            with open(os.path.join(self._channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
                 out_file.write(''.join(self.serialized()))
             return infohash
 
-        def commit_channel_torrent(self, key, channels_dir):
+        def commit_channel_torrent(self):
             """
             Collect new/uncommitted and marked for deletion metadata entries, commit them to channel torrent and
             remove the obsolete entries if the commit succeeds.
-            :param key: The public/private key, used to sign the data
-            :param channels_dir: The directory where all channels are stored
             :return The new infohash, should be used to update the downloads
             """
             new_infohash = None
             try:
-                new_infohash = self.update_channel_torrent(key, channels_dir, self.staged_entries_list)
+                new_infohash = self.update_channel_torrent(self.staged_entries_list)
             except IOError:
                 print ("Error during channel torrent commit, not going to garbage collect the channel")
             else:
@@ -180,10 +175,9 @@ def define_binding(db):
             return db.TorrentMetadata.get(public_key=self.public_key, infohash=infohash) is not None
 
         @db_session
-        def add_torrent_to_channel(self, key, tdef, extra_info):
+        def add_torrent_to_channel(self, tdef, extra_info):
             """
             Add a torrent to your channel.
-            :param key: The public/private key, used to sign the data
             :param tdef: The torrent definition file of the torrent to add
             :param extra_info: Optional extra info to add to the torrent
             """
@@ -197,9 +191,9 @@ def define_binding(db):
                 "size": tdef.get_length(),
                 "torrent_date": datetime.fromtimestamp(tdef.get_creation_date()),
                 "tc_pointer": 0,
-                "public_key": key.pub().key_to_bin()
+                "public_key": self._my_key.pub().key_to_bin()
             })
-            torrent_metadata.sign(key)
+            torrent_metadata.sign()
 
         @property
         def newer_entries(self):

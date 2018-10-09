@@ -110,12 +110,12 @@ class ChannelsDiscoveredEndpoint(BaseChannelsEndpoint):
             my_channel_id = my_key.pub().key_to_bin()
 
             # Do not allow to add a channel twice
-            if self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id):
+            if self.session.lm.mds.get_my_channel():
                 request.setResponseCode(http.INTERNAL_SERVER_ERROR)
                 return json.dumps({"error": "channel already exists"})
 
             title = unicode(parameters['name'][0], 'utf-8')
-            self.session.lm.mds.ChannelMetadata.create_channel(my_key, title, description)
+            self.session.lm.mds.ChannelMetadata.create_channel(title, description)
             return json.dumps({
                 "added": str(my_channel_id).encode("hex"),
             })

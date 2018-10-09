@@ -480,7 +480,7 @@ class TestChannelTorrentsChantEndpoint(AbstractTestChantEndpoint):
         """
         my_channel = self.create_my_channel('test', 'test')
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
-        my_channel.add_torrent_to_channel(self.session.trustchain_keypair, tdef, None)
+        my_channel.add_torrent_to_channel(tdef, None)
 
         with open(TORRENT_UBUNTU_FILE, mode='rb') as torrent_file:
             torrent_64 = base64.b64encode(torrent_file.read())
@@ -569,8 +569,7 @@ class TestModifyChantChannelTorrentEndpoint(AbstractTestChantEndpoint):
         with db_session:
             my_channel = self.create_my_channel('test', 'test123')
             random_torrent = self.add_random_torrent_to_my_channel(name='bla')
-            my_channel.update_channel_torrent(self.session.trustchain_keypair, self.session.lm.mds.channels_dir,
-                                              [random_torrent])
+            my_channel.commit_channel_torrent()
 
         self.should_check_equality = False
         return self.do_request('channels/discovered/%s/torrents/%s' %

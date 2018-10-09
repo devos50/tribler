@@ -89,11 +89,10 @@ class TestChannelMetadata(TestAsServer):
         """
         Test whether creating a channel works as expected
         """
-        my_key = self.session.trustchain_keypair
-        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
+        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
         self.assertTrue(channel_metadata)
         self.assertRaises(DuplicateChannelNameError,
-                          self.session.lm.mds.ChannelMetadata.create_channel, my_key, 'test', 'test')
+                          self.session.lm.mds.ChannelMetadata.create_channel, 'test', 'test')
 
     @db_session
     def test_update_metadata(self):
@@ -109,7 +108,7 @@ class TestChannelMetadata(TestAsServer):
             "tags": "eee",
             "title": "qqq"
         }
-        channel_metadata.update_metadata(my_key, update_dict=update_dict)
+        channel_metadata.update_metadata(update_dict=update_dict)
         self.assertDictContainsSubset(update_dict, channel_metadata.to_dict())
 
     @db_session
@@ -149,8 +148,7 @@ class TestChannelMetadata(TestAsServer):
         Test retrieving a channel with a specific ID
         """
         self.assertIsNone(self.session.lm.mds.ChannelMetadata.get_channel_with_id('a' * 20))
-        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(
-            self.session.trustchain_keypair, 'test', 'test')
+        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
         self.assertIsNotNone(self.session.lm.mds.ChannelMetadata.get_channel_with_id(channel_metadata.public_key))
 
     @db_session
@@ -158,11 +156,10 @@ class TestChannelMetadata(TestAsServer):
         """
         Test whether adding new torrents to a channel works as expected
         """
-        my_key = self.session.trustchain_keypair
-        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
+        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
         self.session.lm.mds.TorrentMetadata.from_dict(
             dict(self.torrent_template, public_key=channel_metadata.public_key))
-        channel_metadata.commit_channel_torrent(my_key, self.session.lm.mds.channels_dir)
+        channel_metadata.commit_channel_torrent()
 
         self.assertEqual(channel_metadata.version, 1)
         self.assertEqual(channel_metadata.size, 1)
@@ -172,34 +169,31 @@ class TestChannelMetadata(TestAsServer):
         """
         Test adding a torrent to your channel
         """
-        my_key = self.session.trustchain_keypair
-        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
+        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
-        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
+        channel_metadata.add_torrent_to_channel(tdef, None)
         self.assertTrue(channel_metadata.contents_list)
-        self.assertRaises(DuplicateTorrentFileError, channel_metadata.add_torrent_to_channel, my_key, tdef, None)
+        self.assertRaises(DuplicateTorrentFileError, channel_metadata.add_torrent_to_channel, tdef, None)
 
     @db_session
     def test_delete_torrent_from_channel(self):
         """
         Test deleting a torrent from your channel
         """
-        channels_dir = self.session.lm.mds.channels_dir
-        my_key = self.session.trustchain_keypair
-        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
+        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
 
         # Check that nothing is committed when deleting uncommited torrent metadata
-        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
+        channel_metadata.add_torrent_to_channel(tdef, None)
         channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
         self.assertEqual(0, len(channel_metadata.contents_list))
 
         # Check append-only deletion process
-        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
-        channel_metadata.commit_channel_torrent(my_key, channels_dir)
+        channel_metadata.add_torrent_to_channel(tdef, None)
+        channel_metadata.commit_channel_torrent()
         self.assertEqual(1, len(channel_metadata.contents_list))
         channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
-        channel_metadata.commit_channel_torrent(my_key, channels_dir)
+        channel_metadata.commit_channel_torrent()
         self.assertEqual(0, len(channel_metadata.contents_list))
 
 
@@ -208,20 +202,18 @@ class TestChannelMetadata(TestAsServer):
         """
         Test completely re-commit your channel
         """
-        channels_dir = self.session.lm.mds.channels_dir
-        my_key = self.session.trustchain_keypair
-        channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
-        my_dir = os.path.abspath(os.path.join(channels_dir, channel_metadata.dir_name))
+        channel = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
+        my_dir = os.path.abspath(os.path.join(self.session.lm.mds.channels_dir, channel.dir_name))
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
 
-        channel_metadata.add_torrent_to_channel(my_key, tdef, None)
+        channel.add_torrent_to_channel(tdef, None)
         self.session.lm.mds.TorrentMetadata.from_dict(
-            dict(self.torrent_template, public_key=channel_metadata.public_key))
-        channel_metadata.commit_channel_torrent(my_key, channels_dir)
-        channel_metadata.delete_torrent_from_channel(tdef.get_infohash())
+            dict(self.torrent_template, public_key=channel.public_key))
+        channel.commit_channel_torrent()
+        channel.delete_torrent_from_channel(tdef.get_infohash())
 
-        self.assertEqual(2, len(channel_metadata.contents_list))
-        channel_metadata.consolidate_channel_torrent(my_key, channels_dir)
+        self.assertEqual(2, len(channel.contents_list))
+        channel.consolidate_channel_torrent()
         self.assertEqual(1, len(os.listdir(my_dir)))
 
 

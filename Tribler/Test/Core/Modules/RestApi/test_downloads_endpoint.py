@@ -580,10 +580,9 @@ class TestMetadataDownloadEndpoint(AbstractApiTest):
         """
         Test whether adding metadata with an invalid signature results in an error
         """
-        my_key = self.session.trustchain_keypair
         file_path = os.path.join(self.session_base_dir, "invalid.mdblob")
         with open(file_path, "wb") as out_file:
-            my_channel = self.session.lm.mds.ChannelMetadata.create_channel(my_key, 'test', 'test')
+            my_channel = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
             my_channel.signature = EMPTY_SIG
             out_file.write(my_channel.serialized())
 

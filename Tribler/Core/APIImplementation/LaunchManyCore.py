@@ -490,7 +490,7 @@ class TriblerLaunchMany(TaskManager):
             channels_dir = os.path.join(self.session.config.get_state_dir(),
                                         self.session.config.get_chant_channels_dir())
             database_path = os.path.join(self.session.config.get_state_dir(), 'sqlite', 'metadata.db')
-            self.mds = MetadataStore(database_path, channels_dir)
+            self.mds = MetadataStore(database_path, channels_dir, self.session.trustchain_keypair)
 
         self.session.set_download_states_callback(self.sesscb_states_callback)
 
