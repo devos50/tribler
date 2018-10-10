@@ -79,7 +79,7 @@ class MetadataPayload(Payload):
     Payload for metadata.
     """
 
-    format_list = ['I', '74s', 'f', 'I']
+    format_list = ['I', '74s', 'f', 'Q']
 
     def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature=EMPTY_SIG, **kwargs):
         super(MetadataPayload, self).__init__()
@@ -97,7 +97,7 @@ class MetadataPayload(Payload):
         data = [('I', self.metadata_type),
                 ('74s', self.public_key),
                 ('f', self.timestamp),
-                ('I', self.tc_pointer)]
+                ('Q', self.tc_pointer)]
         return data
 
     @classmethod
@@ -146,7 +146,7 @@ class TorrentMetadataPayload(MetadataPayload):
     """
     Payload for metadata that stores a torrent.
     """
-    format_list = MetadataPayload.format_list + ['20s', 'I', 'varlenI', 'varlenI']
+    format_list = MetadataPayload.format_list + ['20s', 'Q', 'varlenI', 'varlenI']
 
     def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags,
                  signature=EMPTY_SIG, **kwargs):
@@ -160,7 +160,7 @@ class TorrentMetadataPayload(MetadataPayload):
     def to_pack_list(self):
         data = super(TorrentMetadataPayload, self).to_pack_list()
         data.append(('20s', self.infohash))
-        data.append(('I', self.size))
+        data.append(('Q', self.size))
         data.append(('varlenI', self.title))
         data.append(('varlenI', self.tags))
         return data
@@ -184,7 +184,7 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
     """
     Payload for metadata that stores a channel.
     """
-    format_list = TorrentMetadataPayload.format_list + ['I']
+    format_list = TorrentMetadataPayload.format_list + ['Q']
 
     def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, version,
                  signature=EMPTY_SIG, **kwargs):
@@ -194,7 +194,7 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
 
     def to_pack_list(self):
         data = super(ChannelMetadataPayload, self).to_pack_list()
-        data.append(('I', self.version))
+        data.append(('Q', self.version))
         return data
 
     @classmethod
