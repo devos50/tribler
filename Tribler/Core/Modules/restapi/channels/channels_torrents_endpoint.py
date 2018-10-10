@@ -13,6 +13,8 @@ import Tribler.Core.Utilities.json_util as json
 from Tribler.Core.Utilities.utilities import http_get
 from pony.orm import db_session
 
+from TriblerGUI.defs import UNCOMMITTED, TODELETE, COMMITTED
+
 UNKNOWN_TORRENT_MSG = "this torrent is not found in the specified channel"
 UNKNOWN_COMMUNITY_MSG = "the community for the specified channel cannot be found"
 
@@ -68,7 +70,17 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
             with db_session:
                 channel = self.session.lm.mds.ChannelMetadata.get(public_key=self.cid)
                 if channel:
-                    results_local_torrents_channel = map(convert_torrent_metadata_to_tuple, channel.contents_list)
+                    if channel == self.session.lm.mds.get_my_channel():
+                        # That's our channel, it gets special treatment
+                        uncommitted = map(lambda x: convert_torrent_metadata_to_tuple(x, UNCOMMITTED),
+                                          list(channel.uncommitted_contents))
+                        deleted = map(lambda x: convert_torrent_metadata_to_tuple(x, TODELETE),
+                                      list(channel.deleted_contents))
+                        committed = map(lambda x: convert_torrent_metadata_to_tuple(x, COMMITTED),
+                                        list(channel.committed_contents))
+                        results_local_torrents_channel = uncommitted + deleted + committed
+                    else:
+                        results_local_torrents_channel = map(convert_torrent_metadata_to_tuple, channel.contents_list)
                 else:
                     return ChannelsTorrentsEndpoint.return_404(request)
         else:

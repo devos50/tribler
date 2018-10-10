@@ -70,20 +70,6 @@ def define_binding(db):
             else:
                 return ChannelMetadata.from_payload(payload)
 
-        @property
-        @db_session
-        def contents_list(self):
-            return list(self.contents)
-
-        @property
-        def contents(self):
-            return db.TorrentMetadata.select(lambda g: g.public_key == self.public_key and g != self)
-
-        @property
-        def dir_name(self):
-            # Have to limit this to support Windows file path length limit
-            return str(self.public_key).encode('hex')[-CHANNEL_DIR_NAME_LENGTH:]
-
         @classmethod
         @db_session
         def create_channel(cls, title, description):
@@ -196,14 +182,30 @@ def define_binding(db):
             torrent_metadata.sign()
 
         @property
+        def contents(self):
+            return db.TorrentMetadata.select(lambda g: g.public_key == self.public_key and g != self)
+
+        @property
+        def uncommitted_contents(self):
+            return (g for g in self.newer_entries if not g.deleted)
+
+        @property
+        def committed_contents(self):
+            return (g for g in self.older_entries if not g.deleted)
+
+        @property
+        def deleted_contents(self):
+            return (g for g in self.contents if g.deleted)
+
+        @property
+        def dir_name(self):
+            # Have to limit this to support Windows file path length limit
+            return str(self.public_key).encode('hex')[-CHANNEL_DIR_NAME_LENGTH:]
+
+        @property
         def newer_entries(self):
             return db.Metadata.select(
                 lambda g: g.timestamp > self.timestamp and g.public_key == self.public_key)
-
-        @property
-        @db_session
-        def staged_entries_list(self):
-            return list(db.Metadata.select(lambda g: g.deleted)) + list(self.newer_entries)
 
         @property
         def older_entries(self):
@@ -213,6 +215,16 @@ def define_binding(db):
         @db_session
         def garbage_collect(self):
             orm.delete(g for g in self.older_entries if g.deleted)
+
+        @property
+        @db_session
+        def staged_entries_list(self):
+            return list(self.deleted_contents) + list(self.newer_entries)
+
+        @property
+        @db_session
+        def contents_list(self):
+            return list(self.contents)
 
         @db_session
         def delete_torrent_from_channel(self, infohash):

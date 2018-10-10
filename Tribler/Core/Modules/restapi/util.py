@@ -9,6 +9,7 @@ from Tribler.Core.Modules.MetadataStore.serialization import time2float
 from Tribler.Core.Modules.restapi import VOTE_SUBSCRIBE
 from Tribler.Core.simpledefs import NTFY_TORRENTS
 import Tribler.Core.Utilities.json_util as json
+from TriblerGUI.defs import TODELETE
 
 
 def return_handled_exception(request, exception):
@@ -42,7 +43,7 @@ def convert_channel_metadata_to_tuple(metadata):
            my_vote, unix_timestamp, relevance
 
 
-def convert_torrent_metadata_to_tuple(metadata):
+def convert_torrent_metadata_to_tuple(metadata, commit_status=None):
     """
     Convert some given torrent metadata to a tuple, similar to returned torrents from the database.
     :param metadata: The metadata to convert.
@@ -56,7 +57,7 @@ def convert_torrent_metadata_to_tuple(metadata):
     relevance = 0.9
 
     return (metadata.rowid, infohash, metadata.title, int(metadata.size), category, seeders, leechers,
-            last_tracker_check, None, relevance)
+            last_tracker_check, None, relevance, commit_status)
 
 
 def convert_search_torrent_to_json(torrent):
@@ -94,6 +95,9 @@ def convert_db_torrent_to_json(torrent, include_rel_score=False):
     res_json = {"id": torrent[0], "infohash": torrent[1].encode('hex'), "name": torrent_name, "size": torrent[3],
                 "category": torrent[4], "num_seeders": torrent[5] or 0, "num_leechers": torrent[6] or 0,
                 "last_tracker_check": torrent[7] or 0}
+
+    if len(torrent) >= 11:
+        res_json["commit_status"] = torrent[10]
 
     if include_rel_score:
         res_json["relevance_score"] = torrent[9]
