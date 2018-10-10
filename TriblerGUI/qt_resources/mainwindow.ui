@@ -1050,7 +1050,7 @@ background-color: #e67300;
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>4</number>
+         <number>3</number>
         </property>
         <widget class="HomePage" name="home_page">
          <layout class="QVBoxLayout" name="verticalLayout">
@@ -4021,7 +4021,7 @@ font-size: 18px;</string>
              <item>
               <widget class="QLabel" name="search_results_header_label">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -4048,19 +4048,6 @@ font-weight: bold;</string>
                 <string>Search results</string>
                </property>
               </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_36">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
              </item>
              <item>
               <widget class="QLabel" name="num_search_results_label">
@@ -4626,31 +4613,6 @@ background-color: transparent;
               </spacer>
              </item>
              <item>
-              <widget class="EllipseButton" name="edit_channel_button">
-               <property name="minimumSize">
-                <size>
-                 <width>45</width>
-                 <height>24</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>45</width>
-                 <height>24</height>
-                </size>
-               </property>
-               <property name="cursor">
-                <cursorShape>PointingHandCursor</cursorShape>
-               </property>
-               <property name="styleSheet">
-                <string notr="true"/>
-               </property>
-               <property name="text">
-                <string>EDIT</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <spacer name="horizontalSpacer_6">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -5076,8 +5038,8 @@ border-top: 1px solid #555;
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>661</width>
-               <height>650</height>
+               <width>300</width>
+               <height>646</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_22">
@@ -8308,8 +8270,8 @@ QTabBar::tab:selected {
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>131</width>
-                       <height>260</height>
+                       <width>133</width>
+                       <height>246</height>
                       </rect>
                      </property>
                      <layout class="QFormLayout" name="formLayout_4">
@@ -9412,7 +9374,7 @@ border-top: 1px solid #555;
              <item>
               <widget class="QLabel" name="subscribed_channels_header_label">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -9434,10 +9396,45 @@ border-top: 1px solid #555;
                                             background-color: transparent;
                                             font-size: 20px;
                                             font-weight: bold;
-                                            margin: 10px;</string>
+                                            margin: 10px;
+margin-right: 4px;
+margin-top: 9px;</string>
                </property>
                <property name="text">
                 <string>Trust statistics</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="trust_explain_button">
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>14</pointsize>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border: 1px solid white;
+color: white;
+border-radius: 10px;
+</string>
+               </property>
+               <property name="text">
+                <string>i</string>
                </property>
               </widget>
              </item>
@@ -9447,7 +9444,7 @@ border-top: 1px solid #555;
                 <enum>Qt::Horizontal</enum>
                </property>
                <property name="sizeType">
-                <enum>QSizePolicy::Fixed</enum>
+                <enum>QSizePolicy::Expanding</enum>
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
@@ -9520,7 +9517,7 @@ border-top: 1px solid #555;
              <string notr="true">padding-left: 10px; padding-right: 10px;</string>
             </property>
             <property name="text">
-             <string>You can build trust by contributing to the Tribler network. This is done by exchanging data anonymously or by letting Tribler run idle.</string>
+             <string>You can build trust by contributing bandwidth to the Tribler network. This is done by letting Tribler run idle, or by mining tokens.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -9811,6 +9808,18 @@ border: none;
                 </property>
                 <item>
                  <widget class="QWidget" name="plot_widget" native="true">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>250</height>
+                   </size>
+                  </property>
+                  <property name="baseSize">
+                   <size>
+                    <width>0</width>
+                    <height>250</height>
+                   </size>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">border: none;</string>
                   </property>
@@ -12003,6 +12012,12 @@ color: #eee;</string>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
+   <class>SubscriptionsWidget</class>
+   <extends>QWidget</extends>
+   <header>TriblerGUI.widgets.subscriptionswidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>EllipseButton</class>
    <extends>QToolButton</extends>
    <header>TriblerGUI.widgets.ellipsebutton.h</header>
@@ -12115,12 +12130,6 @@ color: #eee;</string>
    <class>LoadingPage</class>
    <extends>QWidget</extends>
    <header>TriblerGUI.widgets.loadingpage.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SubscriptionsWidget</class>
-   <extends>QWidget</extends>
-   <header>TriblerGUI.widgets.subscriptionswidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -12374,22 +12383,6 @@ color: #eee;</string>
    <hints>
     <hint type="sourcelabel">
      <x>221</x>
-     <y>75</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>427</x>
-     <y>317</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>edit_channel_button</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>on_edit_channel_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>834</x>
      <y>75</y>
     </hint>
     <hint type="destinationlabel">
