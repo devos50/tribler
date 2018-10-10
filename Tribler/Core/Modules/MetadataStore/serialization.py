@@ -146,9 +146,9 @@ class TorrentMetadataPayload(MetadataPayload):
     """
     Payload for metadata that stores a torrent.
     """
-    format_list = MetadataPayload.format_list + ['20s', 'Q', 'varlenI', 'varlenI']
+    format_list = MetadataPayload.format_list + ['20s', 'Q', 'varlenI', 'varlenI', 'varlenI']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags,
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info,
                  signature=EMPTY_SIG, **kwargs):
         super(TorrentMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
                                                      signature=signature, **kwargs)
@@ -156,6 +156,7 @@ class TorrentMetadataPayload(MetadataPayload):
         self.size = size
         self.title = title.encode("utf-8")
         self.tags = tags.encode("utf-8")
+        self.tracker_info = tracker_info.encode("utf-8")
 
     def to_pack_list(self):
         data = super(TorrentMetadataPayload, self).to_pack_list()
@@ -163,6 +164,7 @@ class TorrentMetadataPayload(MetadataPayload):
         data.append(('Q', self.size))
         data.append(('varlenI', self.title))
         data.append(('varlenI', self.tags))
+        data.append(('varlenI', self.tracker_info))
         return data
 
     @classmethod
@@ -175,7 +177,8 @@ class TorrentMetadataPayload(MetadataPayload):
             "infohash": self.infohash,
             "size": self.size,
             "title": self.title,
-            "tags": self.tags
+            "tags": self.tags,
+            "tracker_info": self.tracker_info
         })
         return dct
 
@@ -186,10 +189,10 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
     """
     format_list = TorrentMetadataPayload.format_list + ['Q']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, version,
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info, version,
                  signature=EMPTY_SIG, **kwargs):
         super(ChannelMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
-                                                     infohash, size, title, tags, signature=signature, **kwargs)
+                                                     infohash, size, title, tags, tracker_info, signature=signature, **kwargs)
         self.version = version
 
     def to_pack_list(self):
@@ -198,9 +201,9 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, version):
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info, version):
         return ChannelMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size,
-                                      title, tags, version)
+                                      title, tags, tracker_info, version)
 
     def to_dict(self):
         dct = super(ChannelMetadataPayload, self).to_dict()

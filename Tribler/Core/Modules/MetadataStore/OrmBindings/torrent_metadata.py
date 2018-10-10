@@ -13,6 +13,7 @@ def define_binding(db):
         title = orm.Optional(str, default='')
         size = orm.Optional(int, size=64, default=0)
         tags = orm.Optional(str, default='')
+        tracker_info = orm.Optional(str, default='')
         torrent_date = orm.Optional(datetime)
         _payload_class = TorrentMetadataPayload
 
