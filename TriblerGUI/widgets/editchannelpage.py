@@ -94,6 +94,7 @@ class EditChannelPage(QWidget):
             return
         if 'error' in overview:
             self.window().edit_channel_stacked_widget.setCurrentIndex(0)
+            return
 
         self.channel_overview = overview["mychannel"]
         if "chant" in self.channel_overview:
