@@ -55,7 +55,8 @@ class MyChannelEndpoint(BaseChannelsEndpoint):
                 'mychannel': {
                     'identifier': str(my_channel["public_key"]).encode('hex'),
                     'name': my_channel["title"],
-                    'description': my_channel["tags"]
+                    'description': my_channel["tags"],
+                    'chant': True
                 }})
         else:
             my_channel_id = self.channel_db_handler.getMyChannelId()

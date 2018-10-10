@@ -19,6 +19,15 @@ from TriblerGUI.tribler_request_manager import TriblerRequestManager
 from TriblerGUI.utilities import get_image_path
 
 
+chant_welcome_text = \
+"""
+Welcome to the management interface of your channel! 
+
+Here, you can change settings of you channel and manage your shared torrents. 
+
+Note that this is a New-style channel, which is experimental.
+
+"""
 class EditChannelPage(QWidget):
     """
     This class is responsible for managing lists and data on your channel page, including torrents, playlists
@@ -87,6 +96,10 @@ class EditChannelPage(QWidget):
             self.window().edit_channel_stacked_widget.setCurrentIndex(0)
 
         self.channel_overview = overview["mychannel"]
+        if "chant" in self.channel_overview:
+            self.window().edit_channel_playlists_button.setHidden(True)
+            self.window().edit_channel_rss_feeds_button.setHidden(True)
+            self.window().label_7.setText(chant_welcome_text)
         self.window().edit_channel_name_label.setText("My channel")
 
         self.window().edit_channel_overview_name_label.setText(self.channel_overview["name"])
