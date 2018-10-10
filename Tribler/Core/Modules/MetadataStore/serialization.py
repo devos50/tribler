@@ -168,8 +168,10 @@ class TorrentMetadataPayload(MetadataPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags):
-        return TorrentMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags)
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags,
+                         tracker_info):
+        return TorrentMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags,
+                                      tracker_info)
 
     def to_dict(self):
         dct = super(TorrentMetadataPayload, self).to_dict()
