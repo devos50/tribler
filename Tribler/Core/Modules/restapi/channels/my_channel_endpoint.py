@@ -95,12 +95,13 @@ class MyChannelEndpoint(BaseChannelsEndpoint):
         """
         parameters = http.parse_qs(request.content.read(), 1)
 
-        if not get_parameter(parameters, 'name'):
+        if not get_parameter(parameters, 'name') and not get_parameter(parameters, 'commit_changes'):
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": 'channel name cannot be empty'})
 
         if self.session.config.get_chant_channel_edit():
             with db_session:
+                modified = False
                 my_key = self.session.trustchain_keypair
                 my_channel_id = my_key.pub().key_to_bin()
                 my_channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
@@ -109,18 +110,21 @@ class MyChannelEndpoint(BaseChannelsEndpoint):
                     request.setResponseCode(http.NOT_FOUND)
                     return json.dumps({"error": NO_CHANNEL_CREATED_RESPONSE_MSG})
 
-                my_channel.update_metadata(update_dict={
-                    "tags": unicode(get_parameter(parameters, 'description'), 'utf-8'),
-                    "title": unicode(get_parameter(parameters, 'name'), 'utf-8')
-                })
+                if get_parameter(parameters, 'name'):
+                    my_channel.update_metadata(update_dict={
+                        "tags": unicode(get_parameter(parameters, 'description'), 'utf-8'),
+                        "title": unicode(get_parameter(parameters, 'name'), 'utf-8')
+                    })
+                    modified = True
 
-                if my_channel.staged_entries_list:  # Update torrent if we have uncommitted content in the channel
-                    #TODO: make this a separate button
+                if get_parameter(parameters, 'commit_changes') and my_channel.staged_entries_list:
+                    # Update torrent if we have uncommitted content in the channel
                     my_channel.commit_channel_torrent()
                     torrent_path = os.path.join(self.session.lm.mds.channels_dir, my_channel.dir_name + ".torrent")
                     self.session.lm.updated_my_channel(torrent_path)
+                    modified = True
 
-            return json.dumps({'modified': True})
+            return json.dumps({'modified': modified})
         else:
             my_channel_id = self.channel_db_handler.getMyChannelId()
             if my_channel_id is None:

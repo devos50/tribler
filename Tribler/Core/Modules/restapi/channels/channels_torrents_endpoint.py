@@ -66,6 +66,7 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
 
             :statuscode 404: if the specified channel cannot be found.
         """
+        chant_dirty = False
         if self.is_chant_channel:
             with db_session:
                 channel = self.session.lm.mds.ChannelMetadata.get(public_key=self.cid)
@@ -79,8 +80,10 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
                         committed = map(lambda x: convert_torrent_metadata_to_tuple(x, COMMITTED),
                                         list(channel.committed_contents))
                         results_local_torrents_channel = uncommitted + deleted + committed
+                        chant_dirty = len(channel.staged_entries_list) > 0
                     else:
-                        results_local_torrents_channel = map(convert_torrent_metadata_to_tuple, channel.contents_list)
+                        results_local_torrents_channel = map(convert_torrent_metadata_to_tuple,
+                                                             list(channel.contents))
                 else:
                     return ChannelsTorrentsEndpoint.return_404(request)
         else:
@@ -106,7 +109,7 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
 
             results_json.append(torrent_json)
 
-        return json.dumps({"torrents": results_json})
+        return json.dumps({"torrents": results_json, "chant_dirty": chant_dirty})
 
     @db_session
     def render_PUT(self, request):
@@ -172,11 +175,7 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
 
         if self.is_chant_channel:
             try:
-                torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
                 channel.add_torrent_to_channel(torrent_def, extra_info)
-                #TODO: add a separate button for publishing the channel
-                channel.commit_channel_torrent()
-                self.session.lm.updated_my_channel(torrent_path)
             except DuplicateTorrentFileError as exc:
                 return BaseChannelsEndpoint.return_500(self, request, exc)
         else:
@@ -259,10 +258,6 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
                 with db_session:
                     channel = self.session.lm.mds.get_my_channel()
                     channel.add_torrent_to_channel(torrent_def, extra_info)
-                    #TODO: make this run separately from the GUI
-                    channel.commit_channel_torrent()
-                    torrent_path = os.path.join(self.session.lm.mds.channels_dir, channel.dir_name + ".torrent")
-                    self.session.lm.updated_my_channel(torrent_path)
             else:
                 channel = self.get_channel_from_db(self.cid)
                 self.session.add_torrent_def_to_channel(channel[0], torrent_def, extra_info, forward=True)
@@ -351,12 +346,6 @@ class ChannelModifyTorrentEndpoint(BaseChannelsEndpoint):
                         failed_torrents.append(torrent_path)
                     else:
                         my_channel.delete_torrent_from_channel(infohash)
-                        #TODO: move this to separate call/method/endpoint
-                        my_channel.commit_channel_torrent()
-                        new_torrent_path = os.path.join(self.session.lm.mds.channels_dir,
-                                                        my_channel.dir_name + ".torrent")
-                        self.session.lm.updated_my_channel(new_torrent_path)
-
             if failed_torrents:
                 return json.dumps({"removed": False, "failed_torrents": failed_torrents})
             return json.dumps({"removed": True})

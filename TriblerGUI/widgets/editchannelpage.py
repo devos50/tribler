@@ -81,6 +81,10 @@ class EditChannelPage(QWidget):
         self.window().channel_settings_tab.initialize()
         self.window().channel_settings_tab.clicked_tab_button.connect(self.clicked_tab_button)
 
+        # Chant publish widget is hidden by default and only shown when necessary
+        self.window().dirty_channel_widget.setHidden(True)
+        self.window().edit_channel_commit_button.clicked.connect(self.clicked_edit_channel_commit_button)
+
     def load_my_channel_overview(self):
         if not self.channel_overview:
             self.window().edit_channel_stacked_widget.setCurrentIndex(2)
@@ -123,6 +127,7 @@ class EditChannelPage(QWidget):
             return
         self.window().edit_channel_torrents_list.set_data_items([])
 
+        self.window().dirty_channel_widget.setHidden(not("chant_dirty" in torrents and torrents["chant_dirty"]))
         items = []
         for result in torrents['torrents']:
             items.append((ChannelTorrentListItem, result,
@@ -203,6 +208,18 @@ class EditChannelPage(QWidget):
                                                      data=unicode('name=%s&description=%s' %
                                                                   (channel_name, channel_description)).encode('utf-8'),
                                                      method='POST')
+
+    def clicked_edit_channel_commit_button(self):
+        self.editchannel_request_mgr = TriblerRequestManager()
+        self.editchannel_request_mgr.perform_request("mychannel", self.on_channel_committed,
+                                                     data=unicode('commit_changes=True').encode('utf-8'),
+                                                     method='POST')
+
+    def on_channel_committed(self, result):
+        if not result:
+            return
+        if 'modified' in result:
+            self.load_channel_torrents()
 
     def on_channel_edited(self, result):
         if not result:
