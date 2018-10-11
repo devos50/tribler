@@ -209,7 +209,8 @@ class TestChannelMetadata(TestAsServer):
         channel.commit_channel_torrent()
         channel.delete_torrent_from_channel(tdef.get_infohash())
 
-        self.assertEqual(2, len(channel.contents_list))
+        self.assertEqual(1, len(channel.contents_list))
+        self.assertEqual(2, len(os.listdir(my_dir)))
         channel.consolidate_channel_torrent()
         self.assertEqual(1, len(os.listdir(my_dir)))
 

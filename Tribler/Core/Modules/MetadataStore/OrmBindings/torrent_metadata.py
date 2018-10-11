@@ -14,7 +14,7 @@ def define_binding(db):
         size = orm.Optional(int, size=64, default=0)
         tags = orm.Optional(str, default='')
         tracker_info = orm.Optional(str, default='')
-        torrent_date = orm.Optional(datetime)
+        torrent_date = orm.Optional(datetime, default=datetime.utcnow)
         _payload_class = TorrentMetadataPayload
 
         def get_magnet(self):

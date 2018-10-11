@@ -27,7 +27,7 @@ def create_torrent_from_dir(directory, torrent_filename):
         f.write(bencode(torrent))
 
     infohash = torrent_info(torrent).info_hash().to_bytes()
-    return infohash
+    return torrent, infohash
 
 
 def define_binding(db):
@@ -47,7 +47,6 @@ def define_binding(db):
             channel_dict.update({
                 "size": len(self.contents_list),
                 "timestamp": now,
-                "torrent_date": now
             })
             self.set(**channel_dict)
             self.sign()
@@ -127,8 +126,10 @@ def define_binding(db):
                     f.write(''.join(serialized))
 
             # Make torrent out of dir with metadata files
-            infohash = create_torrent_from_dir(channel_dir, os.path.join(self._channels_dir, self.dir_name + ".torrent"))
-            self.update_metadata(update_dict={"infohash": infohash, "version": new_version})
+            torrent, infohash = create_torrent_from_dir(channel_dir, os.path.join(self._channels_dir, self.dir_name + ".torrent"))
+
+            self.update_metadata(update_dict={"infohash": infohash, "version": new_version,
+                                              "torrent_date": datetime.utcfromtimestamp(torrent['creation date'])})
 
             # Write the channel mdblob away
             with open(os.path.join(self._channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
@@ -205,12 +206,12 @@ def define_binding(db):
         @property
         def newer_entries(self):
             return db.Metadata.select(
-                lambda g: g.timestamp > self.timestamp and g.public_key == self.public_key)
+                lambda g: g.timestamp > self.torrent_date and g.public_key == self.public_key and g != self)
 
         @property
         def older_entries(self):
             return db.Metadata.select(
-                lambda g: g.timestamp < self.timestamp and g.public_key == self.public_key)
+                lambda g: g.timestamp < self.torrent_date and g.public_key == self.public_key and g != self)
 
         @db_session
         def garbage_collect(self):
@@ -238,7 +239,7 @@ def define_binding(db):
                 torrent_metadata = db.TorrentMetadata.get(public_key=self.public_key, infohash=infohash)
             else:
                 return False
-            if torrent_metadata.timestamp > self.timestamp:
+            if torrent_metadata.timestamp > self.torrent_date:
                 # Uncommited metadata. Delete immediately
                 torrent_metadata.delete()
             else:
