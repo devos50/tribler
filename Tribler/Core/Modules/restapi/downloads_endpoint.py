@@ -268,7 +268,6 @@ class DownloadsEndpoint(DownloadBaseEndpoint):
         location, a magnet link or a HTTP(S) url.
         - anon_hops: the number of hops for the anonymous download. 0 hops is equivalent to a plain download
         - safe_seeding: whether the seeding of the download should be anonymous or not (0 = off, 1 = on)
-        - metadata_download: whether we are adding a mdblob file with metadata (optional)
         - destination: the download destination path of the torrent
         - torrent: the URI of the torrent file that should be downloaded. This parameter is required.
 
@@ -291,11 +290,6 @@ class DownloadsEndpoint(DownloadBaseEndpoint):
             request.setResponseCode(http.BAD_REQUEST)
             return json.dumps({"error": "uri parameter missing"})
 
-        metadata_download = False
-        if 'metadata_download' in parameters and parameters['metadata_download'] \
-                and parameters['metadata_download'][0] == "1":
-            metadata_download = True
-
         download_config, error = DownloadsEndpoint.create_dconfig_from_params(parameters)
         if error:
             request.setResponseCode(http.BAD_REQUEST)
@@ -313,7 +307,7 @@ class DownloadsEndpoint(DownloadBaseEndpoint):
 
         uri = parameters['uri'][0]
         if uri.startswith("file:"):
-            if metadata_download and uri.endswith(".mdblob"):
+            if uri.endswith(".mdblob"):
                 filename = url2pathname(uri[5:].encode('utf-8') if isinstance(uri, unicode) else uri[5:])
                 try:
                     payload = ChannelMetadataPayload.from_file(filename)
