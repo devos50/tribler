@@ -97,7 +97,7 @@ class TestMyChannelChantEndpoints(AbstractTestChantEndpoint):
         """
         Testing whether the API returns the right JSON data if an existing chant channel overview is requested
         """
-        channel_json = {u'mychannel': {u'name': u'testname', u'description': u'testdescription',
+        channel_json = {u'mychannel': {u'chant':True, u'name': u'testname', u'description': u'testdescription',
                                        u'identifier': self.session.trustchain_keypair.pub().key_to_bin().encode('hex')}}
         self.create_my_channel(channel_json[u'mychannel'][u'name'], channel_json[u'mychannel'][u'description'])
 
