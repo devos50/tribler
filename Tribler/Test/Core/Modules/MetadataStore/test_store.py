@@ -4,8 +4,9 @@ from datetime import datetime
 from pony.orm import db_session
 from twisted.internet.defer import inlineCallbacks
 
-from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload, MetadataPayload
-from Tribler.Core.Modules.MetadataStore.store import MetadataStore, UnknownBlobTypeException
+from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload, MetadataPayload, \
+    UnknownBlobTypeException
+from Tribler.Core.Modules.MetadataStore.store import MetadataStore
 from Tribler.Test.Core.base_test import TriblerCoreTest
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 

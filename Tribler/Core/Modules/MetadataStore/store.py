@@ -6,8 +6,7 @@ from pony.orm import db_session
 
 from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, torrent_metadata, channel_metadata
 from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, DeletedMetadataPayload, \
-    TorrentMetadataPayload, ChannelMetadataPayload
+from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload
 
 # This table should never be used from ORM directly.
 # It is created as a VIRTUAL table by raw SQL and
@@ -40,9 +39,6 @@ sql_add_fts_trigger_update = """
       new.tags);
     END;"""
 
-
-class UnknownBlobTypeException(Exception):
-    pass
 
 
 class MetadataStore(object):
@@ -105,7 +101,7 @@ class MetadataStore(object):
         """
         with open(filepath, 'rb') as f:
             serialized_data = f.read()
-        payload = MetadataPayload.from_signed_blob(serialized_data)
+        payload = read_payload(serialized_data)
 
         # Don't touch me! Workaround for Pony bug https://github.com/ponyorm/pony/issues/386 !
         orm.flush()
@@ -114,24 +110,15 @@ class MetadataStore(object):
             return self.Metadata.get(signature=payload.signature)
 
         if payload.metadata_type == MetadataTypes.DELETED.value:
-            payload = DeletedMetadataPayload.from_signed_blob(serialized_data, check_signature=False)
             # We only allow people to delete their own entries, thus PKs must match
-            existing_metadata = self.Metadata.get(signature=payload.delete_signature,
-                                                  public_key=payload.public_key)
+            existing_metadata = self.Metadata.get(signature=payload.delete_signature, public_key=payload.public_key)
             if existing_metadata:
                 existing_metadata.delete()
             return None
-
         elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
-            payload = TorrentMetadataPayload.from_signed_blob(serialized_data, check_signature=False)
             return self.TorrentMetadata.from_payload(payload)
-
         elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
-            payload = ChannelMetadataPayload.from_signed_blob(serialized_data, check_signature=False)
             return self.ChannelMetadata.from_payload(payload)
-
-        # Unknown metadata type, raise exception
-        raise UnknownBlobTypeException
 
     @db_session
     def get_my_channel(self):

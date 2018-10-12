@@ -18,8 +18,9 @@ def define_binding(db):
         _payload_class = TorrentMetadataPayload
 
         def get_magnet(self):
-            return "magnet:?xt=urn:btih:%s&dn=%s" % (
-                str(self.infohash).encode('hex'), str(self.title).encode('utf8'))
+            return ("magnet:?xt=urn:btih:%s&dn=%s" %
+                    (str(self.infohash).encode('hex'), str(self.title).encode('utf8'))) + \
+                   ("&tr=%s" % (str(self.tracker_info).encode('utf8')) if self.tracker_info else "")
 
         @classmethod
         def search_keyword(cls, query, entry_type=None, lim=100):

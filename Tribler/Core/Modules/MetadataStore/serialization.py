@@ -74,6 +74,23 @@ class InvalidSignatureException(Exception):
 class KeysMismatchException(Exception):
     pass
 
+class UnknownBlobTypeException(Exception):
+    pass
+
+
+def read_payload(data):
+    payload = MetadataPayload.from_signed_blob(data)
+    if payload.metadata_type == MetadataTypes.DELETED.value:
+        return DeletedMetadataPayload.from_signed_blob(data, check_signature=False)
+    elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
+        return TorrentMetadataPayload.from_signed_blob(data, check_signature=False)
+    elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
+        return ChannelMetadataPayload.from_signed_blob(data, check_signature=False)
+
+    # Unknown metadata type, raise exception
+    raise UnknownBlobTypeException
+
+
 class MetadataPayload(Payload):
     """
     Payload for metadata.
@@ -183,6 +200,11 @@ class TorrentMetadataPayload(MetadataPayload):
         })
         return dct
 
+    # TODO:  DRY!(copypasted from TorrentMetadata)
+    def get_magnet(self):
+        return ("magnet:?xt=urn:btih:%s&dn=%s" %
+                (str(self.infohash).encode('hex'), str(self.title).encode('utf8'))) + \
+               ("&tr=%s" % (str(self.tracker_info).encode('utf8')) if self.tracker_info else "")
 
 class ChannelMetadataPayload(TorrentMetadataPayload):
     """

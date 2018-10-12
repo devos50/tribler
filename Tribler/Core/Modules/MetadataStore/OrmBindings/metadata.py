@@ -29,14 +29,25 @@ def define_binding(db):
                 self.sign(self._my_key)
 
         def _serialized(self, key=None):
+            """
+            Serializes the object and returns the result with added signature (tuple output)
+            :param key: private key to sign object with
+            :return: (serialized_data, signature) tuple
+            """
             return self._payload_class(**self.to_dict())._serialized(key)
 
         def serialized(self, key=None):
+            """
+            Serializes the object and returns the result with added signature (blob output)
+            :param key: private key to sign object with
+            :return: serialized_data+signature binary string
+            """
             return ''.join(self._serialized(key))
 
         def _serialized_delete(self):
             """
-            Create a special command to delete this metadata and encode it for transfer.
+            Create a special command to delete this metadata and encode it for transfer (tuple output).
+            :return: (serialized_data, signature) tuple
             """
             my_dict = Metadata.to_dict(self)
             my_dict.update({"metadata_type": MetadataTypes.DELETED.value,
@@ -44,6 +55,10 @@ def define_binding(db):
             return DeletedMetadataPayload(**my_dict)._serialized(self._my_key)
 
         def serialized_delete(self):
+            """
+            Create a special command to delete this metadata and encode it for transfer (blob output).
+            :return: serialized_data+signature binary string
+            """
             return ''.join(self._serialized_delete())
 
         def to_file(self, filename, key=None):

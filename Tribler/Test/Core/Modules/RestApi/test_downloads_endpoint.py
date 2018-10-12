@@ -580,7 +580,9 @@ class TestMetadataDownloadEndpoint(AbstractApiTest):
         """
         file_path = os.path.join(self.session_base_dir, "invalid.mdblob")
         with open(file_path, "wb") as out_file:
-            my_channel = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
+            with db_session:
+                my_channel = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
+                my_channel.signature = "lalala"
             out_file.write(my_channel.serialized())
 
         post_data = {'uri': 'file:%s' % file_path, 'metadata_download': '1'}
