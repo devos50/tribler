@@ -18,7 +18,7 @@ from pony.orm import db_session
 from Tribler.Core.CacheDB.sqlitecachedb import forceDBThread
 from Tribler.Core.DecentralizedTracking.dht_provider import MainlineDHTProvider
 from Tribler.Core.DownloadConfig import DownloadStartupConfig, DefaultDownloadStartupConfig
-from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload
+from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload, float2time
 from Tribler.Core.Modules.MetadataStore.store import MetadataStore
 from Tribler.Core.Modules.payout_manager import PayoutManager
 from Tribler.Core.Modules.resource_monitor import ResourceMonitor
@@ -519,8 +519,9 @@ class TriblerLaunchMany(TaskManager):
 
         channel = self.mds.ChannelMetadata.get_channel_with_id(payload.public_key)
         if channel:
-            # Update the channel that is already there.
-            channel.set(**ChannelMetadataPayload.to_dict(payload))
+            if payload.version >= channel.version and float2time(payload.timestamp) > channel.timestamp:
+                # Update the channel that is already there.
+                channel.set(**ChannelMetadataPayload.to_dict(payload))
         else:
             # Add new channel object to DB
             channel = self.mds.ChannelMetadata.from_payload(payload)
