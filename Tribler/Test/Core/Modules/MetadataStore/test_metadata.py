@@ -64,7 +64,8 @@ class TestMetadata(TestAsServer):
         Test converting a metadata payload to a metadata object
         """
         metadata = self.session.lm.mds.Metadata.from_dict({})
-
-        metadata_payload = MetadataPayload(**metadata.to_dict())
+        metadata_dict = metadata.to_dict()
+        metadata.delete()
+        metadata_payload = MetadataPayload(**metadata_dict)
         self.assertTrue(self.session.lm.mds.Metadata.from_payload(metadata_payload))
 

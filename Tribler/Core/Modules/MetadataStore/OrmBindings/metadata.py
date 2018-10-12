@@ -5,7 +5,6 @@ from pony import orm
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, DeletedMetadataPayload
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 
-EMPTY_SIG = '0' * 64
 
 
 def define_binding(db):
@@ -13,7 +12,8 @@ def define_binding(db):
         rowid = orm.PrimaryKey(int, auto=True)
         metadata_type = orm.Discriminator(int)
         _discriminator_ = MetadataTypes.TYPELESS.value
-        signature = orm.Optional(buffer, default=EMPTY_SIG)
+        # Want to make signature unique=True for safety, but can't do it in Python2 because of Pony bug #390
+        signature = orm.Optional(buffer)
         timestamp = orm.Optional(datetime, default=datetime.utcnow)
         tc_pointer = orm.Optional(int, size=64, default=0)
         public_key = orm.Optional(buffer, default='\x00' * 74)

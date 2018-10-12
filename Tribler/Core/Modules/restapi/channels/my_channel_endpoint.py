@@ -44,13 +44,14 @@ class MyChannelEndpoint(BaseChannelsEndpoint):
         """
         if self.session.config.get_chant_channel_edit():
             my_channel_id = self.session.trustchain_keypair.pub().key_to_bin()
-            my_channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
+            with db_session:
+                my_channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(my_channel_id)
 
-            if not my_channel:
-                request.setResponseCode(http.NOT_FOUND)
-                return json.dumps({"error": NO_CHANNEL_CREATED_RESPONSE_MSG})
+                if not my_channel:
+                    request.setResponseCode(http.NOT_FOUND)
+                    return json.dumps({"error": NO_CHANNEL_CREATED_RESPONSE_MSG})
 
-            my_channel = my_channel.to_dict()
+                my_channel = my_channel.to_dict()
             return json.dumps({
                 'mychannel': {
                     'identifier': str(my_channel["public_key"]).encode('hex'),

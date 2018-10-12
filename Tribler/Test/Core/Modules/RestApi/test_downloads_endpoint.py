@@ -8,7 +8,6 @@ from twisted.internet.defer import fail
 from Tribler.Core.DownloadConfig import DownloadStartupConfig
 from Tribler.Core.DownloadState import DownloadState
 import Tribler.Core.Utilities.json_util as json
-from Tribler.Core.Modules.MetadataStore.OrmBindings.metadata import EMPTY_SIG
 from Tribler.Core.Utilities.network_utils import get_random_port
 from Tribler.Test.Core.Modules.RestApi.base_api_test import AbstractApiTest
 from Tribler.Test.common import UBUNTU_1504_INFOHASH, TESTS_DATA_DIR, TESTS_DIR
@@ -575,7 +574,6 @@ class TestMetadataDownloadEndpoint(AbstractApiTest):
                                expected_json=expected_json).addCallback(verify_download)
 
     @trial_timeout(10)
-    @db_session
     def test_add_metadata_download_invalid_sig(self):
         """
         Test whether adding metadata with an invalid signature results in an error
@@ -583,7 +581,6 @@ class TestMetadataDownloadEndpoint(AbstractApiTest):
         file_path = os.path.join(self.session_base_dir, "invalid.mdblob")
         with open(file_path, "wb") as out_file:
             my_channel = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
-            my_channel.signature = EMPTY_SIG
             out_file.write(my_channel.serialized())
 
         post_data = {'uri': 'file:%s' % file_path, 'metadata_download': '1'}

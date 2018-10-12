@@ -65,6 +65,7 @@ class TestMetadataStore(TriblerCoreTest):
         self.assertRaises(UnknownBlobTypeException, self.metadata_store.process_channel_dir_file, invalid_metadata)
 
 
+    @db_session
     def test_process_channel_dir(self):
         """
         Test processing a directory containing metadata blobs

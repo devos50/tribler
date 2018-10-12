@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 from enum import Enum, unique
 
-from Tribler.pyipv8.ipv8.attestation.trustchain.block import EMPTY_SIG
 from Tribler.pyipv8.ipv8.deprecated.payload import Payload
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
@@ -13,6 +12,7 @@ EPOCH = datetime(1970, 1, 1)
 INFOHASH_SIZE = 20  # bytes
 
 SIGNATURE_SIZE = 64
+EMPTY_SIG = '0' * 64
 
 crypto = ECCrypto()
 serializer = Serializer()
@@ -81,13 +81,13 @@ class MetadataPayload(Payload):
 
     format_list = ['I', '74s', 'f', 'Q']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, signature=EMPTY_SIG, **kwargs):
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, **kwargs):
         super(MetadataPayload, self).__init__()
         self.metadata_type = metadata_type
         self.public_key = str(public_key)
         self.timestamp = time2float(timestamp) if isinstance(timestamp, datetime) else timestamp
         self.tc_pointer = tc_pointer
-        self.signature = str(signature)
+        self.signature = str(kwargs["signature"]) if "signature" in kwargs else EMPTY_SIG
 
     def has_valid_signature(self):
         sig_data = serializer.pack_multiple(self.to_pack_list())[0]
@@ -149,9 +149,8 @@ class TorrentMetadataPayload(MetadataPayload):
     format_list = MetadataPayload.format_list + ['20s', 'Q', 'varlenI', 'varlenI', 'varlenI']
 
     def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info,
-                 signature=EMPTY_SIG, **kwargs):
-        super(TorrentMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
-                                                     signature=signature, **kwargs)
+                 **kwargs):
+        super(TorrentMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer, **kwargs)
         self.infohash = str(infohash)
         self.size = size
         self.title = title.encode("utf-8")
@@ -191,10 +190,10 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
     """
     format_list = TorrentMetadataPayload.format_list + ['Q']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info, version,
-                 signature=EMPTY_SIG, **kwargs):
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info,
+                 version, **kwargs):
         super(ChannelMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
-                                                     infohash, size, title, tags, tracker_info, signature=signature, **kwargs)
+                                                     infohash, size, title, tags, tracker_info, **kwargs)
         self.version = version
 
     def to_pack_list(self):
@@ -219,10 +218,8 @@ class DeletedMetadataPayload(MetadataPayload):
     """
     format_list = MetadataPayload.format_list + ['64s']
 
-    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, delete_signature,
-                 signature=EMPTY_SIG, **kwargs):
-        super(DeletedMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer,
-                                                     signature=signature, **kwargs)
+    def __init__(self, metadata_type, public_key, timestamp, tc_pointer, delete_signature, **kwargs):
+        super(DeletedMetadataPayload, self).__init__(metadata_type, public_key, timestamp, tc_pointer, **kwargs)
         self.delete_signature = str(delete_signature)
 
     def to_pack_list(self):

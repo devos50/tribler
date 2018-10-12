@@ -82,11 +82,13 @@ class TestChannelMetadata(TestAsServer):
         self.assertEqual(1, len(channel1.contents_list))
         self.assertEqual(2, len(channel2.contents_list))
 
+    @db_session
     def test_create_channel(self):
         """
         Test whether creating a channel works as expected
         """
         channel_metadata = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
+
         self.assertTrue(channel_metadata)
         self.assertRaises(DuplicateChannelNameError,
                           self.session.lm.mds.ChannelMetadata.create_channel, 'test', 'test')
