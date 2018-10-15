@@ -1,11 +1,14 @@
 import logging
 import os
+import struct
+from array import array
 
 from pony import orm
 from pony.orm import db_session
 
 from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, torrent_metadata, channel_metadata
-from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
+from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION, SQUASHED_BLOB_EXTENSION, \
+    CHUNK_HEADER_FORMAT, CHUNK_HEADER_INTRO, CHUNK_HEADER_SIZE
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload
 
 # This table should never be used from ORM directly.
@@ -40,9 +43,11 @@ sql_add_fts_trigger_update = """
     END;"""
 
 
+class BadChunkException(Exception):
+    pass
+
 
 class MetadataStore(object):
-
     def __init__(self, db_filename, channels_dir, my_key):
         self.db_filename = db_filename
         self.channels_dir = channels_dir
@@ -86,14 +91,16 @@ class MetadataStore(object):
         """
         for filename in sorted(os.listdir(dirname)):
             full_filename = os.path.join(dirname, filename)
-            if filename.endswith(BLOB_EXTENSION):
-                try:
-                    self.process_channel_dir_file(full_filename)
-                except InvalidSignatureException:
-                    self._logger.error("Not processing metadata located at %s: invalid signature", full_filename)
+            try:
+                if filename.endswith(BLOB_EXTENSION):
+                    self.process_mdblob_file(full_filename)
+                elif filename.endswith(SQUASHED_BLOB_EXTENSION):
+                    self.process_squashed_mdblob_file(full_filename)
+            except InvalidSignatureException:
+                self._logger.error("Not processing metadata located at %s: invalid signature", full_filename)
 
     @db_session
-    def process_channel_dir_file(self, filepath):
+    def process_mdblob_file(self, filepath):
         """
         Process a file with metadata in a channel directory.
         :param filepath: The path to the file
@@ -101,8 +108,45 @@ class MetadataStore(object):
         """
         with open(filepath, 'rb') as f:
             serialized_data = f.read()
-        payload = read_payload(serialized_data)
+        return self.process_payload(read_payload(serialized_data))
 
+
+    @db_session
+    def process_squashed_mdblob(self, chunk_data):
+        # Read the header
+        print CHUNK_HEADER_SIZE
+        intro, ends_offsets_array_size = struct.unpack(CHUNK_HEADER_FORMAT, chunk_data[:CHUNK_HEADER_SIZE])
+        if intro != CHUNK_HEADER_INTRO:
+            raise BadChunkException
+
+        metadata_list = []
+        ends_offsets_array = array('L').fromstring(
+            chunk_data[CHUNK_HEADER_SIZE:CHUNK_HEADER_SIZE + ends_offsets_array_size])
+        print ends_offsets_array
+        for index, end_offset in enumerate(ends_offsets_array):
+            blob = chunk_data[ends_offsets_array[index-1]:end_offset]
+            md = self.process_payload(read_payload(blob))
+            if md:
+                metadata_list.append(md)
+
+        return metadata_list
+
+
+    @db_session
+    def process_squashed_mdblob_file(self, filepath):
+        """
+        Process a file with multiple metadata entries in a channel directory.
+        :param filepath: The path to the file
+        :return a list of Metadata objects if we can correctly load the metadata
+        """
+        with open(filepath, 'rb') as f:
+            chunk_data = f.read()
+
+        return self.process_squashed_mdblob(chunk_data)
+
+
+    @db_session
+    def process_payload(self, payload):
         # Don't touch me! Workaround for Pony bug https://github.com/ponyorm/pony/issues/386 !
         orm.flush()
 
@@ -120,6 +164,9 @@ class MetadataStore(object):
         elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
             return self.ChannelMetadata.from_payload(payload)
 
+
     @db_session
     def get_my_channel(self):
         return self.ChannelMetadata.get_channel_with_id(self.my_key.pub().key_to_bin())
+
+

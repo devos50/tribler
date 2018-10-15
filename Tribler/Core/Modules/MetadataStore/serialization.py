@@ -206,6 +206,7 @@ class TorrentMetadataPayload(MetadataPayload):
                 (str(self.infohash).encode('hex'), str(self.title).encode('utf8'))) + \
                ("&tr=%s" % (str(self.tracker_info).encode('utf8')) if self.tracker_info else "")
 
+
 class ChannelMetadataPayload(TorrentMetadataPayload):
     """
     Payload for metadata that stores a channel.

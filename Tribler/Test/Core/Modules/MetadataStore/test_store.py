@@ -49,13 +49,13 @@ class TestMetadataStore(TriblerCoreTest):
         test_torrent_metadata.to_file(metadata_path)
         # We delete this TorrentMeta info now, it should be added again to the database when loading it
         test_torrent_metadata.delete()
-        loaded_metadata = self.metadata_store.process_channel_dir_file(metadata_path)
+        loaded_metadata = self.metadata_store.process_mdblob_file(metadata_path)
         self.assertEqual(loaded_metadata.title, 'test')
 
         # Test whether we delete existing metadata when loading a DeletedMetadata blob
         metadata = self.metadata_store.TorrentMetadata(infohash='1'*20)
         metadata.to_delete_file(metadata_path)
-        loaded_metadata = self.metadata_store.process_channel_dir_file(metadata_path)
+        loaded_metadata = self.metadata_store.process_mdblob_file(metadata_path)
         # Make sure the original metadata is deleted
         self.assertIsNone(loaded_metadata)
         self.assertIsNone(self.metadata_store.TorrentMetadata.get(infohash='1'*20))
@@ -63,7 +63,17 @@ class TestMetadataStore(TriblerCoreTest):
         # Test an unknown metadata type, this should raise an exception
         invalid_metadata = os.path.join(self.session_base_dir,'invalidtype.mdblob')
         make_wrong_payload(invalid_metadata)
-        self.assertRaises(UnknownBlobTypeException, self.metadata_store.process_channel_dir_file, invalid_metadata)
+        self.assertRaises(UnknownBlobTypeException, self.metadata_store.process_mdblob_file, invalid_metadata)
+
+    @db_session
+    def test_squash_mdblobs(self):
+        from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import entries_to_chunk
+
+        md_list = [self.metadata_store.TorrentMetadata(title='test'+str(x)) for x in xrange(1,10)]
+
+        chunk, _ = entries_to_chunk(md_list)
+
+        self.metadata_store.process_squashed_mdblob(chunk)
 
 
     @db_session
