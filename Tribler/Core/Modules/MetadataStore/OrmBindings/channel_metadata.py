@@ -1,6 +1,5 @@
-import array
 import os
-import struct
+import xdrlib
 from datetime import datetime
 
 from libtorrent import file_storage, add_files, create_torrent, set_piece_hashes, bencode, torrent_info
@@ -12,12 +11,7 @@ from Tribler.Core.exceptions import DuplicateTorrentFileError, DuplicateChannelN
 
 CHANNEL_DIR_NAME_LENGTH = 60  # Its not 40 so it could be distinguished from infohash
 BLOB_EXTENSION = '.mdblob'
-SQUASHED_BLOB_EXTENSION = '.sblob'
-SQUASH_THRESHOLD = 5 # the minimal number of serialized metadata entries in the squashed blob
 CHUNK_SIZE_LIMIT = 100*1024*1024
-CHUNK_HEADER_FORMAT = '<LL'
-CHUNK_HEADER_SIZE = struct.calcsize(CHUNK_HEADER_FORMAT)
-CHUNK_HEADER_INTRO = 0x73626c62
 
 def create_torrent_from_dir(directory, torrent_filename):
     fs = file_storage()
@@ -48,10 +42,10 @@ def entries_to_chunk(metadata_list, limit=CHUNK_SIZE_LIMIT, start_index=0):
     """
     # Try to fit as many blobs into this chunk as permitted by CHUNK_SIZE_LIMIT and
     # calculate their ends' offsets in the blob
+    p = xdrlib.Packer()
+
     offset = 0
     last_entry_index = start_index
-    ends_offsets_array = array.array('L')
-    serialized_blobs = []
     while True:
         # No more blobs to process?
         if last_entry_index >= len(metadata_list):
@@ -66,26 +60,12 @@ def entries_to_chunk(metadata_list, limit=CHUNK_SIZE_LIMIT, start_index=0):
         # Now that safety checks are done, we can update the counters
         offset += len(blob)
         last_entry_index += 1
-        ends_offsets_array.append(offset)
-        serialized_blobs.append(blob)
+        p.pack_bytes(blob)
 
-    # Calculate the size of the offsets array
-    offsets_array_sz = len(ends_offsets_array.tostring())
-
-    # Adjust offsets to the header and offsets array size
-    for i, offset in enumerate(ends_offsets_array):
-        ends_offsets_array[i] = ends_offsets_array[i] + CHUNK_HEADER_SIZE + offsets_array_sz
-
-    # Add the file format id and the size of the blobs offsets array to the chunk header
-    chunk = struct.pack(CHUNK_HEADER_FORMAT, CHUNK_HEADER_INTRO, offsets_array_sz)
-
-    # Add offsets string to the chunk
-    chunk += ends_offsets_array.tostring()
-
-    # Add blobs to the chunk
-    chunk += ''.join(serialized_blobs)
+    chunk = p.get_buffer()
 
     return chunk, last_entry_index
+
 
 def define_binding(db):
     class ChannelMetadata(db.TorrentMetadata):
@@ -173,26 +153,13 @@ def define_binding(db):
             if not os.path.isdir(channel_dir):
                 os.makedirs(channel_dir)
 
-            def write_blob_file(data, number, extension):
-                with open(os.path.join(channel_dir, str(number).zfill(9) + extension), 'wb') as f:
-                    f.write(data)
-
             old_version = self.version
             index = 0
-            while True:
-                num_remaining = len(metadata_list) - index
-                if num_remaining == 0:
-                    break
-
-                if num_remaining >= SQUASH_THRESHOLD:
-                    # Squash several serialized and signed metadata entries into a single file
-                    data, index = entries_to_chunk(metadata_list, index)
-                    write_blob_file(data, index + old_version, SQUASHED_BLOB_EXTENSION)
-                else:
-                    # Write a single serialized and signed metadata entry into a file
-                    metadata = metadata_list[index]
-                    data = ''.join(metadata.serialized_delete() if metadata.deleted else metadata.serialized())
-                    write_blob_file(data, index + old_version, BLOB_EXTENSION)
+            while len(metadata_list) > index:
+                # Squash several serialized and signed metadata entries into a single file
+                data, index = entries_to_chunk(metadata_list, index)
+                with open(os.path.join(channel_dir, str(index+old_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
+                    f.write(data)
                 index += 1
 
             new_version = self.version + len(metadata_list)

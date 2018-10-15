@@ -6,7 +6,6 @@ from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, Meta
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 
 
-
 def define_binding(db):
     class Metadata(db.Entity):
         rowid = orm.PrimaryKey(int, auto=True)

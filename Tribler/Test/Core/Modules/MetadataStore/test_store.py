@@ -4,6 +4,7 @@ from datetime import datetime
 from pony.orm import db_session
 from twisted.internet.defer import inlineCallbacks
 
+from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import entries_to_chunk
 from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload, MetadataPayload, \
     UnknownBlobTypeException
 from Tribler.Core.Modules.MetadataStore.store import MetadataStore
@@ -30,8 +31,8 @@ class TestMetadataStore(TriblerCoreTest):
         yield super(TestMetadataStore, self).setUp()
         my_key = ECCrypto().generate_key(u"curve25519")
 
-        self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'),
-                                            self.session_base_dir, my_key)
+        self.metadata_store = MetadataStore(":memory:", self.session_base_dir, my_key)
+        #self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'), self.session_base_dir, my_key)
 
     @inlineCallbacks
     def tearDown(self):
@@ -67,14 +68,9 @@ class TestMetadataStore(TriblerCoreTest):
 
     @db_session
     def test_squash_mdblobs(self):
-        from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import entries_to_chunk
-
-        md_list = [self.metadata_store.TorrentMetadata(title='test'+str(x)) for x in xrange(1,10)]
-
+        md_list = [self.metadata_store.TorrentMetadata(title='test'+str(x)) for x in xrange(0,1000)]
         chunk, _ = entries_to_chunk(md_list)
-
-        self.metadata_store.process_squashed_mdblob(chunk)
-
+        self.assertItemsEqual(md_list, self.metadata_store.process_squashed_mdblob(chunk))
 
     @db_session
     def test_process_channel_dir(self):

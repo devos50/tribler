@@ -79,7 +79,7 @@ class UnknownBlobTypeException(Exception):
 
 
 def read_payload(data):
-    payload = MetadataPayload.from_signed_blob(data)
+    payload = MetadataPayload.from_signed_blob(data, check_signature=False)
     if payload.metadata_type == MetadataTypes.DELETED.value:
         return DeletedMetadataPayload.from_signed_blob(data, check_signature=False)
     elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
