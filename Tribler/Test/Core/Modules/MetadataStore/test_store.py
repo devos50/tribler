@@ -31,8 +31,7 @@ class TestMetadataStore(TriblerCoreTest):
         yield super(TestMetadataStore, self).setUp()
         my_key = ECCrypto().generate_key(u"curve25519")
 
-        self.metadata_store = MetadataStore(":memory:", self.session_base_dir, my_key)
-        #self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'), self.session_base_dir, my_key)
+        self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'), self.session_base_dir, my_key)
 
     @inlineCallbacks
     def tearDown(self):
@@ -51,14 +50,14 @@ class TestMetadataStore(TriblerCoreTest):
         # We delete this TorrentMeta info now, it should be added again to the database when loading it
         test_torrent_metadata.delete()
         loaded_metadata = self.metadata_store.process_mdblob_file(metadata_path)
-        self.assertEqual(loaded_metadata.title, 'test')
+        self.assertEqual(loaded_metadata[0].title, 'test')
 
         # Test whether we delete existing metadata when loading a DeletedMetadata blob
         metadata = self.metadata_store.TorrentMetadata(infohash='1'*20)
         metadata.to_delete_file(metadata_path)
         loaded_metadata = self.metadata_store.process_mdblob_file(metadata_path)
         # Make sure the original metadata is deleted
-        self.assertIsNone(loaded_metadata)
+        self.assertListEqual(loaded_metadata, [])
         self.assertIsNone(self.metadata_store.TorrentMetadata.get(infohash='1'*20))
 
         # Test an unknown metadata type, this should raise an exception
@@ -68,9 +67,15 @@ class TestMetadataStore(TriblerCoreTest):
 
     @db_session
     def test_squash_mdblobs(self):
-        md_list = [self.metadata_store.TorrentMetadata(title='test'+str(x)) for x in xrange(0,1000)]
+        md_list = [self.metadata_store.TorrentMetadata(title='test'+str(x)) for x in xrange(0,10)]
         chunk, _ = entries_to_chunk(md_list)
         self.assertItemsEqual(md_list, self.metadata_store.process_squashed_mdblob(chunk))
+
+        # Test splitting into multiple chunks
+        chunk, index = entries_to_chunk(md_list, limit=1000)
+        chunk += entries_to_chunk(md_list, start_index=index)[0]
+        self.assertItemsEqual(md_list, self.metadata_store.process_squashed_mdblob(chunk))
+
 
     @db_session
     def test_process_channel_dir(self):

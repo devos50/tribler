@@ -1,5 +1,6 @@
 from __future__ import division
 
+import struct
 from datetime import datetime, timedelta
 
 from enum import Enum, unique
@@ -78,17 +79,22 @@ class UnknownBlobTypeException(Exception):
     pass
 
 
-def read_payload(data):
-    payload = MetadataPayload.from_signed_blob(data, check_signature=False)
-    if payload.metadata_type == MetadataTypes.DELETED.value:
-        return DeletedMetadataPayload.from_signed_blob(data, check_signature=False)
-    elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
-        return TorrentMetadataPayload.from_signed_blob(data, check_signature=False)
-    elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
-        return ChannelMetadataPayload.from_signed_blob(data, check_signature=False)
+def read_payload_with_offset(data, offset=0):
+    # First we have to determine the actual payload type
+    metadata_type = struct.unpack_from('>I', buffer(data), offset=offset)[0]
+    if metadata_type == MetadataTypes.DELETED.value:
+        return DeletedMetadataPayload.from_signed_blob_with_offset(data, check_signature=True, offset=offset)
+    elif metadata_type == MetadataTypes.REGULAR_TORRENT.value:
+        return TorrentMetadataPayload.from_signed_blob_with_offset(data, check_signature=True, offset=offset)
+    elif metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
+        return ChannelMetadataPayload.from_signed_blob_with_offset(data, check_signature=True, offset=offset)
 
     # Unknown metadata type, raise exception
     raise UnknownBlobTypeException
+
+
+def read_payload(data):
+    return read_payload_with_offset(data)[0]
 
 
 class MetadataPayload(Payload):
@@ -123,14 +129,19 @@ class MetadataPayload(Payload):
 
     @classmethod
     def from_signed_blob(cls, data, check_signature=True):
-        payload = serializer.unpack_to_serializables([cls, ], data)[0]
-        payload.signature = data[-SIGNATURE_SIZE:]
-        data_unsigned = data[:-SIGNATURE_SIZE]
+        return cls.from_signed_blob_with_offset(data, check_signature)[0]
+
+    @classmethod
+    def from_signed_blob_with_offset(cls, data, check_signature=True, offset=0):
+        unpack_list, end_offset = serializer.unpack_multiple(cls.format_list, data, offset=offset)
+        payload = cls.from_unpack_list(*unpack_list)
         if check_signature:
+            payload.signature = data[end_offset:end_offset+SIGNATURE_SIZE]
+            data_unsigned = data[offset:end_offset]
             key = crypto.key_from_public_bin(payload.public_key)
             if not crypto.is_valid_signature(key, data_unsigned, payload.signature):
                 raise InvalidSignatureException
-        return payload
+        return payload, end_offset+SIGNATURE_SIZE
 
     def to_dict(self):
         return {

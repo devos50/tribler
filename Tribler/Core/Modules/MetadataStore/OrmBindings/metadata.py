@@ -11,7 +11,7 @@ def define_binding(db):
         rowid = orm.PrimaryKey(int, auto=True)
         metadata_type = orm.Discriminator(int)
         _discriminator_ = MetadataTypes.TYPELESS.value
-        # Want to make signature unique=True for safety, but can't do it in Python2 because of Pony bug #390
+        # We want to make signature unique=True for safety, but can't do it in Python2 because of Pony bug #390
         signature = orm.Optional(buffer)
         timestamp = orm.Optional(datetime, default=datetime.utcnow)
         tc_pointer = orm.Optional(int, size=64, default=0)

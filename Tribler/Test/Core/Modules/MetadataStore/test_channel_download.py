@@ -7,6 +7,7 @@ from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayl
 from Tribler.Core.TorrentDef import TorrentDef
 from Tribler.Core.Utilities.network_utils import get_random_port
 from Tribler.Test.test_as_server import TestAsServer
+from Tribler.Test.tools import trial_timeout
 
 
 class TestChannelDownload(TestAsServer):
@@ -21,6 +22,7 @@ class TestChannelDownload(TestAsServer):
         self.config.set_chant_enabled(True)
         self.config.set_libtorrent_enabled(True)
 
+    @trial_timeout(20)
     @inlineCallbacks
     def test_channel_download(self):
         """

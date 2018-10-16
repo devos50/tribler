@@ -1,5 +1,4 @@
 import os
-import xdrlib
 from datetime import datetime
 
 from libtorrent import file_storage, add_files, create_torrent, set_piece_hashes, bencode, torrent_info
@@ -11,7 +10,7 @@ from Tribler.Core.exceptions import DuplicateTorrentFileError, DuplicateChannelN
 
 CHANNEL_DIR_NAME_LENGTH = 60  # Its not 40 so it could be distinguished from infohash
 BLOB_EXTENSION = '.mdblob'
-CHUNK_SIZE_LIMIT = 100*1024*1024
+CHUNK_SIZE_LIMIT = 1*1024*1024 # We use 1MB chunks as a workaround for Python's lack of string pointers
 
 def create_torrent_from_dir(directory, torrent_filename):
     fs = file_storage()
@@ -42,7 +41,7 @@ def entries_to_chunk(metadata_list, limit=CHUNK_SIZE_LIMIT, start_index=0):
     """
     # Try to fit as many blobs into this chunk as permitted by CHUNK_SIZE_LIMIT and
     # calculate their ends' offsets in the blob
-    p = xdrlib.Packer()
+    out_list = []
 
     offset = 0
     last_entry_index = start_index
@@ -60,10 +59,9 @@ def entries_to_chunk(metadata_list, limit=CHUNK_SIZE_LIMIT, start_index=0):
         # Now that safety checks are done, we can update the counters
         offset += len(blob)
         last_entry_index += 1
-        p.pack_bytes(blob)
+        out_list.append(blob)
 
-    chunk = p.get_buffer()
-
+    chunk = ''.join(out_list)
     return chunk, last_entry_index
 
 
@@ -157,7 +155,7 @@ def define_binding(db):
             index = 0
             while len(metadata_list) > index:
                 # Squash several serialized and signed metadata entries into a single file
-                data, index = entries_to_chunk(metadata_list, index)
+                data, index = entries_to_chunk(metadata_list, start_index=index)
                 with open(os.path.join(channel_dir, str(index+old_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
                     f.write(data)
                 index += 1

@@ -1,13 +1,12 @@
 import logging
 import os
-import xdrlib
 
 from pony import orm
 from pony.orm import db_session
 
 from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, torrent_metadata, channel_metadata
 from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload
+from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload, read_payload_with_offset
 
 # This table should never be used from ORM directly.
 # It is created as a VIRTUAL table by raw SQL and
@@ -108,17 +107,15 @@ class MetadataStore(object):
 
     @db_session
     def process_squashed_mdblob(self, chunk_data):
-        u = xdrlib.Unpacker(chunk_data)
         metadata_list = []
-        while u.get_position() < len(chunk_data):
-            blob = u.unpack_bytes()
-            md = self.process_payload(read_payload(blob))
+        offset = 0
+        while offset < len(chunk_data):
+            payload, offset = read_payload_with_offset(chunk_data, offset)
+            md = self.process_payload(payload)
             if md:
                 metadata_list.append(md)
-        u.done()
 
         return metadata_list
-
 
     @db_session
     def process_payload(self, payload):
@@ -138,7 +135,6 @@ class MetadataStore(object):
             return self.TorrentMetadata.from_payload(payload)
         elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
             return self.ChannelMetadata.from_payload(payload)
-
 
     @db_session
     def get_my_channel(self):

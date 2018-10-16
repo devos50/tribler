@@ -205,14 +205,21 @@ class TestChannelMetadata(TestAsServer):
         my_dir = os.path.abspath(os.path.join(self.session.lm.mds.channels_dir, channel.dir_name))
         tdef = TorrentDef.load(TORRENT_UBUNTU_FILE)
 
+        # 1st torrent
         channel.add_torrent_to_channel(tdef, None)
+        channel.commit_channel_torrent()
+
+        # 2nd torrent
         self.session.lm.mds.TorrentMetadata.from_dict(
             dict(self.torrent_template, public_key=channel.public_key))
         channel.commit_channel_torrent()
+
+        # Delete entry
         channel.delete_torrent_from_channel(tdef.get_infohash())
+        channel.commit_channel_torrent()
 
         self.assertEqual(1, len(channel.contents_list))
-        self.assertEqual(2, len(os.listdir(my_dir)))
+        self.assertEqual(3, len(os.listdir(my_dir)))
         channel.consolidate_channel_torrent()
         self.assertEqual(1, len(os.listdir(my_dir)))
 
