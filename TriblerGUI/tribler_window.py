@@ -57,34 +57,35 @@ class TriblerWindow(QMainWindow):
     received_search_completions = pyqtSignal(object)
 
     def on_exception(self, *exc_info):
-        if self.exception_handler_called:
-            # We only show one feedback dialog, even when there are two consecutive exceptions.
-            return
-
-        self.exception_handler_called = True
-
-        self.delete_tray_icon()
-
-        # Stop the download loop
-        self.downloads_page.stop_loading_downloads()
-
-        # Add info about whether we are stopping Tribler or not
-        os.environ['TRIBLER_SHUTTING_DOWN'] = str(self.core_manager.shutting_down)
-
-        if not self.core_manager.shutting_down:
-            self.core_manager.stop(stop_app_on_shutdown=False)
-
-        self.setHidden(True)
-
-        if self.debug_window:
-            self.debug_window.setHidden(True)
-
-        exception_text = "".join(traceback.format_exception(*exc_info))
-        logging.error(exception_text)
-
-        self.error_dialog = FeedbackDialog(self, exception_text, self.core_manager.events_manager.tribler_version,
-                                           self.start_time)
-        self.error_dialog.show()
+        return
+        # if self.exception_handler_called:
+        #     # We only show one feedback dialog, even when there are two consecutive exceptions.
+        #     return
+        #
+        # self.exception_handler_called = True
+        #
+        # self.delete_tray_icon()
+        #
+        # # Stop the download loop
+        # self.downloads_page.stop_loading_downloads()
+        #
+        # # Add info about whether we are stopping Tribler or not
+        # os.environ['TRIBLER_SHUTTING_DOWN'] = str(self.core_manager.shutting_down)
+        #
+        # if not self.core_manager.shutting_down:
+        #     self.core_manager.stop(stop_app_on_shutdown=False)
+        #
+        # self.setHidden(True)
+        #
+        # if self.debug_window:
+        #     self.debug_window.setHidden(True)
+        #
+        # exception_text = "".join(traceback.format_exception(*exc_info))
+        # logging.error(exception_text)
+        #
+        # self.error_dialog = FeedbackDialog(self, exception_text, self.core_manager.events_manager.tribler_version,
+        #                                    self.start_time)
+        # self.error_dialog.show()
 
     def __init__(self, core_args=None, core_env=None, api_port=None):
         QMainWindow.__init__(self)
