@@ -3,6 +3,9 @@ import sys
 import logging.config
 
 import signal
+
+from twisted.conch import manhole_tap
+
 from check_os import check_environment, check_free_space, error_and_exit, setup_gui_logging, \
     should_kill_other_tribler_instances, enable_fault_handler, set_process_priority
 
@@ -71,6 +74,19 @@ def start_tribler_core(base_path, api_port):
 
         signal.signal(signal.SIGTERM, lambda signum, stack: shutdown(session, signum, stack))
         session.start()
+
+        # Setup manhole
+        manhole_namespace = {"session": session}
+        manhole = manhole_tap.makeService({
+            'namespace': manhole_namespace,
+            'telnetPort': 'tcp:8765:interface=127.0.0.1',
+            'passwd': os.path.join(os.path.dirname(os.path.realpath(__file__)), 'passwd'),
+            'sshPort': "tcp:8764",
+            'sshKeyDir': os.path.dirname(os.path.realpath(__file__)),
+            'sshKeyName': 'ssh.key',
+            'sshKeySize': 4096
+        })
+        manhole.startService()
 
     reactor.callWhenRunning(start_tribler)
     reactor.run()
