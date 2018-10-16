@@ -39,6 +39,10 @@ sql_add_fts_trigger_update = """
       new.tags);
     END;"""
 
+sql_add_signature_index = "CREATE INDEX SignatureIndex ON Metadata(signature);"
+sql_add_public_key_index = "CREATE INDEX PublicKeyIndex ON Metadata(public_key);"
+sql_add_infohash_index = "CREATE INDEX InfohashIndex ON Metadata(infohash);"
+
 
 class BadChunkException(Exception):
     pass
@@ -77,6 +81,8 @@ class MetadataStore(object):
                 self._db.execute(sql_add_fts_trigger_insert)
                 self._db.execute(sql_add_fts_trigger_delete)
                 self._db.execute(sql_add_fts_trigger_update)
+                self._db.execute(sql_add_signature_index)
+                self._db.execute(sql_add_public_key_index)
 
     def shutdown(self):
         self._db.disconnect()
@@ -117,24 +123,22 @@ class MetadataStore(object):
 
         return metadata_list
 
-    @db_session
+    # Can't use db_session wrapper here, performance drops 10 times! Pony bug!
     def process_payload(self, payload):
-        # Don't touch me! Workaround for Pony bug https://github.com/ponyorm/pony/issues/386 !
-        orm.flush()
+        with db_session:
+            if self.Metadata.exists(signature=payload.signature):
+                return self.Metadata.get(signature=payload.signature)
 
-        if self.Metadata.exists(signature=payload.signature):
-            return self.Metadata.get(signature=payload.signature)
-
-        if payload.metadata_type == MetadataTypes.DELETED.value:
-            # We only allow people to delete their own entries, thus PKs must match
-            existing_metadata = self.Metadata.get(signature=payload.delete_signature, public_key=payload.public_key)
-            if existing_metadata:
-                existing_metadata.delete()
-            return None
-        elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
-            return self.TorrentMetadata.from_payload(payload)
-        elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
-            return self.ChannelMetadata.from_payload(payload)
+            if payload.metadata_type == MetadataTypes.DELETED.value:
+                # We only allow people to delete their own entries, thus PKs must match
+                existing_metadata = self.Metadata.get(signature=payload.delete_signature, public_key=payload.public_key)
+                if existing_metadata:
+                    existing_metadata.delete()
+                return None
+            elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
+                return self.TorrentMetadata.from_payload(payload)
+            elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
+                return self.ChannelMetadata.from_payload(payload)
 
     @db_session
     def get_my_channel(self):
