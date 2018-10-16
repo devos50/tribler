@@ -80,9 +80,9 @@ def start_tribler_core(base_path, api_port):
         manhole = manhole_tap.makeService({
             'namespace': manhole_namespace,
             'telnetPort': 'tcp:8765:interface=127.0.0.1',
-            'passwd': os.path.join(os.path.dirname(os.path.realpath(__file__)), 'passwd'),
+            'passwd': os.path.join(session.config.get_state_dir(), 'passwd'),
             'sshPort': "tcp:8764",
-            'sshKeyDir': os.path.dirname(os.path.realpath(__file__)),
+            'sshKeyDir': session.config.get_state_dir(),
             'sshKeyName': 'ssh.key',
             'sshKeySize': 4096
         })
