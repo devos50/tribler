@@ -500,10 +500,10 @@ class TriblerLaunchMany(TaskManager):
 
         self.initComplete = True
 
-    def on_channel_download_finished(self, download, finished_deferred=None):
+    def on_channel_download_finished(self, download, channel_id, finished_deferred=None):
         if download.get_channel_download():
             channel_dirname = os.path.join(self.session.lm.mds.channels_dir, download.get_def().get_name())
-            self.mds.process_channel_dir(channel_dirname)
+            self.mds.process_channel_dir(channel_dirname, channel_id)
             if finished_deferred:
                 finished_deferred.callback(download)
 
@@ -528,19 +528,20 @@ class TriblerLaunchMany(TaskManager):
 
         return self.download_channel(channel)
 
-    def download_channel(self, channel_metadata):
+    def download_channel(self, channel):
         """
         Download a channel with a given infohash and title.
-        :param channel_metadata: The metadata of the channel.
+        :param channel: The channel metadata ORM object.
         """
         finished_deferred = Deferred()
 
         dcfg = DownloadStartupConfig()
         dcfg.set_dest_dir(self.mds.channels_dir)
         dcfg.set_channel_download(True)
-        tdef = TorrentDefNoMetainfo(infohash=str(channel_metadata.infohash), name=channel_metadata.title)
+        tdef = TorrentDefNoMetainfo(infohash=str(channel.infohash), name=channel.title)
         download = self.session.start_download_from_tdef(tdef, dcfg)
-        download.finished_callback = lambda dl: self.on_channel_download_finished(dl, finished_deferred)
+        channel_id = channel.public_key
+        download.finished_callback = lambda dl: self.on_channel_download_finished(dl, channel_id, finished_deferred)
         return download, finished_deferred
 
     def updated_my_channel(self, new_torrent_path):

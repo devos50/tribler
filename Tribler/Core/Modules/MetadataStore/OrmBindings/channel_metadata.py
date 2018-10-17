@@ -71,6 +71,7 @@ def define_binding(db):
         version = orm.Optional(int, size=64, default=0)
         subscribed = orm.Optional(bool, default=False)
         votes = orm.Optional(int, size=64, default=0)
+        local_version = orm.Optional(int, size=64, default=0)
         _payload_class = ChannelMetadataPayload
         _channels_dir = None
 
@@ -168,6 +169,7 @@ def define_binding(db):
             self.update_metadata(update_dict={"infohash": infohash, "version": new_version,
                                               "torrent_date": datetime.utcfromtimestamp(torrent['creation date'])})
 
+            self.local_version = new_version
             # Write the channel mdblob away
             with open(os.path.join(self._channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
                 out_file.write(''.join(self.serialized()))
@@ -175,7 +177,7 @@ def define_binding(db):
 
         def commit_channel_torrent(self):
             """
-            Collect new/uncommitted and marked for deletion metadata entries, commit them to channel torrent and
+            Collect new/uncommitted and marked for deletion metadata entries, commit them to a channel torrent and
             remove the obsolete entries if the commit succeeds.
             :return The new infohash, should be used to update the downloads
             """

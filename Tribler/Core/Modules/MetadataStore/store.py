@@ -87,18 +87,27 @@ class MetadataStore(object):
     def shutdown(self):
         self._db.disconnect()
 
-    def process_channel_dir(self, dirname):
+    def process_channel_dir(self, dirname, channel_id):
         """
-        Load blobs all metadata blobs in a given directory.
+        Load all metadata blobs in a given directory.
         :param dirname: The directory containing the metadata blobs.
+        :param channel_id: public_key of the channel.
         """
-        for filename in sorted(os.listdir(dirname)):
-            full_filename = os.path.join(dirname, filename)
-            if filename.endswith(BLOB_EXTENSION):
-                try:
-                    self.process_mdblob_file(full_filename)
-                except InvalidSignatureException:
-                    self._logger.error("Not processing metadata located at %s: invalid signature", full_filename)
+        with db_session:
+            channel = self.ChannelMetadata.get(public_key=channel_id)
+            for filename in sorted(os.listdir(dirname)):
+                full_filename = os.path.join(dirname, filename)
+                if filename.endswith(BLOB_EXTENSION):
+                    blob_sequence_number = int(filename[:-len(BLOB_EXTENSION)])
+                    # Skip blobs containing data we already have
+                    if blob_sequence_number <= channel.local_version:
+                        continue
+                    try:
+                        self.process_mdblob_file(full_filename)
+                        # We track the local version of the channel while reading blobs
+                        channel.local_version = blob_sequence_number
+                    except InvalidSignatureException:
+                        self._logger.error("Not processing metadata located at %s: invalid signature", full_filename)
 
     @db_session
     def process_mdblob_file(self, filepath):

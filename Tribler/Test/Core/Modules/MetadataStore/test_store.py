@@ -83,7 +83,8 @@ class TestMetadataStore(TriblerCoreTest):
         Test processing a directory containing metadata blobs
         """
         payload = ChannelMetadataPayload.from_file(self.CHANNEL_METADATA)
-        channel_metadata = self.metadata_store.ChannelMetadata.process_channel_metadata_payload(payload)
-        self.assertFalse(channel_metadata.contents_list)
-        self.metadata_store.process_channel_dir(self.CHANNEL_DIR)
-        self.assertEqual(len(channel_metadata.contents_list), 3)
+        channel = self.metadata_store.ChannelMetadata.process_channel_metadata_payload(payload)
+        self.assertFalse(channel.contents_list)
+        self.metadata_store.process_channel_dir(self.CHANNEL_DIR, channel.public_key)
+        self.assertEqual(len(channel.contents_list), 3)
+        self.assertEqual(channel.local_version, 3)
