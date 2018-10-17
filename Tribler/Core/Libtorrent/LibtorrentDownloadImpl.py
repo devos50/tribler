@@ -117,6 +117,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         self.vod_index = None
         self.orig_files = None
         self.finished_callback = None
+        self.finished_callback_already_called = False
 
         # To be able to return the progress of a stopped torrent, how far it got.
         self.progressbeforestop = 0.0
@@ -644,7 +645,12 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
     def on_torrent_finished_alert(self, alert):
         self.update_lt_status(self.handle.status())
         if self.finished_callback:
-            self.finished_callback(self)
+            if self.finished_callback_already_called:
+                self._logger.debug("LibtorrentDownloadImpl: tried to repeat the call to finished_callback %s",
+                                   self.tdef.get_name())
+            else:
+                self.finished_callback_already_called = True
+                self.finished_callback(self)
 
         progress = self.get_state().get_progress()
         if self.get_mode() == DLMODE_VOD:
