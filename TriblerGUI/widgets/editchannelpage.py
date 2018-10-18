@@ -1,4 +1,5 @@
 import base64
+import os
 import urllib
 
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -20,14 +21,10 @@ from TriblerGUI.utilities import get_image_path
 
 
 chant_welcome_text = \
-"""
-Welcome to the management interface of your channel! 
+"""Welcome to the management interface of your channel!
 
 Here, you can change settings of you channel and manage your shared torrents. 
-
-Note that this is a New-style channel, which is experimental.
-
-"""
+Note that this is a New-style channel, which is experimental."""
 class EditChannelPage(QWidget):
     """
     This class is responsible for managing lists and data on your channel page, including torrents, playlists
@@ -85,6 +82,10 @@ class EditChannelPage(QWidget):
         self.window().dirty_channel_widget.setHidden(True)
         self.window().edit_channel_commit_button.clicked.connect(self.clicked_edit_channel_commit_button)
 
+        self.window().export_channel_button.clicked.connect(self.on_export_mdblob)
+        self.window().export_channel_button.setHidden(True)
+
+
     def load_my_channel_overview(self):
         if not self.channel_overview:
             self.window().edit_channel_stacked_widget.setCurrentIndex(2)
@@ -105,6 +106,7 @@ class EditChannelPage(QWidget):
             self.window().edit_channel_playlists_button.setHidden(True)
             self.window().edit_channel_rss_feeds_button.setHidden(True)
             self.window().label_7.setText(chant_welcome_text)
+            self.window().export_channel_button.setHidden(False)
         self.window().edit_channel_name_label.setText("My channel")
 
         self.window().edit_channel_overview_name_label.setText(self.channel_overview["name"])
@@ -605,3 +607,49 @@ class EditChannelPage(QWidget):
             return
         if json_result["rechecked"]:
             self.window().edit_channel_details_rss_refresh_button.setEnabled(True)
+
+    def on_export_mdblob(self):
+
+        export_dir = QFileDialog.getExistingDirectory(self, "Please select the destination directory", "", QFileDialog.ShowDirsOnly)
+
+        if len(export_dir) == 0:
+            return
+
+        # Show confirmation dialog where we specify the name of the file
+        mdblob_name = self.channel_overview["identifier"]
+        dialog = ConfirmationDialog(self, "Export mdblob file",
+                                         "Please enter the name of the channel metadata file:",
+                                         [('SAVE', BUTTON_TYPE_NORMAL), ('CANCEL', BUTTON_TYPE_CONFIRM)],
+                                         show_input=True)
+
+        def on_export_download_dialog_done(action):
+            if action == 0:
+                dest_path = os.path.join(export_dir, dialog.dialog_widget.dialog_input.text())
+                request_mgr = TriblerRequestManager()
+                request_mgr.download_file("channels/discovered/%s/mdblob" % mdblob_name,
+                                          lambda data: on_export_download_request_done(dest_path, data))
+
+            dialog.close_dialog()
+
+        def on_export_download_request_done(dest_path, data):
+            try:
+                torrent_file = open(dest_path, "wb")
+                torrent_file.write(data)
+                torrent_file.close()
+            except IOError as exc:
+                ConfirmationDialog.show_error(self.window(),
+                                              "Error when exporting file",
+                                              "An error occurred when exporting the torrent file: %s" % str(exc))
+            else:
+                self.window().tray_show_message("Torrent file exported", "Torrent file exported to %s" % dest_path)
+
+        dialog.dialog_widget.dialog_input.setPlaceholderText('Channel file name')
+        dialog.dialog_widget.dialog_input.setText("%s.mdblob" % mdblob_name)
+        dialog.dialog_widget.dialog_input.setFocus()
+        dialog.button_clicked.connect(on_export_download_dialog_done)
+        dialog.show()
+
+
+
+
+

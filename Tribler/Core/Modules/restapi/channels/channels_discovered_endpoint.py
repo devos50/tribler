@@ -144,7 +144,8 @@ class ChannelsDiscoveredSpecificEndpoint(BaseChannelsEndpoint):
         self.cid = bytes(cid.decode('hex'))
 
         child_handler_dict = {"torrents": ChannelsTorrentsEndpoint, "rssfeeds": ChannelsRssFeedsEndpoint,
-                              "playlists": ChannelsPlaylistsEndpoint, "recheckfeeds": ChannelsRecheckFeedsEndpoint}
+                              "playlists": ChannelsPlaylistsEndpoint, "recheckfeeds": ChannelsRecheckFeedsEndpoint,
+                              "mdblob": ChannelsDiscoveredExportEndpoint}
         for path, child_cls in child_handler_dict.iteritems():
             self.putChild(path, child_cls(session, self.cid))
 
@@ -180,3 +181,46 @@ class ChannelsDiscoveredSpecificEndpoint(BaseChannelsEndpoint):
 
         return json.dumps({'overview': {'identifier': channel_info[1].encode('hex'), 'name': channel_info[2],
                                         'description': channel_info[3]}})
+
+
+class ChannelsDiscoveredExportEndpoint(BaseChannelsEndpoint):
+    """
+    This class is responsible for serving .mdblob file export requests for a specific channel.
+    """
+
+    def __init__(self, session, cid):
+        BaseChannelsEndpoint.__init__(self, session)
+        self.cid = cid
+        self.is_chant_channel = (len(cid) == 74)
+
+    def getChild(self, path, request):
+        return ChannelsDiscoveredExportEndpoint(self.session, self.cid)
+
+    def render_GET(self, request):
+        """
+        .. http:get:: /channels/discovered/(string: channelid)/mdblob
+
+        Return the mdblob binary
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/channels/discovered/(string: channel_id)/mdblob
+
+            **Example response**:
+
+            The .mdblob file containing the serialized and signed metadata for the channelid.
+
+            :statuscode 404: if channel with given channeld is not found.
+        """
+        with db_session:
+            channel = self.session.lm.mds.ChannelMetadata.get_channel_with_id(self.cid)
+            if not channel:
+                return ChannelsDiscoveredSpecificEndpoint.return_404(request)
+            else:
+                mdblob = channel.serialized()
+
+        request.setHeader(b'content-type', 'application/octet-stream')
+        request.setHeader(b'Content-Disposition', 'attachment; filename=%s.mdblob' % self.cid.encode('hex'))
+        return mdblob
