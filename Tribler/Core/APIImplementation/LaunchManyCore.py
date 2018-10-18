@@ -488,8 +488,7 @@ class TriblerLaunchMany(TaskManager):
             self.version_check_manager.start()
 
         if self.session.config.get_chant_enabled():
-            channels_dir = os.path.join(self.session.config.get_state_dir(),
-                                        self.session.config.get_chant_channels_dir())
+            channels_dir = os.path.join(self.session.config.get_chant_channels_dir())
             database_path = os.path.join(self.session.config.get_state_dir(), 'sqlite', 'metadata.db')
             self.mds = MetadataStore(database_path, channels_dir, self.session.trustchain_keypair)
 
