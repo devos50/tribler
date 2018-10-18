@@ -1,8 +1,10 @@
 import base64
+import glob
 import os
 import urllib
+from urllib import pathname2url
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QDir
 from PyQt5.QtGui import QIcon, QCursor
 
 from PyQt5.QtWidgets import QWidget, QAction, QTreeWidgetItem, QFileDialog
@@ -24,7 +26,7 @@ chant_welcome_text = \
 """Welcome to the management interface of your channel!
 
 Here, you can change settings of you channel and manage your shared torrents. 
-Note that this is a New-style channel, which is experimental."""
+Note that this is a New-style channel, which is still experimental."""
 class EditChannelPage(QWidget):
     """
     This class is responsible for managing lists and data on your channel page, including torrents, playlists
@@ -259,32 +261,37 @@ class EditChannelPage(QWidget):
         menu = TriblerActionMenu(self)
 
         browse_files_action = QAction('Import torrent from file', self)
+        browse_dir_action = QAction('Import torrent(s) from dir', self)
         add_url_action = QAction('Add URL', self)
         create_torrent_action = QAction('Create torrent from file(s)', self)
 
         browse_files_action.triggered.connect(self.on_add_torrent_browse_file)
+        browse_dir_action.triggered.connect(self.on_add_torrents_browse_dir)
         add_url_action.triggered.connect(self.on_add_torrent_from_url)
         create_torrent_action.triggered.connect(self.on_create_torrent_from_files)
 
         menu.addAction(browse_files_action)
+        menu.addAction(browse_dir_action)
         menu.addAction(add_url_action)
         menu.addAction(create_torrent_action)
 
         menu.exec_(QCursor.pos())
 
-    def on_add_torrent_browse_file(self):
-        filename = QFileDialog.getOpenFileName(self, "Please select the .torrent file", "", "Torrent files (*.torrent)")
-
-        if len(filename[0]) == 0:
-            return
-
-        with open(filename[0], "rb") as torrent_file:
+    def add_torrent_to_channel(self, filename):
+        with open(filename, "rb") as torrent_file:
             torrent_content = urllib.quote_plus(base64.b64encode(torrent_file.read()))
-            self.editchannel_request_mgr = TriblerRequestManager()
-            self.editchannel_request_mgr.perform_request("channels/discovered/%s/torrents" %
+            editchannel_request_mgr = TriblerRequestManager()
+            editchannel_request_mgr.perform_request("channels/discovered/%s/torrents" %
                                                          self.channel_overview['identifier'],
                                                          self.on_torrent_to_channel_added, method='PUT',
                                                          data='torrent=%s' % torrent_content)
+
+    def on_add_torrent_browse_file(self):
+        filename = QFileDialog.getOpenFileName(self, "Please select the .torrent file", "", "Torrent files (*.torrent)")
+        if len(filename[0]) == 0:
+            return
+        self.add_torrent_to_channel(filename[0])
+
 
     def on_add_torrent_from_url(self):
         self.dialog = ConfirmationDialog(self, "Add torrent from URL/magnet link",
@@ -650,6 +657,30 @@ class EditChannelPage(QWidget):
         dialog.show()
 
 
+    def on_add_torrents_browse_dir(self):
+        chosen_dir = QFileDialog.getExistingDirectory(self,
+                                                      "Please select the directory containing the .torrent files",
+                                                      QDir.homePath(),
+                                                      QFileDialog.ShowDirsOnly)
+        if len(chosen_dir) == 0:
+            return
+
+        self.selected_torrent_files = [torrent_file for torrent_file in glob.glob(chosen_dir + "/*.torrent")]
+        self.dialog = ConfirmationDialog(self, "Add torrents from directory",
+                                         "Are you sure you want to add %d torrents to your Tribler channel?" %
+                                         len(self.selected_torrent_files),
+                                         [('ADD', BUTTON_TYPE_NORMAL), ('CANCEL', BUTTON_TYPE_CONFIRM)])
+        self.dialog.button_clicked.connect(self.on_confirm_add_directory_dialog)
+        self.dialog.show()
+
+    def on_confirm_add_directory_dialog(self, action):
+        if action == 0:
+            for filename in self.selected_torrent_files:
+                self.add_torrent_to_channel(filename)
+
+        if self.dialog:
+            self.dialog.close_dialog()
+            self.dialog = None
 
 
 
