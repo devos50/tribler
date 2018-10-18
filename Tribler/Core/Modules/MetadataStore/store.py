@@ -70,6 +70,7 @@ class MetadataStore(object):
 
         self.Metadata._my_key = my_key
         self.ChannelMetadata._channels_dir = channels_dir
+        self.Metadata._logger = self._logger # Use Store-level logger for every ORM-based class
 
         self._db.bind(provider='sqlite', filename=db_filename, create_db=create_db)
         if create_db:
@@ -93,8 +94,11 @@ class MetadataStore(object):
         :param dirname: The directory containing the metadata blobs.
         :param channel_id: public_key of the channel.
         """
+
         with db_session:
             channel = self.ChannelMetadata.get(public_key=channel_id)
+            self._logger.debug("Starting processing channel dir %s. Channel %s local/max version %i/%i",
+                               dirname, str(channel.public_key).encode("hex"), channel.local_version, channel.version)
             for filename in sorted(os.listdir(dirname)):
                 full_filename = os.path.join(dirname, filename)
                 if filename.endswith(BLOB_EXTENSION):
@@ -108,6 +112,8 @@ class MetadataStore(object):
                         channel.local_version = blob_sequence_number
                     except InvalidSignatureException:
                         self._logger.error("Not processing metadata located at %s: invalid signature", full_filename)
+            self._logger.debug("Finished processing channel dir %s. Channel %s local/max version %i/%i",
+                               dirname, str(channel.public_key).encode("hex"), channel.local_version, channel.version)
 
     @db_session
     def process_mdblob_file(self, filepath):
@@ -129,7 +135,6 @@ class MetadataStore(object):
             md = self.process_payload(payload)
             if md:
                 metadata_list.append(md)
-
         return metadata_list
 
     # Can't use db_session wrapper here, performance drops 10 times! Pony bug!

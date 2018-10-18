@@ -525,6 +525,8 @@ class TriblerLaunchMany(TaskManager):
             # Add new channel object to DB
             channel = self.mds.ChannelMetadata.from_payload(payload)
 
+        self._logger.info("Updating channel %s ver %i->%i", str(channel.public_key).encode("hex"),
+                          channel.local_version, channel.version)
         return self.download_channel(channel)
 
     def download_channel(self, channel):

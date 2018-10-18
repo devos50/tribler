@@ -34,12 +34,13 @@ def convert_channel_metadata_to_tuple(metadata):
     :param metadata: The metadata to convert.
     :return: A tuple with information about the torrent.
     """
+    # TODO: the values here are totally random temporary placeholders, and should be removed eventually.
     votes = 1
     my_vote = 2
     spam = 0
     relevance = 0.9
     unix_timestamp = time2float(metadata.timestamp)
-    return metadata.rowid, str(metadata.public_key), metadata.title, metadata.tags, int(metadata.size), votes, spam,\
+    return metadata.rowid, str(metadata.public_key), metadata.title, metadata.tags, int(metadata.size), votes, spam, \
            my_vote, unix_timestamp, relevance
 
 

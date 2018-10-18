@@ -20,6 +20,7 @@ def define_binding(db):
         deleted = orm.Optional(bool, default=False)
         _payload_class = MetadataPayload
         _my_key = None
+        _logger = None
 
         def __init__(self, *args, **kwargs):
             super(Metadata, self).__init__(*args, **kwargs)

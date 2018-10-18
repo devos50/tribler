@@ -173,6 +173,9 @@ def define_binding(db):
             # Write the channel mdblob away
             with open(os.path.join(self._channels_dir, self.dir_name + BLOB_EXTENSION), 'wb') as out_file:
                 out_file.write(''.join(self.serialized()))
+
+            self._logger.info("Channel %s committed with %i new entries. New version is %i",
+                              str(self.public_key).encode("hex"), len(metadata_list), new_version)
             return infohash
 
         def commit_channel_torrent(self):
@@ -185,7 +188,9 @@ def define_binding(db):
             try:
                 new_infohash = self.update_channel_torrent(self.staged_entries_list)
             except IOError:
-                print ("Error during channel torrent commit, not going to garbage collect the channel")
+                self._logger.error(
+                    "Error during channel torrent commit, not going to garbage collect the channel. Channel %s",
+                    str(self.public_key).encode("hex"))
             else:
                 # Clean up obsolete entries
                 self.garbage_collect()

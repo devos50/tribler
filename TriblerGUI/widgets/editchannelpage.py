@@ -216,7 +216,7 @@ class EditChannelPage(QWidget):
     def clicked_edit_channel_commit_button(self):
         self.editchannel_request_mgr = TriblerRequestManager()
         self.editchannel_request_mgr.perform_request("mychannel", self.on_channel_committed,
-                                                     data=unicode('commit_changes=True').encode('utf-8'),
+                                                     data=unicode('commit_changes=1').encode('utf-8'),
                                                      method='POST')
 
     def on_channel_committed(self, result):
