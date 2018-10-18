@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
-
 from libtorrent import file_storage, add_files, create_torrent, set_piece_hashes, bencode, torrent_info
+
 from pony import orm
 from pony.orm import db_session
 
@@ -10,7 +10,8 @@ from Tribler.Core.exceptions import DuplicateTorrentFileError, DuplicateChannelN
 
 CHANNEL_DIR_NAME_LENGTH = 60  # Its not 40 so it could be distinguished from infohash
 BLOB_EXTENSION = '.mdblob'
-CHUNK_SIZE_LIMIT = 1*1024*1024 # We use 1MB chunks as a workaround for Python's lack of string pointers
+CHUNK_SIZE_LIMIT = 1 * 1024 * 1024  # We use 1MB chunks as a workaround for Python's lack of string pointers
+
 
 def create_torrent_from_dir(directory, torrent_filename):
     fs = file_storage()
@@ -53,7 +54,7 @@ def entries_to_chunk(metadata_list, limit=CHUNK_SIZE_LIMIT, start_index=0):
         blob = ''.join(metadata.serialized_delete() if metadata.deleted else metadata.serialized())
 
         # Chunk size limit reached?
-        if offset+len(blob) > limit:
+        if offset + len(blob) > limit:
             break
 
         # Now that safety checks are done, we can update the counters
@@ -157,14 +158,15 @@ def define_binding(db):
             while len(metadata_list) > index:
                 # Squash several serialized and signed metadata entries into a single file
                 data, index = entries_to_chunk(metadata_list, start_index=index)
-                with open(os.path.join(channel_dir, str(index+old_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
+                with open(os.path.join(channel_dir, str(index + old_version).zfill(9) + BLOB_EXTENSION), 'wb') as f:
                     f.write(data)
                 index += 1
 
             new_version = self.version + len(metadata_list)
 
             # Make torrent out of dir with metadata files
-            torrent, infohash = create_torrent_from_dir(channel_dir, os.path.join(self._channels_dir, self.dir_name + ".torrent"))
+            torrent, infohash = create_torrent_from_dir(channel_dir,
+                                                        os.path.join(self._channels_dir, self.dir_name + ".torrent"))
 
             self.update_metadata(update_dict={"infohash": infohash, "version": new_version,
                                               "torrent_date": datetime.utcfromtimestamp(torrent['creation date'])})

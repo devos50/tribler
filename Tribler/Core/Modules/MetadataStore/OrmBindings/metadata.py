@@ -25,7 +25,7 @@ def define_binding(db):
         def __init__(self, *args, **kwargs):
             super(Metadata, self).__init__(*args, **kwargs)
             # If no key/signature given, sign with our own key.
-            if "public_key" not in kwargs or (kwargs["public_key"]==self._my_key and "signature" not in kwargs):
+            if "public_key" not in kwargs or (kwargs["public_key"] == self._my_key and "signature" not in kwargs):
                 self.sign(self._my_key)
 
         def _serialized(self, key=None):
@@ -78,7 +78,7 @@ def define_binding(db):
         def has_valid_signature(self):
             crypto = ECCrypto()
             return crypto.is_valid_public_bin(str(self.public_key)) \
-                     and self._payload_class(**self.to_dict()).has_valid_signature()
+                   and self._payload_class(**self.to_dict()).has_valid_signature()
 
         @classmethod
         def from_payload(cls, payload):

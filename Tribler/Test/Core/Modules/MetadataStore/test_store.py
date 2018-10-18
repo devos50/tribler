@@ -11,11 +11,13 @@ from Tribler.Core.Modules.MetadataStore.store import MetadataStore
 from Tribler.Test.Core.base_test import TriblerCoreTest
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 
+
 def make_wrong_payload(filename):
     key = ECCrypto().generate_key(u"curve25519")
     metadata_payload = MetadataPayload(666, buffer(key.pub().key_to_bin()), datetime.utcnow(), 123)
     with open(filename, 'wb') as output_file:
         output_file.write(''.join(metadata_payload.serialized(key)))
+
 
 class TestMetadataStore(TriblerCoreTest):
     """
@@ -31,7 +33,8 @@ class TestMetadataStore(TriblerCoreTest):
         yield super(TestMetadataStore, self).setUp()
         my_key = ECCrypto().generate_key(u"curve25519")
 
-        self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'), self.session_base_dir, my_key)
+        self.metadata_store = MetadataStore(os.path.join(self.session_base_dir, 'test.db'), self.session_base_dir,
+                                            my_key)
 
     @inlineCallbacks
     def tearDown(self):
@@ -53,21 +56,21 @@ class TestMetadataStore(TriblerCoreTest):
         self.assertEqual(loaded_metadata[0].title, 'test')
 
         # Test whether we delete existing metadata when loading a DeletedMetadata blob
-        metadata = self.metadata_store.TorrentMetadata(infohash='1'*20)
+        metadata = self.metadata_store.TorrentMetadata(infohash='1' * 20)
         metadata.to_delete_file(metadata_path)
         loaded_metadata = self.metadata_store.process_mdblob_file(metadata_path)
         # Make sure the original metadata is deleted
         self.assertListEqual(loaded_metadata, [])
-        self.assertIsNone(self.metadata_store.TorrentMetadata.get(infohash='1'*20))
+        self.assertIsNone(self.metadata_store.TorrentMetadata.get(infohash='1' * 20))
 
         # Test an unknown metadata type, this should raise an exception
-        invalid_metadata = os.path.join(self.session_base_dir,'invalidtype.mdblob')
+        invalid_metadata = os.path.join(self.session_base_dir, 'invalidtype.mdblob')
         make_wrong_payload(invalid_metadata)
         self.assertRaises(UnknownBlobTypeException, self.metadata_store.process_mdblob_file, invalid_metadata)
 
     @db_session
     def test_squash_mdblobs(self):
-        md_list = [self.metadata_store.TorrentMetadata(title='test'+str(x)) for x in xrange(0,10)]
+        md_list = [self.metadata_store.TorrentMetadata(title='test' + str(x)) for x in xrange(0, 10)]
         chunk, _ = entries_to_chunk(md_list)
         self.assertItemsEqual(md_list, self.metadata_store.process_squashed_mdblob(chunk))
 
@@ -75,7 +78,6 @@ class TestMetadataStore(TriblerCoreTest):
         chunk, index = entries_to_chunk(md_list, limit=1000)
         chunk += entries_to_chunk(md_list, start_index=index)[0]
         self.assertItemsEqual(md_list, self.metadata_store.process_squashed_mdblob(chunk))
-
 
     @db_session
     def test_process_channel_dir(self):

@@ -195,7 +195,6 @@ class TestChannelMetadata(TestAsServer):
         channel_metadata.commit_channel_torrent()
         self.assertEqual(0, len(channel_metadata.contents_list))
 
-
     @db_session
     def test_consolidate_channel_torrent(self):
         """
@@ -222,8 +221,3 @@ class TestChannelMetadata(TestAsServer):
         self.assertEqual(3, len(os.listdir(my_dir)))
         channel.consolidate_channel_torrent()
         self.assertEqual(1, len(os.listdir(my_dir)))
-
-
-
-
-

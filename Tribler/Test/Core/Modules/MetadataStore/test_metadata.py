@@ -5,6 +5,7 @@ from pony.orm import db_session
 from Tribler.Core.Modules.MetadataStore.serialization import MetadataPayload
 from Tribler.Test.test_as_server import TestAsServer
 
+
 class TestMetadata(TestAsServer):
     """
     Contains various tests for the Metadata type.
@@ -68,4 +69,3 @@ class TestMetadata(TestAsServer):
         metadata.delete()
         metadata_payload = MetadataPayload(**metadata_dict)
         self.assertTrue(self.session.lm.mds.Metadata.from_payload(metadata_payload))
-

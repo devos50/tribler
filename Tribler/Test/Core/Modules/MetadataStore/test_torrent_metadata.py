@@ -143,4 +143,3 @@ class TestTorrentMetadata(TestAsServer):
 
         autocomplete_terms = self.session.lm.mds.TorrentMetadata.get_auto_complete_terms("sheep", 2)
         self.assertEqual(len(autocomplete_terms), 1)
-

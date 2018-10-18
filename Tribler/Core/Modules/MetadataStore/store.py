@@ -6,8 +6,7 @@ from pony.orm import db_session
 
 from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, torrent_metadata, channel_metadata
 from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload, read_payload_with_offset
-
+from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload_with_offset
 # This table should never be used from ORM directly.
 # It is created as a VIRTUAL table by raw SQL and
 # maintained by SQL triggers.
@@ -70,7 +69,7 @@ class MetadataStore(object):
 
         self.Metadata._my_key = my_key
         self.ChannelMetadata._channels_dir = channels_dir
-        self.Metadata._logger = self._logger # Use Store-level logger for every ORM-based class
+        self.Metadata._logger = self._logger  # Use Store-level logger for every ORM-based class
 
         self._db.bind(provider='sqlite', filename=db_filename, create_db=create_db)
         if create_db:
@@ -157,5 +156,3 @@ class MetadataStore(object):
     @db_session
     def get_my_channel(self):
         return self.ChannelMetadata.get_channel_with_id(self.my_key.pub().key_to_bin())
-
-

@@ -11,7 +11,6 @@ from Tribler.Test.tools import trial_timeout
 
 
 class TestChannelDownload(TestAsServer):
-
     DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(os.path.realpath(__file__))), '..', '..', 'data')
     CHANNEL_DIR = os.path.join(DATA_DIR, 'sample_channel')
     CHANNEL_TORRENT = os.path.join(CHANNEL_DIR, 'channel.torrent')

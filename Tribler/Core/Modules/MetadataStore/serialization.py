@@ -72,8 +72,10 @@ def float2time(timestamp, epoch=EPOCH):
 class InvalidSignatureException(Exception):
     pass
 
+
 class KeysMismatchException(Exception):
     pass
+
 
 class UnknownBlobTypeException(Exception):
     pass
@@ -136,12 +138,12 @@ class MetadataPayload(Payload):
         unpack_list, end_offset = serializer.unpack_multiple(cls.format_list, data, offset=offset)
         payload = cls.from_unpack_list(*unpack_list)
         if check_signature:
-            payload.signature = data[end_offset:end_offset+SIGNATURE_SIZE]
+            payload.signature = data[end_offset:end_offset + SIGNATURE_SIZE]
             data_unsigned = data[offset:end_offset]
             key = crypto.key_from_public_bin(payload.public_key)
             if not crypto.is_valid_signature(key, data_unsigned, payload.signature):
                 raise InvalidSignatureException
-        return payload, end_offset+SIGNATURE_SIZE
+        return payload, end_offset + SIGNATURE_SIZE
 
     def to_dict(self):
         return {
@@ -155,7 +157,7 @@ class MetadataPayload(Payload):
     def _serialized(self, key=None):
         # If we are going to sign it, we must provide a matching key
         if key and self.public_key != str(key.pub().key_to_bin()):
-                raise KeysMismatchException(self.public_key, str(key.pub().key_to_bin()))
+            raise KeysMismatchException(self.public_key, str(key.pub().key_to_bin()))
 
         serialized_data = serializer.pack_multiple(self.to_pack_list())[0]
         signature = ECCrypto().create_signature(key, serialized_data) if key else self.signature
@@ -236,7 +238,8 @@ class ChannelMetadataPayload(TorrentMetadataPayload):
         return data
 
     @classmethod
-    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags, tracker_info, version):
+    def from_unpack_list(cls, metadata_type, public_key, timestamp, tc_pointer, infohash, size, title, tags,
+                         tracker_info, version):
         return ChannelMetadataPayload(metadata_type, public_key, timestamp, tc_pointer, infohash, size,
                                       title, tags, tracker_info, version)
 
@@ -269,4 +272,3 @@ class DeletedMetadataPayload(MetadataPayload):
         dct = super(DeletedMetadataPayload, self).to_dict()
         dct.update({"delete_signature": self.delete_signature})
         return dct
-
