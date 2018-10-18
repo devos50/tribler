@@ -1,22 +1,20 @@
-import logging
 import hashlib
+import logging
+from libtorrent import bdecode, bencode
 from urllib import url2pathname
 
-from libtorrent import bdecode, bencode
-
-from pony.orm import db_session
 from twisted.internet.defer import Deferred
 from twisted.internet.error import DNSLookupError, ConnectError, ConnectionLost
 from twisted.web import http, resource
 from twisted.web.server import NOT_DONE_YET
 
-from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
-from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload, MetadataPayload, \
-    InvalidSignatureException, CHANNEL_TORRENT, REGULAR_TORRENT, read_payload
-from Tribler.Core.exceptions import HttpError
-from Tribler.Core.TorrentDef import TorrentDef
 import Tribler.Core.Utilities.json_util as json
+from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
+from Tribler.Core.Modules.MetadataStore.serialization import InvalidSignatureException, CHANNEL_TORRENT, \
+    REGULAR_TORRENT, read_payload
+from Tribler.Core.TorrentDef import TorrentDef
 from Tribler.Core.Utilities.utilities import fix_torrent, http_get, parse_magnetlink
+from Tribler.Core.exceptions import HttpError
 
 
 class TorrentInfoEndpoint(resource.Resource):

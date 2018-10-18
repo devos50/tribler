@@ -1,5 +1,3 @@
-import os
-
 from pony.orm import db_session
 from twisted.web import http
 

@@ -1,18 +1,16 @@
 import base64
-import os
 
+from pony.orm import db_session
 from twisted.internet.defer import Deferred
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
+import Tribler.Core.Utilities.json_util as json
 from Tribler.Core.Modules.restapi.channels.base_channels_endpoint import BaseChannelsEndpoint
 from Tribler.Core.Modules.restapi.util import convert_db_torrent_to_json, convert_torrent_metadata_to_tuple
 from Tribler.Core.TorrentDef import TorrentDef
-from Tribler.Core.exceptions import DuplicateTorrentFileError, HttpError
-import Tribler.Core.Utilities.json_util as json
 from Tribler.Core.Utilities.utilities import http_get
-from pony.orm import db_session
-
+from Tribler.Core.exceptions import DuplicateTorrentFileError, HttpError
 from TriblerGUI.defs import UNCOMMITTED, TODELETE, COMMITTED
 
 UNKNOWN_TORRENT_MSG = "this torrent is not found in the specified channel"
@@ -73,14 +71,14 @@ class ChannelsTorrentsEndpoint(BaseChannelsEndpoint):
                 if channel:
                     if channel == self.session.lm.mds.get_my_channel():
                         # That's our channel, it gets special treatment
-                        uncommitted = map(lambda x: convert_torrent_metadata_to_tuple(x, UNCOMMITTED),
-                                          list(channel.uncommitted_contents))
-                        deleted = map(lambda x: convert_torrent_metadata_to_tuple(x, TODELETE),
-                                      list(channel.deleted_contents))
-                        committed = map(lambda x: convert_torrent_metadata_to_tuple(x, COMMITTED),
-                                        list(channel.committed_contents))
+                        uncommitted = [convert_torrent_metadata_to_tuple(x, UNCOMMITTED) for x in
+                                       list(channel.uncommitted_contents)]
+                        deleted = [convert_torrent_metadata_to_tuple(x, TODELETE) for x in
+                                   list(channel.deleted_contents)]
+                        committed = [convert_torrent_metadata_to_tuple(x, COMMITTED) for x in
+                                     list(channel.committed_contents)]
                         results_local_torrents_channel = uncommitted + deleted + committed
-                        chant_dirty = len(channel.staged_entries_list) > 0
+                        chant_dirty = bool(uncommitted + deleted)
                     else:
                         results_local_torrents_channel = map(convert_torrent_metadata_to_tuple,
                                                              list(channel.contents))

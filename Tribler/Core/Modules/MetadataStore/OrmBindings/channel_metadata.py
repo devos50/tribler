@@ -97,14 +97,12 @@ def define_binding(db):
             :return: The ChannelMetadata object that contains the latest version of the channel
             """
             channel = ChannelMetadata.get_channel_with_id(payload.public_key)
-            if channel:
-                if payload.version > channel.version:
-                    channel.delete()
-                    return ChannelMetadata.from_payload(payload)
-                else:
-                    return channel
-            else:
+            if not channel:
                 return ChannelMetadata.from_payload(payload)
+
+            if payload.version > channel.version:
+                channel.set(**payload.to_dict())
+            return channel
 
         @classmethod
         @db_session
