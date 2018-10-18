@@ -525,6 +525,8 @@ class EditChannelPage(QWidget):
                 self.remove_torrent_requests.append(request_mgr)
 
             self.window().edit_channel_torrents_list.set_data_items([])
+            if "chant" in self.channel_overview:
+                self.load_channel_torrents()
 
         self.dialog.close_dialog()
         self.dialog = None
