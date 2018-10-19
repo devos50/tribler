@@ -3,8 +3,6 @@ from __future__ import division
 import struct
 from datetime import datetime, timedelta
 
-from enum import Enum, unique
-
 from Tribler.pyipv8.ipv8.deprecated.payload import Payload
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 from Tribler.pyipv8.ipv8.messaging.serialization import Serializer
@@ -18,19 +16,11 @@ EMPTY_SIG = '0' * 64
 crypto = ECCrypto()
 serializer = Serializer()
 
-
-@unique
-class MetadataTypes(Enum):
-    TYPELESS = 1
-    REGULAR_TORRENT = 2
-    CHANNEL_TORRENT = 3
-    DELETED = 4
-
-
-TYPELESS = MetadataTypes.TYPELESS
-REGULAR_TORRENT = MetadataTypes.REGULAR_TORRENT
-CHANNEL_TORRENT = MetadataTypes.CHANNEL_TORRENT
-DELETED = MetadataTypes.DELETED
+# Metadata types. Should have been an enum, but in Python its unwieldy.
+TYPELESS = 1
+REGULAR_TORRENT = 2
+CHANNEL_TORRENT = 3
+DELETED = 4
 
 
 # We have to write our own serialization procedure for timestamps, since
@@ -84,11 +74,11 @@ class UnknownBlobTypeException(Exception):
 def read_payload_with_offset(data, offset=0):
     # First we have to determine the actual payload type
     metadata_type = struct.unpack_from('>I', buffer(data), offset=offset)[0]
-    if metadata_type == MetadataTypes.DELETED.value:
+    if metadata_type == DELETED:
         return DeletedMetadataPayload.from_signed_blob_with_offset(data, check_signature=True, offset=offset)
-    elif metadata_type == MetadataTypes.REGULAR_TORRENT.value:
+    elif metadata_type == REGULAR_TORRENT:
         return TorrentMetadataPayload.from_signed_blob_with_offset(data, check_signature=True, offset=offset)
-    elif metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
+    elif metadata_type == CHANNEL_TORRENT:
         return ChannelMetadataPayload.from_signed_blob_with_offset(data, check_signature=True, offset=offset)
 
     # Unknown metadata type, raise exception

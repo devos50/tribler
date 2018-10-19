@@ -5,7 +5,7 @@ from libtorrent import file_storage, add_files, create_torrent, set_piece_hashes
 from pony import orm
 from pony.orm import db_session
 
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, ChannelMetadataPayload
+from Tribler.Core.Modules.MetadataStore.serialization import ChannelMetadataPayload, CHANNEL_TORRENT
 from Tribler.Core.exceptions import DuplicateTorrentFileError, DuplicateChannelNameError
 
 CHANNEL_DIR_NAME_LENGTH = 60  # Its not 40 so it could be distinguished from infohash
@@ -68,7 +68,7 @@ def entries_to_chunk(metadata_list, limit=CHUNK_SIZE_LIMIT, start_index=0):
 
 def define_binding(db):
     class ChannelMetadata(db.TorrentMetadata):
-        _discriminator_ = MetadataTypes.CHANNEL_TORRENT.value
+        _discriminator_ = CHANNEL_TORRENT
         version = orm.Optional(int, size=64, default=0)
         subscribed = orm.Optional(bool, default=False)
         votes = orm.Optional(int, size=64, default=0)

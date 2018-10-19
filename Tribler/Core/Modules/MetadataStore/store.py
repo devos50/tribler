@@ -6,7 +6,8 @@ from pony.orm import db_session
 
 from Tribler.Core.Modules.MetadataStore.OrmBindings import metadata, torrent_metadata, channel_metadata
 from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_metadata import BLOB_EXTENSION
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, read_payload_with_offset
+from Tribler.Core.Modules.MetadataStore.serialization import read_payload_with_offset, REGULAR_TORRENT, \
+    CHANNEL_TORRENT, DELETED
 # This table should never be used from ORM directly.
 # It is created as a VIRTUAL table by raw SQL and
 # maintained by SQL triggers.
@@ -142,15 +143,15 @@ class MetadataStore(object):
             if self.Metadata.exists(signature=payload.signature):
                 return self.Metadata.get(signature=payload.signature)
 
-            if payload.metadata_type == MetadataTypes.DELETED.value:
+            if payload.metadata_type == DELETED:
                 # We only allow people to delete their own entries, thus PKs must match
                 existing_metadata = self.Metadata.get(signature=payload.delete_signature, public_key=payload.public_key)
                 if existing_metadata:
                     existing_metadata.delete()
                 return None
-            elif payload.metadata_type == MetadataTypes.REGULAR_TORRENT.value:
+            elif payload.metadata_type == REGULAR_TORRENT:
                 return self.TorrentMetadata.from_payload(payload)
-            elif payload.metadata_type == MetadataTypes.CHANNEL_TORRENT.value:
+            elif payload.metadata_type == CHANNEL_TORRENT:
                 return self.ChannelMetadata.from_payload(payload)
 
     @db_session

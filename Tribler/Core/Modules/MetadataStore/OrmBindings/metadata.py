@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pony import orm
 
-from Tribler.Core.Modules.MetadataStore.serialization import MetadataTypes, MetadataPayload, DeletedMetadataPayload
+from Tribler.Core.Modules.MetadataStore.serialization import MetadataPayload, DeletedMetadataPayload, TYPELESS, DELETED
 from Tribler.pyipv8.ipv8.keyvault.crypto import ECCrypto
 
 
@@ -10,7 +10,7 @@ def define_binding(db):
     class Metadata(db.Entity):
         rowid = orm.PrimaryKey(int, auto=True)
         metadata_type = orm.Discriminator(int)
-        _discriminator_ = MetadataTypes.TYPELESS.value
+        _discriminator_ = TYPELESS
         # We want to make signature unique=True for safety, but can't do it in Python2 because of Pony bug #390
         signature = orm.Optional(buffer)
         timestamp = orm.Optional(datetime, default=datetime.utcnow)
@@ -50,7 +50,7 @@ def define_binding(db):
             :return: (serialized_data, signature) tuple
             """
             my_dict = Metadata.to_dict(self)
-            my_dict.update({"metadata_type": MetadataTypes.DELETED.value,
+            my_dict.update({"metadata_type": DELETED,
                             "delete_signature": self.signature})
             return DeletedMetadataPayload(**my_dict)._serialized(self._my_key)
 

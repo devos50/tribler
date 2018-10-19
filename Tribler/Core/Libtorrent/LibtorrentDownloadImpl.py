@@ -6,17 +6,15 @@ Author(s): Arno Bakker, Egbert Bouman
 import base64
 import logging
 import os
-import random
 import sys
 import time
 from binascii import hexlify
-from traceback import print_exc
+
+import libtorrent as lt
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, CancelledError, succeed
 from twisted.internet.task import LoopingCall
 from twisted.python.failure import Failure
-
-import libtorrent as lt
 
 from Tribler.Core import NoDispersyRLock
 from Tribler.Core.DownloadConfig import DownloadStartupConfig, DownloadConfigInterface, get_default_dest_dir
@@ -28,9 +26,8 @@ from Tribler.Core.Utilities.torrent_utils import get_info_from_handle
 from Tribler.Core.exceptions import SaveResumeDataError
 from Tribler.Core.osutils import fix_filebasename
 from Tribler.Core.simpledefs import DLSTATUS_SEEDING, DLSTATUS_STOPPED, DLMODE_VOD, DLMODE_NORMAL, \
-                                    PERSISTENTSTATE_CURRENTVERSION, dlstatus_strings
+    PERSISTENTSTATE_CURRENTVERSION, dlstatus_strings
 from Tribler.pyipv8.ipv8.taskmanager import TaskManager
-
 
 if sys.platform == "win32":
     try:
@@ -647,7 +644,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
         if self.finished_callback:
             if self.finished_callback_already_called:
                 self._logger.warning("LibtorrentDownloadImpl: tried to repeat the call to finished_callback %s",
-                                   self.tdef.get_name())
+                                     self.tdef.get_name())
             else:
                 self.finished_callback_already_called = True
             self.finished_callback(self)
