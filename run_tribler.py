@@ -3,6 +3,8 @@ import sys
 import logging.config
 
 import signal
+
+from TriblerGUI.utilities import get_base_path
 from check_os import check_environment, check_free_space, error_and_exit, setup_gui_logging, \
     should_kill_other_tribler_instances, enable_fault_handler, set_process_priority
 
@@ -70,6 +72,11 @@ def start_tribler_core(base_path, api_port):
         session = Session(config)
 
         signal.signal(signal.SIGTERM, lambda signum, stack: shutdown(session, signum, stack))
+        if '--headless' in sys.argv:
+            # In headless mode, we directly invoke the shutdown here.
+            # If not in headless mode, TriblerWindow handles the SIGINT.
+            signal.signal(signal.SIGINT, lambda signum, stack: shutdown(session, signum, stack))
+
         session.start()
 
     reactor.callWhenRunning(start_tribler)
@@ -77,8 +84,11 @@ def start_tribler_core(base_path, api_port):
 
 
 if __name__ == "__main__":
+    if '--headless' in sys.argv:
+        start_tribler_core(get_base_path(), 8085)
+
     # Check whether we need to start the core or the user interface
-    if 'CORE_PROCESS' in os.environ:
+    elif 'CORE_PROCESS' in os.environ:
         base_path = os.environ['CORE_BASE_PATH']
         api_port = os.environ['CORE_API_PORT']
         start_tribler_core(base_path, api_port)
