@@ -4,7 +4,6 @@ from twisted.web import http, resource
 
 from Tribler.Core.simpledefs import NTFY_CHANNELCAST
 import Tribler.Core.Utilities.json_util as json
-from Tribler.community.allchannel.community import AllChannelCommunity
 from Tribler.dispersy.exception import CommunityNotFoundException
 
 UNKNOWN_CHANNEL_RESPONSE_MSG = "the channel with the provided cid is not known"
@@ -69,6 +68,7 @@ class BaseChannelsEndpoint(resource.Resource):
         """
         Make a vote in the channel specified by the cid. Returns a deferred that fires when the vote is done.
         """
+        from Tribler.community.allchannel.community import AllChannelCommunity
         for community in self.session.get_dispersy_instance().get_communities():
             if isinstance(community, AllChannelCommunity):
                 return community.disp_create_votecast(cid, vote, int(time.time()))
