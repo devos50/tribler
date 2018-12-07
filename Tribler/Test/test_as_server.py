@@ -35,6 +35,7 @@ from Tribler.Core.Utilities.instrumentation import WatchDog
 from Tribler.Core.Utilities.network_utils import get_random_port
 from Tribler.Core.simpledefs import dlstatus_strings, DLSTATUS_SEEDING
 from Tribler.Test.util.util import process_unhandled_exceptions, process_unhandled_twisted_exceptions
+from Tribler.util import is_python3, cast_to_unicode
 
 TESTS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 TESTS_DATA_DIR = os.path.abspath(os.path.join(TESTS_DIR, u"data"))
@@ -69,7 +70,7 @@ class BaseTestCase(unittest.TestCase):
         while self._tempdirs:
             temp_dir = self._tempdirs.pop()
             os.chmod(temp_dir, 0o700)
-            shutil.rmtree(unicode(temp_dir), ignore_errors=False)
+            shutil.rmtree(cast_to_unicode(temp_dir), ignore_errors=False)
 
     def temporary_directory(self, suffix=''):
         random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
@@ -85,7 +86,8 @@ class AbstractServer(BaseTestCase):
 
     def __init__(self, *args, **kwargs):
         super(AbstractServer, self).__init__(*args, **kwargs)
-        twisted.internet.base.DelayedCall.debug = True
+        if not is_python3():
+            twisted.internet.base.DelayedCall.debug = True
 
         self.watchdog = WatchDog()
         self.selected_socks5_ports = set()
