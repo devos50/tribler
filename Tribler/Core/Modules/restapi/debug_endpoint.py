@@ -1,6 +1,5 @@
 import logging
 import os
-from StringIO import StringIO
 import sys
 
 import datetime
@@ -10,6 +9,7 @@ from twisted.web import http, resource
 
 from Tribler.Core.Utilities.instrumentation import WatchDog
 import Tribler.Core.Utilities.json_util as json
+from Tribler.util import StringIO
 
 
 class MemoryDumpBuffer(StringIO):

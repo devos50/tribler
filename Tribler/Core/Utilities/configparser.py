@@ -5,18 +5,17 @@ Author(s): Egbert Bouman
 """
 import ast
 import codecs
-import StringIO
 
-from ConfigParser import DEFAULTSECT, RawConfigParser
 from threading import RLock
 
 from Tribler.Core.exceptions import OperationNotPossibleAtRuntimeException
+from Tribler.util import configparser_future, StringIO
 
 
-class CallbackConfigParser(RawConfigParser):
+class CallbackConfigParser(configparser_future.RawConfigParser):
 
     def __init__(self, *args, **kwargs):
-        RawConfigParser.__init__(self, *args, **kwargs)
+        configparser_future.RawConfigParser.__init__(self, *args, **kwargs)
         self.filename = None
         self.callback = None
         self.lock = RLock()
@@ -31,7 +30,7 @@ class CallbackConfigParser(RawConfigParser):
         # (e.g. when loading resumedata). Please do not remove.
         with codecs.open(filename, 'rb', encoding) as fp:
             buff = fp.read()
-        self.readfp(StringIO.StringIO(buff))
+        self.readfp(StringIO(buff))
 
     def set(self, section, option, new_value):
         with self.lock:
@@ -39,11 +38,11 @@ class CallbackConfigParser(RawConfigParser):
                 old_value = self.get(section, option)
                 if not self.callback(section, option, new_value, old_value):
                     raise OperationNotPossibleAtRuntimeException
-            RawConfigParser.set(self, section, option, new_value)
+            configparser_future.RawConfigParser.set(self, section, option, new_value)
 
     def get(self, section, option, literal_eval=True):
-        value = RawConfigParser.get(self, section, option) if RawConfigParser.has_option(
-            self, section, option) else None
+        value = configparser_future.RawConfigParser.get(self, section, option) if \
+            configparser_future.RawConfigParser.has_option(self, section, option) else None
         if literal_eval:
             return CallbackConfigParser.get_literal_value(value)
         return value
@@ -67,7 +66,7 @@ class CallbackConfigParser(RawConfigParser):
     def write(self, fp):
         with self.lock:
             if self._defaults:
-                fp.write(u"[%s]\n" % DEFAULTSECT)
+                fp.write(u"[%s]\n" % configparser_future.DEFAULTSECT)
                 for (key, value) in self._defaults.items():
                     fp.write(u"%s = %s\n" % (key, unicode(value).replace(u'\n', u'\n\t')))
                 fp.write(u"\n")

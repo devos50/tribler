@@ -3,7 +3,7 @@ Give the initial category information.
 
 Author(s): Yuan Yuan
 """
-import ConfigParser
+from Tribler.util import configparser
 
 
 def __split_list(string):
@@ -38,7 +38,7 @@ def __get_default():
 
 
 def getCategoryInfo(filename):
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.readfp(open(filename))
 
     cate_list = []

@@ -1,5 +1,4 @@
-from httplib import HTTP_PORT
-from urlparse import urlparse
+from Tribler.util import urllib_future, httplib_future
 
 
 class MalformedTrackerURLException(Exception):
@@ -34,7 +33,7 @@ def get_uniformed_tracker_url(tracker_url):
     except UnicodeDecodeError:
         return None
 
-    url = urlparse(tracker_url)
+    url = urllib_future.urlparse(tracker_url)
 
     # accessing urlparse attributes may throw UnicodeError's or ValueError's
     try:
@@ -52,7 +51,7 @@ def get_uniformed_tracker_url(tracker_url):
                 return None
             # HTTP trackers default to port HTTP_PORT
             elif url.scheme == 'http':
-                uniformed_port = HTTP_PORT
+                uniformed_port = httplib_future.HTTP_PORT
         else:
             uniformed_port = url.port
 
@@ -65,7 +64,7 @@ def get_uniformed_tracker_url(tracker_url):
         if url.scheme == 'http' and not url.path:
             return None
 
-        if url.scheme == 'http' and uniformed_port == HTTP_PORT:
+        if url.scheme == 'http' and uniformed_port == httplib_future.HTTP_PORT:
             uniformed_url = u'%s://%s%s' % (uniformed_scheme, uniformed_hostname, uniformed_path)
         else:
             uniformed_url = u'%s://%s:%d%s' % (uniformed_scheme, uniformed_hostname, uniformed_port, uniformed_path)
@@ -89,7 +88,7 @@ def parse_tracker_url(tracker_url):
     :returns: a tuple of size 3 containing the scheme, a tuple of hostname and port,
         and path of the url
     """
-    url = urlparse(tracker_url)
+    url = urllib_future.urlparse(tracker_url)
     if not (url.scheme == 'udp' or url.scheme == 'http'):
         raise MalformedTrackerURLException(u'Unexpected tracker type (%s).' % url.scheme)
 

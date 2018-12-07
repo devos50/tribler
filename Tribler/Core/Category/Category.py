@@ -6,7 +6,7 @@ Author(s):  Yuan Yuan, Jelle Roozenburg
 import logging
 import os
 import re
-from ConfigParser import MissingSectionHeaderError, ParsingError
+from Tribler.util import configparser_future
 
 from Tribler.Core.Category.FamilyFilter import XXXFilter
 from Tribler.Core.Category.init_category import getCategoryInfo
@@ -26,7 +26,7 @@ class Category(object):
         try:
             self.category_info = getCategoryInfo(filename)
             self.category_info.sort(cmp_rank)
-        except (MissingSectionHeaderError, ParsingError, IOError):
+        except (configparser_future.MissingSectionHeaderError, configparser_future.ParsingError, IOError):
             self.category_info = []
             self._logger.critical('', exc_info=True)
 

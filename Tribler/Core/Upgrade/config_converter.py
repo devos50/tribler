@@ -1,13 +1,13 @@
 import ast
 import os
-from ConfigParser import RawConfigParser, DuplicateSectionError, NoSectionError, MissingSectionHeaderError
 import logging
 from glob import iglob
 
-from Tribler.Core.simpledefs import STATEDIR_DLPSTATE_DIR
-
 from Tribler.Core.Config.tribler_config import TriblerConfig
 from Tribler.Core.exceptions import InvalidConfigException
+from Tribler.Core.simpledefs import STATEDIR_DLPSTATE_DIR
+from Tribler.util import configparser_future
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,14 +22,14 @@ def convert_config_to_tribler71(current_config, state_dir=None):
     state_dir = state_dir or TriblerConfig.get_default_state_dir()
     libtribler_file_loc = os.path.join(state_dir, "libtribler.conf")
     if os.path.exists(libtribler_file_loc):
-        libtribler_cfg = RawConfigParser()
+        libtribler_cfg = configparser_future.RawConfigParser()
         libtribler_cfg.read(libtribler_file_loc)
         current_config = add_libtribler_config(current_config, libtribler_cfg)
         os.remove(libtribler_file_loc)
 
     tribler_file_loc = os.path.join(state_dir, "tribler.conf")
     if os.path.exists(tribler_file_loc):
-        tribler_cfg = RawConfigParser()
+        tribler_cfg = configparser_future.RawConfigParser()
         tribler_cfg.read(tribler_file_loc)
         current_config = add_tribler_config(current_config, tribler_cfg)
         os.remove(tribler_file_loc)
@@ -38,11 +38,11 @@ def convert_config_to_tribler71(current_config, state_dir=None):
     # 'download_defaults'.
     for _, filename in enumerate(iglob(
             os.path.join(state_dir, STATEDIR_DLPSTATE_DIR, '*.state'))):
-        download_cfg = RawConfigParser()
+        download_cfg = configparser_future.RawConfigParser()
         try:
             with open(filename) as cfg_file:
                 download_cfg.readfp(cfg_file, filename=filename)
-        except MissingSectionHeaderError:
+        except configparser_future.MissingSectionHeaderError:
             logger.error("Removing download state file %s since it appears to be corrupt", filename)
             os.remove(filename)
 
@@ -54,7 +54,7 @@ def convert_config_to_tribler71(current_config, state_dir=None):
             download_cfg.remove_section("downloadconfig")
             with open(filename, "w") as output_config_file:
                 download_cfg.write(output_config_file)
-        except (NoSectionError, DuplicateSectionError):
+        except (configparser_future.NoSectionError, configparser_future.DuplicateSectionError):
             # This item has already been converted
             pass
 

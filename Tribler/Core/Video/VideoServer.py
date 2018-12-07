@@ -8,8 +8,6 @@ import mimetypes
 import os
 import socket
 import time
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from SocketServer import ThreadingMixIn
 from binascii import unhexlify
 from cherrypy.lib.httputil import get_ranges
 from collections import defaultdict
@@ -18,9 +16,10 @@ from traceback import print_exc
 
 from Tribler.Core.Libtorrent.LibtorrentDownloadImpl import VODFile
 from Tribler.Core.simpledefs import DLMODE_VOD, DLMODE_NORMAL
+from Tribler.util import httpserver_future, socketserver
 
 
-class VideoServer(ThreadingMixIn, HTTPServer):
+class VideoServer(socketserver.ThreadingMixIn, httpserver_future.HTTPServer):
 
     def __init__(self, port, session):
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -31,7 +30,7 @@ class VideoServer(ThreadingMixIn, HTTPServer):
         self.vod_download = None
         self.vod_info = defaultdict(dict)  # A dictionary containing info about the requested VOD streams.
 
-        HTTPServer.__init__(self, ("127.0.0.1", self.port), VideoRequestHandler)
+        httpserver_future.HTTPServer.__init__(self, ("127.0.0.1", self.port), VideoRequestHandler)
 
         self.server_thread = None
 
@@ -102,13 +101,13 @@ class VideoServer(ThreadingMixIn, HTTPServer):
         self.set_vod_download(None)
 
 
-class VideoRequestHandler(BaseHTTPRequestHandler):
+class VideoRequestHandler(httpserver_future.BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, video_server):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.event = None
         self.video_server = video_server
-        BaseHTTPRequestHandler.__init__(self, request, client_address, video_server)
+        httpserver_future.BaseHTTPRequestHandler.__init__(self, request, client_address, video_server)
 
     def log_message(self, f, *args):
         pass

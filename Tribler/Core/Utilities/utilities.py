@@ -5,10 +5,7 @@ Author(s): Jie Yang
 """
 import binascii
 import logging
-import urlparse
 from base64 import b32decode
-from types import StringType, LongType, IntType, ListType, DictType
-from urlparse import urlsplit, parse_qsl
 
 from libtorrent import bencode, bdecode
 from twisted.internet import reactor
@@ -21,6 +18,7 @@ from twisted.web.http_headers import Headers
 
 from Tribler.Core.exceptions import HttpError
 from Tribler.Core.version import version_id
+from Tribler.util import is_long_or_int, urllib_future
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +39,15 @@ def validate_torrent_nodes(metainfo):
     """
     if 'nodes' in metainfo:
         nodes = metainfo['nodes']
-        if not isinstance(nodes, ListType):
+        if not isinstance(nodes, list):
             raise ValueError('nodes not list, but ' + repr(type(nodes)))
         for pair in nodes:
-            if not isinstance(pair, ListType) and len(pair) != 2:
+            if not isinstance(pair, list) and len(pair) != 2:
                 raise ValueError('node not 2-item list, but ' + repr(type(pair)))
             host, port = pair
-            if not isinstance(host, StringType):
+            if not isinstance(host, str):
                 raise ValueError('node host not string, but ' + repr(type(host)))
-            if not isinstance(port, (IntType, LongType)):
+            if not is_long_or_int(port):
                 raise ValueError('node port not int, but ' + repr(type(port)))
         return nodes
     return None
@@ -111,8 +109,8 @@ def validate_url_list(metainfo):
         if 'info' in metainfo and 'files' in metainfo['info']:
             logger.warn("Warning: Only single-file mode supported with HTTP seeding. HTTP seeding disabled")
             return None
-        elif not isinstance(metainfo['url-list'], ListType):
-            if isinstance(metainfo['url-list'], StringType):
+        elif not isinstance(metainfo['url-list'], list):
+            if isinstance(metainfo['url-list'], str):
                 url_list = [metainfo['url-list']]
             else:
                 logger.warn("Warning: url-list is not of type list/string. HTTP seeding disabled")
@@ -142,7 +140,7 @@ def validate_http_seeds(metainfo):
     """
     if 'httpseeds' in metainfo and metainfo['httpseeds']:
         http_seeds = []
-        if not isinstance(metainfo['httpseeds'], ListType):
+        if not isinstance(metainfo['httpseeds'], list):
             logger.warn("Warning: httpseeds is not of type list. HTTP seeding disabled")
             return None
         else:
@@ -179,12 +177,12 @@ def validate_files(info):
             raise ValueError('info may not contain both files and length key')
 
         l = info['length']
-        if not isinstance(l, IntType) and not isinstance(l, LongType):
+        if not is_long_or_int(l):
             raise ValueError('info length is not int, but ' + repr(type(l)))
     elif 'files' in info:
         # multi-file torrent
         files = info['files']
-        if not isinstance(files, ListType):
+        if not isinstance(files, list):
             raise ValueError('info files not list, but ' + repr(type(files)))
 
         filekeys = ['path', 'length']
@@ -193,14 +191,14 @@ def validate_files(info):
                 raise ValueError('info files missing path or length key')
 
             path = file_desc['path']
-            if not isinstance(path, ListType):
+            if not isinstance(path, list):
                 raise ValueError('info files path is not list, but ' + repr(type(path)))
 
-            if not all(isinstance(dir_path, StringType) for dir_path in path):
+            if not all(isinstance(dir_path, str) for dir_path in path):
                 raise ValueError('info files path is not string')
 
             length = file_desc['length']
-            if not isinstance(length, IntType) and not isinstance(length, LongType):
+            if not is_long_or_int(length):
                 raise ValueError('info files length is not int, but ' + repr(type(length)))
     else:
         raise ValueError("neither length or files found in files information")
@@ -227,7 +225,7 @@ def validate_torrent_info(metainfo):
         raise ValueError('metainfo misses key info')
 
     info = metainfo['info']
-    if not isinstance(info, DictType):
+    if not isinstance(info, dict):
         raise ValueError('info not dict')
 
     if not(all(key in info for key in {'name', 'piece length'})
@@ -235,20 +233,20 @@ def validate_torrent_info(metainfo):
         raise ValueError('info misses key')
 
     name = info['name']
-    if not isinstance(name, StringType):
+    if not isinstance(name, str):
         raise ValueError('info name is not string but ' + repr(type(name)))
 
     pl = info['piece length']
-    if not (isinstance(pl, IntType) or isinstance(pl, LongType)):
+    if not is_long_or_int(pl):
         raise ValueError('info piece size is not int, but ' + repr(type(pl)))
 
     if 'root hash' in info:
         rh = info['root hash']
-        if not isinstance(rh, StringType) or len(rh) != 20:
+        if not isinstance(rh, str) or len(rh) != 20:
             raise ValueError('info roothash is not 20-byte string')
     else:
         pieces = info['pieces']
-        if not isinstance(pieces, StringType) or len(pieces) % 20 != 0:
+        if not isinstance(pieces, str) or len(pieces) % 20 != 0:
             raise ValueError('info pieces is not multiple of 20 bytes')
 
     validate_files(info)
@@ -266,7 +264,7 @@ def create_valid_metainfo(metainfo):
     """
     metainfo_result = metainfo
 
-    if not isinstance(metainfo, DictType):
+    if not isinstance(metainfo, dict):
         raise ValueError('metainfo not dict')
 
     # some .torrent files have a dht:// url in the announce field.
@@ -277,9 +275,9 @@ def create_valid_metainfo(metainfo):
     # common additional fields
     if 'announce-list' in metainfo:
         al = metainfo['announce-list']
-        if not isinstance(al, ListType):
+        if not isinstance(al, list):
             raise ValueError('announce-list is not list, but ' + repr(type(al)))
-        if not all(isinstance(tier, ListType) for tier in al):
+        if not all(isinstance(tier, list) for tier in al):
             raise ValueError('announce-list tier is not list')
 
     metainfo_result['nodes'] = validate_torrent_nodes(metainfo_result)
@@ -330,7 +328,7 @@ def is_valid_url(url):
         return
     if url.lower().startswith('udp'):
         url = url.lower().replace('udp', 'http', 1)
-    split_url = urlparse.urlsplit(url)
+    split_url = urllib_future.urlsplit(url)
 
     return not(split_url[0] == '' or split_url[1] == '')
 
@@ -392,7 +390,7 @@ def parse_magnetlink(url):
 
     logger.debug("parse_magnetlink() %s", url)
 
-    schema, netloc, path, query, fragment = urlsplit(url)
+    schema, netloc, path, query, fragment = urllib_future.urlsplit(url)
     if schema == "magnet":
         # magnet url's do not conform to regular url syntax (they
         # do not have a netloc.)  This causes path to contain the
@@ -404,7 +402,7 @@ def parse_magnetlink(url):
             else:
                 query = post
 
-        for key, value in parse_qsl(query):
+        for key, value in urllib_future.parse_qsl(query):
             if key == "dn":
                 # convert to unicode
                 dn = value.decode() if not isinstance(value, unicode) else value

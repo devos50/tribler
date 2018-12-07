@@ -7,7 +7,6 @@ import logging
 import os
 import sys
 from hashlib import sha1
-from types import StringType, ListType, IntType, LongType
 
 from libtorrent import bencode, bdecode
 
@@ -18,6 +17,7 @@ from Tribler.Core.Utilities.utilities import parse_magnetlink, http_get
 from Tribler.Core.defaults import TDEF_DEFAULTS
 from Tribler.Core.exceptions import TorrentDefNotFinalizedException, NotYetImplementedException
 from Tribler.Core.simpledefs import INFOHASH_LENGTH
+from Tribler.util import is_long_or_int
 
 
 def escape_as_utf8(string, encoding='utf8'):
@@ -275,10 +275,10 @@ class TorrentDef(object):
         """
         # TODO: check input, in particular remove / at end
         newhier = []
-        if not isinstance(hier, ListType):
+        if not isinstance(hier, list):
             raise ValueError("hierarchy is not a list")
         for tier in hier:
-            if not isinstance(tier, ListType):
+            if not isinstance(tier, list):
                 raise ValueError("tier is not a list")
             newtier = []
             for url in tier:
@@ -326,15 +326,15 @@ class TorrentDef(object):
         @param nodes A list of [hostname,port] lists.
         """
         # Check input
-        if not isinstance(nodes, ListType):
+        if not isinstance(nodes, list):
             raise ValueError("nodes not a list")
         else:
             for node in nodes:
-                if not isinstance(node, ListType) or len(node) != 2:
+                if not isinstance(node, list) or len(node) != 2:
                     raise ValueError("node in nodes not a 2-item list: " + repr(node))
-                if not isinstance(node[0], StringType):
+                if not isinstance(node[0], str):
                     raise ValueError("host in node is not string:" + repr(node))
-                if not isinstance(node[1], IntType):
+                if not is_long_or_int(node[1]):
                     raise ValueError("port in node is not int:" + repr(node))
 
         self.input['nodes'] = nodes
@@ -416,7 +416,7 @@ class TorrentDef(object):
         (value 0).
         @param value A number of bytes as per the text.
         """
-        if not (isinstance(value, IntType) or isinstance(value, LongType)):
+        if not is_long_or_int(value):
             raise ValueError("Piece length not an int/long")
 
         self.input['piece length'] = value

@@ -6,14 +6,12 @@ Author(s): Arno Bakker, Egbert Bouman
 import copy
 import logging
 import os
-from ConfigParser import ParsingError, MissingSectionHeaderError
-
-from types import StringType
 
 from Tribler.Core.Utilities.configparser import CallbackConfigParser
 from Tribler.Core.defaults import dldefaults
 from Tribler.Core.osutils import get_home_dir
 from Tribler.Core.simpledefs import DLMODE_VOD
+from Tribler.util import configparser_future
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +152,7 @@ class DownloadConfigInterface(object):
         ['harry.avi','sjaak.avi']). Not Unicode strings!
         """
         # TODO: can't check if files exists, don't have tdef here.... bugger
-        if isinstance(files, StringType):  # convenience
+        if isinstance(files, str):  # convenience
             files = [files]
 
         if self.get_mode() == DLMODE_VOD and len(files) > 1:
@@ -203,7 +201,7 @@ class DownloadStartupConfig(DownloadConfigInterface):
         dlconfig = CallbackConfigParser()
         try:
             dlconfig.read_file(filename)
-        except (ParsingError, IOError, MissingSectionHeaderError):
+        except (configparser_future.ParsingError, configparser_future.MissingSectionHeaderError, IOError):
             logger.error("Failed to open download config file: %s", filename)
             raise
 
