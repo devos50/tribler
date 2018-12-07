@@ -3,11 +3,14 @@ The FamilyFilter filters out nsfw content if enabled.
 
 Author(s): Jelle Roozenburg
 """
+from __future__ import absolute_import
+
 import logging
 import os
 import re
 
 from Tribler.Core.Utilities.install_dir import get_lib_path
+from Tribler.util import grange
 
 WORDS_REGEXP = re.compile('[a-zA-Z0-9]+')
 
@@ -26,7 +29,7 @@ class XXXFilter(object):
         searchterms = set()
 
         try:
-            f = file(filename, 'r')
+            f = open(filename, 'r')
             lines = f.read().lower().splitlines()
 
             for line in lines:
@@ -72,7 +75,7 @@ class XXXFilter(object):
         if not self.isAudio(s) and self.foundXXXTerm(s):
             return True
         words = self._getWords(s)
-        words2 = [' '.join(words[i:i + 2]) for i in xrange(0, len(words) - 1)]
+        words2 = [' '.join(words[i:i + 2]) for i in grange(0, len(words) - 1)]
         num_xxx = len([w for w in words + words2 if self.isXXXTerm(w, s)])
         if isFilename and self.isAudio(s):
             return num_xxx > 2  # almost never classify mp3 as porn

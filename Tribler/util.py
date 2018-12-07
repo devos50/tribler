@@ -19,6 +19,7 @@ if sys.version_info.major > 2:
     import socketserver
     from urllib.parse import parse_qsl, unquote_plus, urlsplit, urlparse
     from urllib.request import url2pathname
+    grange = range
     is_long_or_int = lambda x: isinstance(x, int)
     cast_to_unicode = lambda x: "".join([chr(c) for c in x]) if isinstance(x, bytes) else str(x)
 else:
@@ -31,6 +32,7 @@ else:
     from StringIO import StringIO
     from urllib import unquote_plus, url2pathname
     from urlparse import parse_qsl, urlsplit, urlparse
+    grange = xrange
     is_long_or_int = lambda x: isinstance(x, (int, long))
     cast_to_unicode = lambda x: unicode(x)
 StringIO = StringIO

@@ -3,9 +3,13 @@ Category.
 
 Author(s):  Yuan Yuan, Jelle Roozenburg
 """
+from __future__ import absolute_import, division
+
 import logging
 import os
 import re
+from functools import cmp_to_key
+
 from Tribler.util import configparser_future
 
 from Tribler.Core.Category.FamilyFilter import XXXFilter
@@ -25,7 +29,7 @@ class Category(object):
         filename = os.path.join(get_lib_path(), 'Core', 'Category', CATEGORY_CONFIG_FILE)
         try:
             self.category_info = getCategoryInfo(filename)
-            self.category_info.sort(cmp_rank)
+            self.category_info.sort(key=cmp_to_key(cmp_rank))
         except (configparser_future.MissingSectionHeaderError, configparser_future.ParsingError, IOError):
             self.category_info = []
             self._logger.critical('', exc_info=True)

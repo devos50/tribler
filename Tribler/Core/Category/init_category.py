@@ -3,6 +3,8 @@ Give the initial category information.
 
 Author(s): Yuan Yuan
 """
+from __future__ import absolute_import
+
 from Tribler.util import configparser
 
 
