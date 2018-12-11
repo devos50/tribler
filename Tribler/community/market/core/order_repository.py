@@ -1,13 +1,16 @@
-import logging
+from __future__ import absolute_import
+
 from abc import ABCMeta, abstractmethod
+import logging
+
+import six
 
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import OrderNumber, OrderId, Order
 
 
-class OrderRepository(object):
+class OrderRepository(six.with_metaclass(ABCMeta, object)):
     """A repository interface for orders in the order manager"""
-    __metaclass__ = ABCMeta
 
     def __init__(self):
         """

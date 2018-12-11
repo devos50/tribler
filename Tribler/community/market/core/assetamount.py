@@ -1,3 +1,8 @@
+from __future__ import absolute_import
+
+from six import integer_types
+
+
 class AssetAmount(object):
     """
     This class represents a specific number of assets. It contains various utility methods to add/substract asset
@@ -13,11 +18,8 @@ class AssetAmount(object):
         """
         super(AssetAmount, self).__init__()
 
-        if isinstance(amount, int):
-            amount = long(amount)
-
-        if not isinstance(amount, long):
-            raise ValueError("Price must be a long")
+        if not isinstance(amount, integer_types):
+            raise ValueError("Price must be an integer")
 
         if not isinstance(asset_id, str):
             raise ValueError("Asset id must be a string")

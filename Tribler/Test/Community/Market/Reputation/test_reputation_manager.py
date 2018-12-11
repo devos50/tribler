@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from Tribler.Test.Community.Market.Reputation.test_reputation_base import TestReputationBase
 from Tribler.community.market.reputation.reputation_manager import ReputationManager
 

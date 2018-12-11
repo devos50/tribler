@@ -1,10 +1,13 @@
+from __future__ import absolute_import
+
+from twisted.internet.defer import fail, inlineCallbacks
 from twisted.python.failure import Failure
 
 from Tribler.Core.Modules.wallet.dummy_wallet import DummyWallet1, DummyWallet2
 from Tribler.Core.Modules.wallet.tc_wallet import TrustchainWallet
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.community.market.block import MarketBlock
-from Tribler.community.market.community import MarketCommunity, PingRequestCache
+from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.message import TraderId
@@ -16,7 +19,6 @@ from Tribler.community.market.core.transaction import TransactionId, Transaction
 from Tribler.pyipv8.ipv8.test.base import TestBase
 from Tribler.pyipv8.ipv8.test.mocking.ipv8 import MockIPv8
 from Tribler.Test.tools import trial_timeout
-from twisted.internet.defer import fail, succeed, inlineCallbacks
 
 
 class TestMarketCommunityBase(TestBase):

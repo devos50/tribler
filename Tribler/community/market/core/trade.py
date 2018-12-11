@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import random
 
 from Tribler.community.market.core.message import Message

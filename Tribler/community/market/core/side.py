@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from Tribler.community.market.core.order import OrderId
 from Tribler.community.market.core.pricelevel import PriceLevel
 from Tribler.community.market.core.pricelevel_list import PriceLevelList

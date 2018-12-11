@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from Tribler.community.market.core.tickentry import TickEntry
 
 

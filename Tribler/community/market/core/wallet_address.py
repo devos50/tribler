@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+
+
 class WalletAddress(object):
     """Used for having a validated instance of a wallet address that we can easily check if it still valid."""
 

@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+
+from six import text_type
+
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.message import Message, TraderId
 from Tribler.community.market.core.payment_id import PaymentId
@@ -37,10 +41,10 @@ class Payment(Message):
         Returns a database representation of a Payment object.
         :rtype: tuple
         """
-        return (unicode(self.trader_id), unicode(self.transaction_id.trader_id),
-                int(self.transaction_id.transaction_number), unicode(self.payment_id), self.transferred_assets.amount,
-                unicode(self.transferred_assets.asset_id), unicode(self.address_from),
-                unicode(self.address_to), float(self.timestamp), self.success)
+        return (text_type(self.trader_id), text_type(self.transaction_id.trader_id),
+                int(self.transaction_id.transaction_number), text_type(self.payment_id), self.transferred_assets.amount,
+                text_type(self.transferred_assets.asset_id), text_type(self.address_from),
+                text_type(self.address_to), float(self.timestamp), self.success)
 
     @property
     def transaction_id(self):

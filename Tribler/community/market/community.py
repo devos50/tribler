@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from base64 import b64decode
-from binascii import unhexlify
+from binascii import unhexlify, hexlify
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, succeed, Deferred
@@ -39,7 +39,6 @@ from Tribler.pyipv8.ipv8.attestation.trustchain.listener import BlockListener
 from Tribler.pyipv8.ipv8.attestation.trustchain.payload import HalfBlockPairPayload
 from Tribler.pyipv8.ipv8.community import Community, lazy_wrapper
 from Tribler.pyipv8.ipv8.messaging.bloomfilter import BloomFilter
-from Tribler.pyipv8.ipv8.messaging.payload import IntroductionRequestPayload, IntroductionResponsePayload
 from Tribler.pyipv8.ipv8.messaging.payload_headers import BinMemberAuthenticationPayload
 from Tribler.pyipv8.ipv8.messaging.payload_headers import GlobalTimeDistributionPayload
 from Tribler.pyipv8.ipv8.peer import Peer
@@ -150,7 +149,7 @@ class MarketCommunity(Community, BlockListener):
         BlockListener.__init__(self)
 
         self._use_main_thread = True  # Market community is unable to deal with thread pool message processing yet
-        self.mid = self.my_peer.mid.encode('hex')
+        self.mid = hexlify(self.my_peer.mid)
         self.mid_register = {}
         self.order_book = None
         self.market_database = MarketDB(db_working_dir, self.DB_NAME)
@@ -320,7 +319,7 @@ class MarketCommunity(Community, BlockListener):
         self.request_cache.clear()
 
         # Store all traders to the database
-        for trader_id, sock_addr in self.mid_register.iteritems():
+        for trader_id, sock_addr in self.mid_register.items():
             self.market_database.add_trader_identity(trader_id, sock_addr[0], sock_addr[1])
 
         # Save the ticks to the database
@@ -1038,7 +1037,7 @@ class MarketCommunity(Community, BlockListener):
         return True, ''
 
     def get_outstanding_proposals(self, order_id, partner_order_id):
-        return [(proposal_id, cache) for proposal_id, cache in self.request_cache._identifiers.iteritems()
+        return [(proposal_id, cache) for proposal_id, cache in self.request_cache._identifiers.items()
                 if isinstance(cache, ProposedTradeRequestCache)
                 and cache.proposed_trade.order_id == order_id
                 and cache.proposed_trade.recipient_order_id == partner_order_id]

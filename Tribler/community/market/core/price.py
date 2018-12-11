@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+
+
 class Price(object):
     """
     This class represents a price in the market.

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import networkx as nx
 
 from Tribler.community.market.reputation.reputation_manager import ReputationManager

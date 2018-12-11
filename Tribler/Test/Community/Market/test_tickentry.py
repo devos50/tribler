@@ -1,9 +1,10 @@
+from __future__ import absolute_import
+
+from twisted.internet.defer import inlineCallbacks
+
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.price import Price
-from twisted.internet.defer import inlineCallbacks
-
-from Tribler.Test.test_as_server import AbstractServer
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.pricelevel import PriceLevel
@@ -11,6 +12,7 @@ from Tribler.community.market.core.tick import Tick
 from Tribler.community.market.core.tickentry import TickEntry
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
+from Tribler.Test.test_as_server import AbstractServer
 
 
 class TickEntryTestSuite(AbstractServer):

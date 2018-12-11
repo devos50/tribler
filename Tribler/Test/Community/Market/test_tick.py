@@ -1,4 +1,7 @@
+from __future__ import absolute_import
+
 import unittest
+from binascii import hexlify
 
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
@@ -75,5 +78,5 @@ class TickTestSuite(unittest.TestCase):
             "timeout": 30,
             "timestamp": 0.0,
             "traded": 0,
-            "block_hash": ('0' * 32).encode('hex')
+            "block_hash": hexlify('0' * 32)
         })

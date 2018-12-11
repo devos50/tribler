@@ -1,16 +1,20 @@
+from __future__ import absolute_import
+
 import logging
 import random
 from abc import ABCMeta, abstractmethod
 from time import time
+
+import six
+from six.moves import xrange
 
 from Tribler.community.market.core.order import OrderId
 from Tribler.community.market.core.orderbook import OrderBook
 from Tribler.community.market.core.tickentry import TickEntry
 
 
-class MatchingStrategy(object):
+class MatchingStrategy(six.with_metaclass(ABCMeta, object)):
     """Matching strategy base class"""
-    __metaclass__ = ABCMeta
 
     def __init__(self, order_book):
         """

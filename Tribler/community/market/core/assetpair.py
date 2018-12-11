@@ -1,3 +1,7 @@
+from __future__ import absolute_import, division
+
+from six import integer_types
+
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.price import Price
 
@@ -47,7 +51,7 @@ class AssetPair(object):
         If we now change the amount of the first asset from 4 BTC to 1 BTC, the new AssetPair becomes (1 BTC, 2 MB).
         """
         return AssetPair(AssetAmount(new_amount, self.first.asset_id),
-                         AssetAmount(long(self.price.amount * new_amount), self.second.asset_id))
+                         AssetAmount(integer_types(self.price.amount * new_amount), self.second.asset_id))
 
     def __str__(self):
         return "%s %s" % (self.first, self.second)

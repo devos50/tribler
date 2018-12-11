@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from twisted.internet.defer import inlineCallbacks

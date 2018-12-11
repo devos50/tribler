@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import time
 
 from Tribler.community.market.core.timestamp import Timestamp

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+
+
 class PaymentId(object):
     """Used for having a validated instance of a payment id that we can monitor."""
 

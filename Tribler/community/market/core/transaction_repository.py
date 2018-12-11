@@ -1,13 +1,16 @@
+from __future__ import absolute_import
+
 import logging
 from abc import ABCMeta, abstractmethod
+
+import six
 
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.transaction import TransactionNumber, TransactionId, Transaction
 
 
-class TransactionRepository(object):
+class TransactionRepository(six.with_metaclass(ABCMeta, object)):
     """A repository interface for transactions in the transaction manager"""
-    __metaclass__ = ABCMeta
 
     def __init__(self):
         """

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+
+
 class DeclinedTradeReason(object):
     ORDER_COMPLETED = 0
     ORDER_EXPIRED = 1

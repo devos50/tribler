@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+
+from six import integer_types
+
 import datetime
 import time
 
@@ -13,8 +17,8 @@ class Timestamp(object):
         """
         super(Timestamp, self).__init__()
 
-        if not isinstance(timestamp, (float, int, long)):
-            raise ValueError("Timestamp must be a float or a long")
+        if not isinstance(timestamp, (float, integer_types)):
+            raise ValueError("Timestamp must be a float or an integer")
 
         if timestamp < 0:
             raise ValueError("Timestamp can not be negative")
