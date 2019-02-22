@@ -11,9 +11,11 @@ class SyncChannels(DiscoveryStrategy):
     """
 
     def take_step(self):
+        print "TAKING STEPZ"
         with self.walk_lock:
             # Share my random channels
             peers = self.overlay.get_peers()
             if peers:
+                print "FOUND PEERS"
                 peer = choice(peers)
                 self.overlay.send_random_to(peer)

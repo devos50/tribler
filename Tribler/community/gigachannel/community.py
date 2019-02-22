@@ -69,11 +69,13 @@ class GigaChannelCommunity(Community):
             # TODO: when the health table will be there, send popular torrents instead
             channel_l = self.metadata_store.ChannelMetadata.get_random_channels(1, only_subscribed=True)[:]
             if not channel_l:
+                print "NO CHAHNELZZ"
                 return
             channel = channel_l[0]
             md_list.append(channel)
             md_list.extend(list(channel.get_random_torrents(max_entries - 1)))
             blob = entries_to_chunk(md_list, maximum_payload_size)[0] if md_list else None
+        print "SENDING STUFF"
         self.endpoint.send(peer.address, self._ez_pack(self._prefix, self.NEWS_PUSH_MESSAGE,
                                                        [self.auth, RawBlobPayload(blob).to_pack_list()]))
 
