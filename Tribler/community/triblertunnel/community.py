@@ -201,6 +201,13 @@ class TriblerTunnelCommunity(HiddenTunnelCommunity):
 
         return balance_deferred
 
+    def log_payout(self, base_amount, amount, reason):
+        if not self.tribler_session:
+            return
+
+        with open(os.path.join(self.tribler_session.config.get_state_dir(), 'payouts.txt'), 'a') as payouts_file:
+            payouts_file.write("%d,%d,%s\n" % (base_amount, amount, reason))
+
     def on_payout_block(self, source_address, data):
         if not self.bandwidth_wallet:
             self.logger.warning("Got payout while not having a TrustChain community running!")
@@ -213,6 +220,8 @@ class TriblerTunnelCommunity(HiddenTunnelCommunity):
             # Send the next payout
             if blocks and payload.circuit_id in self.relay_from_to and block.transaction['down'] > payload.base_amount:
                 relay = self.relay_from_to[payload.circuit_id]
+                self.log_payout(payload.base_amount, block.transaction['down'] - payload.base_amount * 2,
+                                "sending next payout for circuit %s to %s" % (relay.circuit_id, relay.peer))
                 self._logger.info("Sending next payout to peer %s", relay.peer)
                 self.do_payout(relay.peer, relay.circuit_id, block.transaction['down'] - payload.base_amount * 2,
                                payload.base_amount)
@@ -220,6 +229,8 @@ class TriblerTunnelCommunity(HiddenTunnelCommunity):
         block = TriblerBandwidthBlock.from_payload(payload, self.serializer)
         self.bandwidth_wallet.trustchain.process_half_block(block, peer)\
             .addCallbacks(on_transaction_completed, lambda _: None)
+
+        self.log_payout(payload.base_amount, block.transaction['down'], "Received payout from %s" % peer)
 
         # Check whether the block has been added to the database and has been verified
         if not self.bandwidth_wallet.trustchain.persistence.contains(block):
@@ -367,12 +378,16 @@ class TriblerTunnelCommunity(HiddenTunnelCommunity):
                 # We remove an e2e circuit as downloader. We pay the subsequent nodes in the downloader part of the e2e
                 # circuit. In addition, we pay for one hop seeder anonymity since we don't know the circuit length at
                 # the seeder side.
+                self.log_payout(circuit.bytes_down, circuit.bytes_down * ((circuit.goal_hops * 2) + 1),
+                                "sending payout for rp circuit %s to %s" % (circuit_id, circuit.peer))
                 self.do_payout(circuit.peer, circuit_id, circuit.bytes_down * ((circuit.goal_hops * 2) + 1),
                                circuit.bytes_down)
                 assert circuit.bytes_down == 0
 
             if circuit.ctype == CIRCUIT_TYPE_DATA:
                 # We remove a regular data circuit as downloader. Pay the relay nodes and the exit nodes.
+                self.log_payout(circuit.bytes_down, circuit.bytes_down * (circuit.goal_hops * 2 - 1),
+                                "sending payout for data circuit %s to %s" % (circuit_id, circuit.peer))
                 self.do_payout(circuit.peer, circuit_id, circuit.bytes_down * (circuit.goal_hops * 2 - 1),
                                circuit.bytes_down)
                 assert circuit.bytes_down == 0
