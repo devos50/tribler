@@ -369,11 +369,13 @@ class TriblerTunnelCommunity(HiddenTunnelCommunity):
                 # the seeder side.
                 self.do_payout(circuit.peer, circuit_id, circuit.bytes_down * ((circuit.goal_hops * 2) + 1),
                                circuit.bytes_down)
+                assert circuit.bytes_down == 0
 
             if circuit.ctype == CIRCUIT_TYPE_DATA:
                 # We remove a regular data circuit as downloader. Pay the relay nodes and the exit nodes.
                 self.do_payout(circuit.peer, circuit_id, circuit.bytes_down * (circuit.goal_hops * 2 - 1),
                                circuit.bytes_down)
+                assert circuit.bytes_down == 0
 
             # Reset the circuit byte counters so we do not payout again if we receive a destroy message.
             circuit.bytes_up = circuit.bytes_down = 0
