@@ -6,6 +6,7 @@ Author(s): Arno Bakker, Niels Zeilemaker
 from __future__ import absolute_import
 
 import binascii
+import codecs
 import logging
 import os
 import sys
@@ -587,7 +588,7 @@ class TriblerLaunchMany(TaskManager):
     def load_download_pstate_noexc(self, infohash):
         """ Called by any thread, assume session_lock already held """
         try:
-            basename = binascii.hexlify(infohash) + '.state'
+            basename = codecs.decode(binascii.hexlify(infohash), 'raw_unicode_escape') + '.state'
             filename = os.path.join(self.session.get_downloads_pstate_dir(), basename)
             if os.path.exists(filename):
                 return self.load_download_pstate(filename)

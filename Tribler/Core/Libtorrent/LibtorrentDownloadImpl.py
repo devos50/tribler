@@ -6,6 +6,7 @@ Author(s): Arno Bakker, Egbert Bouman
 from __future__ import absolute_import
 
 import base64
+import codecs
 import logging
 import os
 import shutil
@@ -271,7 +272,8 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
                 metainfo = self.tdef.get_metainfo()
                 torrentinfo = lt.torrent_info(metainfo)
 
-                self.orig_files = [file_entry.path.decode('utf-8') for file_entry in torrentinfo.files()]
+                self.orig_files = [codecs.decode(file_entry.path, 'raw_unicode_escape')
+                                   for file_entry in torrentinfo.files()]
                 is_multifile = len(self.orig_files) > 1
                 commonprefix = os.path.commonprefix(self.orig_files) if is_multifile else ''
                 swarmname = commonprefix.partition(os.path.sep)[0]
@@ -499,10 +501,10 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
 
         self.pstate_for_restart = self.get_persistent_download_config()
         self.pstate_for_restart.set('state', 'engineresumedata', resume_data)
-        self._logger.debug("%s get resume data %s", hexlify(resume_data['info-hash']), resume_data)
+        self._logger.debug("%s get resume data %s", hexlify(resume_data[b'info-hash']), resume_data)
 
         # save it to file
-        basename = hexlify(resume_data['info-hash']) + '.state'
+        basename = codecs.decode(hexlify(resume_data[b'info-hash']), 'raw_unicode_escape') + '.state'
         filename = os.path.join(self.session.get_downloads_pstate_dir(), basename)
 
         self._logger.debug("tlm: network checkpointing: to file %s", filename)

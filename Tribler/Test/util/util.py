@@ -96,7 +96,7 @@ class UnhandledTwistedExceptionCatcher(object):
                     self._twisted_exceptions.append(str(event['log_failure']))
                 else:
                     self._twisted_exceptions.append('\n'.join(["%r: %r" % (key, value)
-                                                               for key, value in event.iteritems()]))
+                                                               for key, value in event.items()]))
 
         addObserver(unhandled_error_observer)
 

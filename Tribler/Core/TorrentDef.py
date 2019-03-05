@@ -486,7 +486,7 @@ class TorrentDef(object):
             self.metainfo_valid = True
 
         assert self.infohash is None or isinstance(
-            self.infohash, str), "INFOHASH has invalid type: %s" % type(self.infohash)
+            self.infohash, six.binary_type), "INFOHASH has invalid type: %s" % type(self.infohash)
         assert self.infohash is None or len(
             self.infohash) == INFOHASH_LENGTH, "INFOHASH has invalid length: %d" % len(self.infohash)
 

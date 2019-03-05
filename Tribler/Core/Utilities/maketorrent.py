@@ -207,7 +207,7 @@ def makeinfo(input, userabortflag, userprogresscallback):
                 'name': uniconvert(name, encoding),
                 'name.utf-8': uniconvert(name, 'utf-8')}
 
-    infodict.update({'pieces': ''.join(pieces)})
+    infodict.update({'pieces': b''.join(pieces)})
 
     return infodict, piece_length
 
