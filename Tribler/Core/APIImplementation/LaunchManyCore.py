@@ -47,6 +47,7 @@ from Tribler.pyipv8.ipv8.peerdiscovery.churn import RandomChurn
 from Tribler.pyipv8.ipv8.peerdiscovery.community import DiscoveryCommunity, PeriodicSimilarity
 from Tribler.pyipv8.ipv8.peerdiscovery.discovery import EdgeWalk, RandomWalk
 from Tribler.pyipv8.ipv8.taskmanager import TaskManager
+from Tribler.pyipv8.ipv8.util import cast_to_unicode
 from Tribler.pyipv8.ipv8_service import IPv8
 
 
@@ -585,7 +586,7 @@ class TriblerLaunchMany(TaskManager):
     def load_download_pstate_noexc(self, infohash):
         """ Called by any thread, assume session_lock already held """
         try:
-            basename = hexlify(infohash) + '.state'
+            basename = cast_to_unicode(hexlify(infohash)) + '.state'
             filename = os.path.join(self.session.get_downloads_pstate_dir(), basename)
             if os.path.exists(filename):
                 return self.load_download_pstate(filename)
