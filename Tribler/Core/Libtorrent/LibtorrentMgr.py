@@ -35,6 +35,7 @@ from Tribler.Core.simpledefs import (NTFY_INSERT, NTFY_MAGNET_CLOSE, NTFY_MAGNET
                                      NTFY_REACHABLE, NTFY_TORRENTS)
 from Tribler.Core.version import version_id
 from Tribler.pyipv8.ipv8.taskmanager import TaskManager
+from Tribler.pyipv8.ipv8.util import cast_to_unicode
 
 LTSTATE_FILENAME = "lt.state"
 METAINFO_CACHE_PERIOD = 5 * 60
@@ -178,8 +179,8 @@ class LibtorrentMgr(TaskManager):
                 ltsession.set_pe_settings(pe_settings)
 
             mid = self.tribler_session.trustchain_keypair.key_to_hash()
-            settings['peer_fingerprint'] = mid
-            settings['handshake_client_version'] = 'Tribler/' + version_id + '/' + str(hexlify(mid))
+            settings['peer_fingerprint'] = cast_to_unicode(mid)
+            settings['handshake_client_version'] = 'Tribler/' + version_id + '/' + cast_to_unicode(hexlify(mid))
         else:
             settings['enable_outgoing_utp'] = True
             settings['enable_incoming_utp'] = True
