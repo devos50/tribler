@@ -244,6 +244,7 @@ class LibtorrentDownloadImpl(DownloadConfigInterface, TaskManager):
             return deferred
 
         except Exception as e:
+            self._logger.warning("Error when setting up torrent download: %s", e)
             self.error = e
 
     def network_create_engine_wrapper(self, pstate, checkpoint_disabled=False, share_mode=False, upload_mode=False):
