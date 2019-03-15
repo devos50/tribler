@@ -1,13 +1,13 @@
 import struct
+
 from libtorrent import bencode
+
 from twisted.internet.defer import Deferred, inlineCallbacks
-from twisted.internet.task import Clock
 from twisted.python.failure import Failure
 
 from Tribler.Core.Config.tribler_config import TriblerConfig
 from Tribler.Core.Session import Session
-from Tribler.Core.TorrentChecker.session import FakeDHTSession, DHT_TRACKER_MAX_RETRIES, DHT_TRACKER_RECHECK_INTERVAL, \
-    UdpTrackerSession, HttpTrackerSession
+from Tribler.Core.TorrentChecker.session import FakeDHTSession, UdpTrackerSession, HttpTrackerSession
 from Tribler.Test.Core.base_test import TriblerCoreTest, MockObject
 from Tribler.Test.tools import trial_timeout
 from Tribler.Test.test_as_server import TestAsServer
@@ -381,9 +381,5 @@ class TestDHTSession(TriblerCoreTest):
         """
         Test various methods in the DHT session class
         """
-        self.assertTrue(self.dht_session.can_add_request())
         self.dht_session.add_infohash('b' * 20)
         self.assertEqual(self.dht_session.infohash, 'b' * 20)
-        self.assertEqual(self.dht_session.max_retries, DHT_TRACKER_MAX_RETRIES)
-        self.assertEqual(self.dht_session.retry_interval, DHT_TRACKER_RECHECK_INTERVAL)
-        self.assertGreater(self.dht_session.last_contact, 0)
