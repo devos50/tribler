@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-from six import text_type
-
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.message import Message, TraderId
 from Tribler.community.market.core.payment_id import PaymentId
@@ -33,8 +31,8 @@ class Payment(Message):
          address_from, address_to, timestamp, success) = data
 
         transaction_id = TransactionId(TraderId(bytes(transaction_trader_id)), TransactionNumber(transaction_number))
-        return cls(TraderId(bytes(trader_id)), transaction_id, AssetAmount(transferred_amount, str(transferred_id)),
-                   WalletAddress(str(address_from)), WalletAddress(str(address_to)), PaymentId(str(payment_id)),
+        return cls(TraderId(bytes(trader_id)), transaction_id, AssetAmount(transferred_amount, bytes(transferred_id)),
+                   WalletAddress(bytes(address_from)), WalletAddress(bytes(address_to)), PaymentId(bytes(payment_id)),
                    Timestamp(float(timestamp)), bool(success))
 
     def to_database(self):
@@ -43,9 +41,10 @@ class Payment(Message):
         :rtype: tuple
         """
         return (database_blob(bytes(self.trader_id)), database_blob(bytes(self.transaction_id.trader_id)),
-                int(self.transaction_id.transaction_number), text_type(self.payment_id), self.transferred_assets.amount,
-                text_type(self.transferred_assets.asset_id), text_type(self.address_from),
-                text_type(self.address_to), float(self.timestamp), self.success)
+                int(self.transaction_id.transaction_number), database_blob(bytes(self.payment_id)),
+                self.transferred_assets.amount, database_blob(bytes(self.transferred_assets.asset_id)),
+                database_blob(bytes(self.address_from)), database_blob(bytes(self.address_to)),
+                float(self.timestamp), self.success)
 
     @property
     def transaction_id(self):
@@ -108,12 +107,12 @@ class Payment(Message):
 
     def to_dictionary(self):
         return {
-            "trader_id": bytes(self.transaction_id.trader_id),
-            "transaction_number": int(self.transaction_id.transaction_number),
-            "transferred": self.transferred_assets.to_dictionary(),
-            "payment_id": str(self.payment_id),
-            "address_from": str(self.address_from),
-            "address_to": str(self.address_to),
-            "timestamp": float(self.timestamp),
-            "success": self.success
+            b"trader_id": bytes(self.transaction_id.trader_id),
+            b"transaction_number": int(self.transaction_id.transaction_number),
+            b"transferred": self.transferred_assets.to_dictionary(),
+            b"payment_id": bytes(self.payment_id),
+            b"address_from": bytes(self.address_from),
+            b"address_to": bytes(self.address_to),
+            b"timestamp": float(self.timestamp),
+            b"success": self.success
         }
