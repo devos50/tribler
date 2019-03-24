@@ -2,8 +2,6 @@ from __future__ import absolute_import
 
 import logging
 
-from six import text_type
-
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.message import Message, TraderId
@@ -136,7 +134,7 @@ class Transaction(object):
         self.outgoing_address = None
         self.partner_incoming_address = None
         self.partner_outgoing_address = None
-        self.match_id = ''
+        self.match_id = b''
 
         self._payments = []
         self._current_payment = 0
@@ -153,21 +151,21 @@ class Transaction(object):
 
         transaction_id = TransactionId(TraderId(bytes(trader_id)), TransactionNumber(transaction_number))
         transaction = cls(transaction_id,
-                          AssetPair(AssetAmount(asset1_amount, str(asset1_type)),
-                                    AssetAmount(asset2_amount, str(asset2_type))),
+                          AssetPair(AssetAmount(asset1_amount, bytes(asset1_type)),
+                                    AssetAmount(asset2_amount, bytes(asset2_type))),
                           OrderId(TraderId(bytes(order_trader_id)), OrderNumber(order_number)),
                           OrderId(TraderId(bytes(partner_trader_id)), OrderNumber(partner_order_number)),
                           Timestamp(float(transaction_timestamp)))
 
-        transaction._transferred_assets = AssetPair(AssetAmount(asset1_transferred, str(asset1_type)),
-                                                    AssetAmount(asset2_transferred, str(asset2_type)))
+        transaction._transferred_assets = AssetPair(AssetAmount(asset1_transferred, bytes(asset1_type)),
+                                                    AssetAmount(asset2_transferred, bytes(asset2_type)))
         transaction.sent_wallet_info = sent_wallet_info
         transaction.received_wallet_info = received_wallet_info
-        transaction.incoming_address = WalletAddress(str(incoming_address))
-        transaction.outgoing_address = WalletAddress(str(outgoing_address))
-        transaction.partner_incoming_address = WalletAddress(str(partner_incoming_address))
-        transaction.partner_outgoing_address = WalletAddress(str(partner_outgoing_address))
-        transaction.match_id = str(match_id)
+        transaction.incoming_address = WalletAddress(bytes(incoming_address))
+        transaction.outgoing_address = WalletAddress(bytes(outgoing_address))
+        transaction.partner_incoming_address = WalletAddress(bytes(partner_incoming_address))
+        transaction.partner_outgoing_address = WalletAddress(bytes(partner_outgoing_address))
+        transaction.match_id = bytes(match_id)
         transaction._payments = payments
 
         return transaction
@@ -177,44 +175,44 @@ class Transaction(object):
         """
         Create a Transaction object based on information in a tx_init/tx_done block.
         """
-        trader_id = block_info["tx"]["trader_id"]
-        transaction_number = block_info["tx"]["transaction_number"]
-        order_trader_id = block_info["tx"]["trader_id"]
-        order_number = block_info["tx"]["order_number"]
-        partner_trader_id = block_info["tx"]["partner_trader_id"]
-        partner_order_number = block_info["tx"]["partner_order_number"]
-        asset1_amount = block_info["tx"]["assets"]["first"]["amount"]
-        asset1_type = block_info["tx"]["assets"]["first"]["type"]
-        asset1_transferred = block_info["tx"]["transferred"]["first"]["amount"]
-        asset2_amount = block_info["tx"]["assets"]["second"]["amount"]
-        asset2_type = block_info["tx"]["assets"]["second"]["type"]
-        asset2_transferred = block_info["tx"]["transferred"]["second"]["amount"]
-        transaction_timestamp = block_info["tx"]["timestamp"]
+        trader_id = block_info[b"tx"][b"trader_id"]
+        transaction_number = block_info[b"tx"][b"transaction_number"]
+        order_trader_id = block_info[b"tx"][b"trader_id"]
+        order_number = block_info[b"tx"][b"order_number"]
+        partner_trader_id = block_info[b"tx"][b"partner_trader_id"]
+        partner_order_number = block_info[b"tx"][b"partner_order_number"]
+        asset1_amount = block_info[b"tx"][b"assets"][b"first"][b"amount"]
+        asset1_type = block_info[b"tx"][b"assets"][b"first"][b"type"]
+        asset1_transferred = block_info[b"tx"][b"transferred"][b"first"][b"amount"]
+        asset2_amount = block_info[b"tx"][b"assets"][b"second"][b"amount"]
+        asset2_type = block_info[b"tx"][b"assets"][b"second"][b"type"]
+        asset2_transferred = block_info[b"tx"][b"transferred"][b"second"][b"amount"]
+        transaction_timestamp = block_info[b"tx"][b"timestamp"]
         sent_wallet_info = False
         received_wallet_info = False
         incoming_address = None
         outgoing_address = None
         partner_incoming_address = None
         partner_outgoing_address = None
-        match_id = ''
+        match_id = b''
 
         transaction_id = TransactionId(TraderId(bytes(trader_id)), TransactionNumber(transaction_number))
         transaction = cls(transaction_id,
-                          AssetPair(AssetAmount(asset1_amount, str(asset1_type)),
-                                    AssetAmount(asset2_amount, str(asset2_type))),
+                          AssetPair(AssetAmount(asset1_amount, bytes(asset1_type)),
+                                    AssetAmount(asset2_amount, bytes(asset2_type))),
                           OrderId(TraderId(bytes(order_trader_id)), OrderNumber(order_number)),
                           OrderId(TraderId(bytes(partner_trader_id)), OrderNumber(partner_order_number)),
                           Timestamp(float(transaction_timestamp)))
 
-        transaction._transferred_assets = AssetPair(AssetAmount(asset1_transferred, str(asset1_type)),
-                                                    AssetAmount(asset2_transferred, str(asset2_type)))
+        transaction._transferred_assets = AssetPair(AssetAmount(asset1_transferred, bytes(asset1_type)),
+                                                    AssetAmount(asset2_transferred, bytes(asset2_type)))
         transaction.sent_wallet_info = sent_wallet_info
         transaction.received_wallet_info = received_wallet_info
-        transaction.incoming_address = WalletAddress(str(incoming_address))
-        transaction.outgoing_address = WalletAddress(str(outgoing_address))
-        transaction.partner_incoming_address = WalletAddress(str(partner_incoming_address))
-        transaction.partner_outgoing_address = WalletAddress(str(partner_outgoing_address))
-        transaction.match_id = str(match_id)
+        transaction.incoming_address = WalletAddress(bytes(incoming_address))
+        transaction.outgoing_address = WalletAddress(bytes(outgoing_address))
+        transaction.partner_incoming_address = WalletAddress(bytes(partner_incoming_address))
+        transaction.partner_outgoing_address = WalletAddress(bytes(partner_outgoing_address))
+        transaction.match_id = bytes(match_id)
 
         return transaction
 
@@ -226,12 +224,13 @@ class Transaction(object):
         return (database_blob(bytes(self.transaction_id.trader_id)), int(self.transaction_id.transaction_number),
                 database_blob(bytes(self.order_id.trader_id)), int(self.order_id.order_number),
                 database_blob(bytes(self.partner_order_id.trader_id)), int(self.partner_order_id.order_number),
-                self.assets.first.amount, text_type(self.assets.first.asset_id), self.transferred_assets.first.amount,
-                self.assets.second.amount, text_type(self.assets.second.asset_id),
-                self.transferred_assets.second.amount, float(self.timestamp), self.sent_wallet_info,
-                self.received_wallet_info, text_type(self.incoming_address), text_type(self.outgoing_address),
-                text_type(self.partner_incoming_address), text_type(self.partner_outgoing_address),
-                text_type(self.match_id))
+                self.assets.first.amount, database_blob(bytes(self.assets.first.asset_id)),
+                self.transferred_assets.first.amount, self.assets.second.amount,
+                database_blob(bytes(self.assets.second.asset_id)), self.transferred_assets.second.amount,
+                float(self.timestamp), self.sent_wallet_info, self.received_wallet_info,
+                database_blob(bytes(self.incoming_address)), database_blob(bytes(self.outgoing_address)),
+                database_blob(bytes(self.partner_incoming_address)),
+                database_blob(bytes(self.partner_outgoing_address)), database_blob(bytes(self.match_id)))
 
     @classmethod
     def from_proposed_trade(cls, proposed_trade, transaction_id):
@@ -300,7 +299,7 @@ class Transaction(object):
     def status(self):
         """
         Return the status of this transaction, can be one of these: "pending", "completed", "error".
-        :rtype: str
+        :rtype: binary_type
         """
         if len([payment for payment in self.payments if not payment.success]):
             return b"error"
