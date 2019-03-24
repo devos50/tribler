@@ -10,11 +10,11 @@ class PaymentIdTestSuite(unittest.TestCase):
         self.payment_id1 = PaymentId(b"3")
         self.payment_id2 = PaymentId(b"4")
 
-    def test_str(self):
+    def test_bytes(self):
         """
-        Test the string representation of a payment id
+        Test the bytes representation of a payment id
         """
-        self.assertEqual(str(self.payment_id1), "3")
+        self.assertEqual(bytes(self.payment_id1), b"3")
 
     def test_equality(self):
         """
