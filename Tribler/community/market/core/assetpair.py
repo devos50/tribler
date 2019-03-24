@@ -32,14 +32,14 @@ class AssetPair(object):
 
     def to_dictionary(self):
         return {
-            "first": self.first.to_dictionary(),
-            "second": self.second.to_dictionary()
+            b"first": self.first.to_dictionary(),
+            b"second": self.second.to_dictionary()
         }
 
     @classmethod
     def from_dictionary(cls, dictionary):
-        return cls(AssetAmount(dictionary["first"]["amount"], dictionary["first"]["type"]),
-                   AssetAmount(dictionary["second"]["amount"], dictionary["second"]["type"]))
+        return cls(AssetAmount(dictionary[b"first"][b"amount"], dictionary[b"first"][b"type"]),
+                   AssetAmount(dictionary[b"second"][b"amount"], dictionary[b"second"][b"type"]))
 
     @property
     def price(self):

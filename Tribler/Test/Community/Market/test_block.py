@@ -24,11 +24,11 @@ class TestMarketBlock(AbstractServer):
         yield super(TestMarketBlock, self).setUp()
 
         self.ask = Ask(OrderId(TraderId(b'0' * 40), OrderNumber(1)),
-                       AssetPair(AssetAmount(30, 'BTC'), AssetAmount(30, 'MB')), Timeout(30), Timestamp(0.0), True)
+                       AssetPair(AssetAmount(30, b'BTC'), AssetAmount(30, b'MB')), Timeout(30), Timestamp(0.0), True)
         self.bid = Ask(OrderId(TraderId(b'1' * 40), OrderNumber(1)),
-                       AssetPair(AssetAmount(30, 'BTC'), AssetAmount(30, 'MB')), Timeout(30), Timestamp(0.0), False)
+                       AssetPair(AssetAmount(30, b'BTC'), AssetAmount(30, b'MB')), Timeout(30), Timestamp(0.0), False)
         self.transaction = Transaction(TransactionId(TraderId(b'0' * 40), TransactionNumber(1)),
-                                       AssetPair(AssetAmount(30, 'BTC'), AssetAmount(30, 'MB')),
+                                       AssetPair(AssetAmount(30, b'BTC'), AssetAmount(30, b'MB')),
                                        OrderId(TraderId(b'0' * 40), OrderNumber(1)),
                                        OrderId(TraderId(b'1' * 40), OrderNumber(1)), Timestamp(0.0))
 
@@ -36,37 +36,37 @@ class TestMarketBlock(AbstractServer):
         bid_tx = self.bid.to_block_dict()
 
         self.tick_block = MarketBlock()
-        self.tick_block.type = 'ask'
-        self.tick_block.transaction = {'tick': ask_tx}
+        self.tick_block.type = b'ask'
+        self.tick_block.transaction = {b'tick': ask_tx}
 
         self.cancel_block = MarketBlock()
-        self.cancel_block.type = 'cancel_order'
-        self.cancel_block.transaction = {'trader_id': 'a' * 40, 'order_number': 1}
+        self.cancel_block.type = b'cancel_order'
+        self.cancel_block.transaction = {b'trader_id': b'a' * 40, b'order_number': 1}
 
         self.tx_block = MarketBlock()
-        self.tx_block.type = 'tx_init'
+        self.tx_block.type = b'tx_init'
         self.tx_block.transaction = {
-            'ask': ask_tx,
-            'bid': bid_tx,
-            'tx': self.transaction.to_dictionary()
+            b'ask': ask_tx,
+            b'bid': bid_tx,
+            b'tx': self.transaction.to_dictionary()
         }
 
         payment = {
-            'trader_id': 'a' * 40,
-            'transaction_number': 3,
-            'transferred': {
-                'amount': 3,
-                'type': 'BTC'
+            b'trader_id': b'a' * 40,
+            b'transaction_number': 3,
+            b'transferred': {
+                b'amount': 3,
+                b'type': b'BTC'
             },
-            'payment_id': 'a',
-            'address_from': 'a',
-            'address_to': 'b',
-            'timestamp': 1234.3,
-            'success': True
+            b'payment_id': b'a',
+            b'address_from': b'a',
+            b'address_to': b'b',
+            b'timestamp': 1234.3,
+            b'success': True
         }
         self.payment_block = MarketBlock()
-        self.payment_block.type = 'tx_payment'
-        self.payment_block.transaction = {'payment': payment}
+        self.payment_block.type = b'tx_payment'
+        self.payment_block.transaction = {b'payment': payment}
 
     def test_tick_block(self):
         """
@@ -74,51 +74,51 @@ class TestMarketBlock(AbstractServer):
         """
         self.assertTrue(self.tick_block.is_valid_tick_block())
 
-        self.tick_block.transaction['tick']['timeout'] = -1
+        self.tick_block.transaction[b'tick'][b'timeout'] = -1
         self.assertFalse(self.tick_block.is_valid_tick_block())
-        self.tick_block.transaction['tick']['timeout'] = 3600
+        self.tick_block.transaction[b'tick'][b'timeout'] = 3600
 
-        self.tick_block.type = 'test'
-        self.assertFalse(self.tick_block.is_valid_tick_block())
-
-        self.tick_block.type = 'ask'
-        self.tick_block.transaction['test'] = self.tick_block.transaction.pop('tick')
+        self.tick_block.type = b'test'
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        self.tick_block.transaction['tick'] = self.tick_block.transaction.pop('test')
-        self.tick_block.transaction['tick'].pop('timeout')
+        self.tick_block.type = b'ask'
+        self.tick_block.transaction[b'test'] = self.tick_block.transaction.pop(b'tick')
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        self.tick_block.transaction['tick']['timeout'] = "300"
+        self.tick_block.transaction[b'tick'] = self.tick_block.transaction.pop(b'test')
+        self.tick_block.transaction[b'tick'].pop(b'timeout')
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        self.tick_block.transaction['tick']['timeout'] = 300
-        self.tick_block.transaction['tick']['trader_id'] = 'g' * 40
+        self.tick_block.transaction[b'tick'][b'timeout'] = b"300"
+        self.assertFalse(self.tick_block.is_valid_tick_block())
+
+        self.tick_block.transaction[b'tick'][b'timeout'] = 300
+        self.tick_block.transaction[b'tick'][b'trader_id'] = b'g' * 40
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
         # Make the asset pair invalid
-        assets = self.tick_block.transaction['tick']['assets']
-        self.tick_block.transaction['tick']['trader_id'] = 'a' * 40
-        assets['test'] = assets.pop('first')
+        assets = self.tick_block.transaction[b'tick'][b'assets']
+        self.tick_block.transaction[b'tick'][b'trader_id'] = b'a' * 40
+        assets[b'test'] = assets.pop(b'first')
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        assets['first'] = assets.pop('test')
-        assets['first']['test'] = assets['first'].pop('amount')
+        assets[b'first'] = assets.pop(b'test')
+        assets[b'first'][b'test'] = assets[b'first'].pop(b'amount')
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        assets['first']['amount'] = assets['first']['test']
-        assets['second']['test'] = assets['second'].pop('amount')
+        assets[b'first'][b'amount'] = assets[b'first'][b'test']
+        assets[b'second'][b'test'] = assets[b'second'].pop(b'amount')
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        assets['second']['amount'] = assets['second']['test']
-        assets['first']['amount'] = 3.4
+        assets[b'second'][b'amount'] = assets[b'second'][b'test']
+        assets[b'first'][b'amount'] = 3.4
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        assets['first']['amount'] = 2 ** 64
+        assets[b'first'][b'amount'] = 2 ** 64
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
-        assets['first']['amount'] = 3
-        assets['second']['type'] = 4
+        assets[b'first'][b'amount'] = 3
+        assets[b'second'][b'type'] = 4
         self.assertFalse(self.tick_block.is_valid_tick_block())
 
     def test_cancel_block(self):
@@ -127,14 +127,14 @@ class TestMarketBlock(AbstractServer):
         """
         self.assertTrue(self.cancel_block.is_valid_cancel_block())
 
-        self.cancel_block.type = 'cancel'
+        self.cancel_block.type = b'cancel'
         self.assertFalse(self.cancel_block.is_valid_cancel_block())
 
-        self.cancel_block.type = 'cancel_order'
-        self.cancel_block.transaction.pop('trader_id')
+        self.cancel_block.type = b'cancel_order'
+        self.cancel_block.transaction.pop(b'trader_id')
         self.assertFalse(self.cancel_block.is_valid_cancel_block())
 
-        self.cancel_block.transaction['trader_id'] = 3
+        self.cancel_block.transaction[b'trader_id'] = 3
         self.assertFalse(self.cancel_block.is_valid_cancel_block())
 
     def test_tx_init_done_block(self):
@@ -143,43 +143,43 @@ class TestMarketBlock(AbstractServer):
         """
         self.assertTrue(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.type = 'test'
+        self.tx_block.type = b'test'
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.type = 'tx_init'
-        self.tx_block.transaction['test'] = self.tx_block.transaction.pop('ask')
+        self.tx_block.type = b'tx_init'
+        self.tx_block.transaction[b'test'] = self.tx_block.transaction.pop(b'ask')
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['ask'] = self.tx_block.transaction.pop('test')
-        self.tx_block.transaction['ask']['timeout'] = 3.44
+        self.tx_block.transaction[b'ask'] = self.tx_block.transaction.pop(b'test')
+        self.tx_block.transaction[b'ask'][b'timeout'] = 3.44
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['ask']['timeout'] = 3
-        self.tx_block.transaction['bid']['timeout'] = 3.44
+        self.tx_block.transaction[b'ask'][b'timeout'] = 3
+        self.tx_block.transaction[b'bid'][b'timeout'] = 3.44
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['bid']['timeout'] = 3
-        self.tx_block.transaction['tx'].pop('trader_id')
+        self.tx_block.transaction[b'bid'][b'timeout'] = 3
+        self.tx_block.transaction[b'tx'].pop(b'trader_id')
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['tx']['trader_id'] = 'a' * 40
-        self.tx_block.transaction['tx']['test'] = 3
+        self.tx_block.transaction[b'tx'][b'trader_id'] = b'a' * 40
+        self.tx_block.transaction[b'tx'][b'test'] = 3
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['tx'].pop('test')
-        self.tx_block.transaction['tx']['trader_id'] = 'a'
+        self.tx_block.transaction[b'tx'].pop(b'test')
+        self.tx_block.transaction[b'tx'][b'trader_id'] = b'a'
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['tx']['trader_id'] = 'a' * 40
-        self.tx_block.transaction['tx']['assets']['first']['amount'] = 3.4
+        self.tx_block.transaction[b'tx'][b'trader_id'] = b'a' * 40
+        self.tx_block.transaction[b'tx'][b'assets'][b'first'][b'amount'] = 3.4
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['tx']['assets']['first']['amount'] = 3
-        self.tx_block.transaction['tx']['transferred']['first']['amount'] = 3.4
+        self.tx_block.transaction[b'tx'][b'assets'][b'first'][b'amount'] = 3
+        self.tx_block.transaction[b'tx'][b'transferred'][b'first'][b'amount'] = 3.4
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
-        self.tx_block.transaction['tx']['transferred']['first']['amount'] = 3
-        self.tx_block.transaction['tx']['transaction_number'] = 3.4
+        self.tx_block.transaction[b'tx'][b'transferred'][b'first'][b'amount'] = 3
+        self.tx_block.transaction[b'tx'][b'transaction_number'] = 3.4
         self.assertFalse(self.tx_block.is_valid_tx_init_done_block())
 
     def test_tx_payment_block(self):
@@ -188,41 +188,41 @@ class TestMarketBlock(AbstractServer):
         """
         self.assertTrue(self.payment_block.is_valid_tx_payment_block())
 
-        self.payment_block.type = 'test'
+        self.payment_block.type = b'test'
         self.assertFalse(self.payment_block.is_valid_tx_payment_block())
 
-        self.payment_block.type = 'tx_payment'
-        self.payment_block.transaction['test'] = self.payment_block.transaction.pop('payment')
+        self.payment_block.type = b'tx_payment'
+        self.payment_block.transaction[b'test'] = self.payment_block.transaction.pop(b'payment')
         self.assertFalse(self.payment_block.is_valid_tx_payment_block())
 
-        self.payment_block.transaction['payment'] = self.payment_block.transaction.pop('test')
-        self.payment_block.transaction['payment'].pop('address_to')
+        self.payment_block.transaction[b'payment'] = self.payment_block.transaction.pop(b'test')
+        self.payment_block.transaction[b'payment'].pop(b'address_to')
         self.assertFalse(self.payment_block.is_valid_tx_payment_block())
 
-        self.payment_block.transaction['payment']['address_to'] = 'a'
-        self.payment_block.transaction['payment']['test'] = 'a'
+        self.payment_block.transaction[b'payment'][b'address_to'] = b'a'
+        self.payment_block.transaction[b'payment'][b'test'] = b'a'
         self.assertFalse(self.payment_block.is_valid_tx_payment_block())
 
-        self.payment_block.transaction['payment'].pop('test')
-        self.payment_block.transaction['payment']['address_to'] = 3
+        self.payment_block.transaction[b'payment'].pop(b'test')
+        self.payment_block.transaction[b'payment'][b'address_to'] = 3
         self.assertFalse(self.payment_block.is_valid_tx_payment_block())
 
-        self.payment_block.transaction['payment']['address_to'] = 'a'
-        self.payment_block.transaction['payment']['trader_id'] = 'a' * 39
+        self.payment_block.transaction[b'payment'][b'address_to'] = b'a'
+        self.payment_block.transaction[b'payment'][b'trader_id'] = b'a' * 39
         self.assertFalse(self.payment_block.is_valid_tx_payment_block())
 
     def test_is_valid_asset_pair(self):
         """
         Test the method to verify whether an asset pair is valid
         """
-        self.assertFalse(MarketBlock.is_valid_asset_pair({'a': 'b'}))
-        self.assertFalse(MarketBlock.is_valid_asset_pair({'first': {'amount': 3, 'type': 'DUM1'},
-                                                          'second': {'amount': 3}}))
-        self.assertFalse(MarketBlock.is_valid_asset_pair({'first': {'type': 'DUM1'},
-                                                          'second': {'amount': 3, 'type': 'DUM2'}}))
-        self.assertFalse(MarketBlock.is_valid_asset_pair({'first': {'amount': "4", 'type': 'DUM1'},
-                                                          'second': {'amount': 3, 'type': 'DUM2'}}))
-        self.assertFalse(MarketBlock.is_valid_asset_pair({'first': {'amount': 4, 'type': 'DUM1'},
-                                                          'second': {'amount': "3", 'type': 'DUM2'}}))
-        self.assertFalse(MarketBlock.is_valid_asset_pair({'first': {'amount': -4, 'type': 'DUM1'},
-                                                          'second': {'amount': 3, 'type': 'DUM2'}}))
+        self.assertFalse(MarketBlock.is_valid_asset_pair({b'a': b'b'}))
+        self.assertFalse(MarketBlock.is_valid_asset_pair({b'first': {b'amount': 3, b'type': b'DUM1'},
+                                                          b'second': {b'amount': 3}}))
+        self.assertFalse(MarketBlock.is_valid_asset_pair({b'first': {b'type': b'DUM1'},
+                                                          b'second': {b'amount': 3, b'type': b'DUM2'}}))
+        self.assertFalse(MarketBlock.is_valid_asset_pair({b'first': {b'amount': b"4", b'type': b'DUM1'},
+                                                          b'second': {b'amount': 3, b'type': b'DUM2'}}))
+        self.assertFalse(MarketBlock.is_valid_asset_pair({b'first': {b'amount': 4, b'type': b'DUM1'},
+                                                          b'second': {b'amount': "3", b'type': b'DUM2'}}))
+        self.assertFalse(MarketBlock.is_valid_asset_pair({b'first': {b'amount': -4, b'type': b'DUM1'},
+                                                          b'second': {b'amount': 3, b'type': b'DUM2'}}))

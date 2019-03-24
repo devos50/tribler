@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from six import integer_types
+from six import binary_type, integer_types
 
 from Tribler.community.market import MAX_ORDER_TIMEOUT
 from Tribler.pyipv8.ipv8.attestation.trustchain.block import TrustChainBlock
@@ -28,22 +28,24 @@ class MarketBlock(TrustChainBlock):
 
     @staticmethod
     def is_valid_asset_pair(assets_dict, amount_positive=True):
-        if 'first' not in assets_dict or 'second' not in assets_dict:
+        if b'first' not in assets_dict or b'second' not in assets_dict:
             return False
-        if 'amount' not in assets_dict['first'] or 'type' not in assets_dict['first']:
+        if b'amount' not in assets_dict[b'first'] or b'type' not in assets_dict[b'first']:
             return False
-        if 'amount' not in assets_dict['second'] or 'type' not in assets_dict['second']:
-            return False
-
-        if not MarketBlock.has_required_types([('amount', integer_types), ('type', str)], assets_dict['first']):
-            return False
-        if not MarketBlock.has_required_types([('amount', integer_types), ('type', str)], assets_dict['second']):
+        if b'amount' not in assets_dict[b'second'] or b'type' not in assets_dict[b'second']:
             return False
 
-        if assets_dict['first']['amount'].bit_length() > 63 or assets_dict['second']['amount'].bit_length() > 63:
+        if not MarketBlock.has_required_types([(b'amount', integer_types), (b'type', binary_type)],
+                                              assets_dict[b'first']):
+            return False
+        if not MarketBlock.has_required_types([(b'amount', integer_types), (b'type', binary_type)],
+                                              assets_dict[b'second']):
             return False
 
-        if amount_positive and (assets_dict['first']['amount'] <= 0 or assets_dict['second']['amount'] <= 0):
+        if assets_dict[b'first'][b'amount'].bit_length() > 63 or assets_dict[b'second'][b'amount'].bit_length() > 63:
+            return False
+
+        if amount_positive and (assets_dict[b'first'][b'amount'] <= 0 or assets_dict[b'second'][b'amount'] <= 0):
             return False
 
         return True
@@ -64,20 +66,20 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether a dictionary that contains a tick, is valid.
         """
-        required_fields = ['trader_id', 'order_number', 'assets', 'timeout', 'timestamp', 'traded']
+        required_fields = [b'trader_id', b'order_number', b'assets', b'timeout', b'timestamp', b'traded']
         if not MarketBlock.has_fields(required_fields, tick):
             return False
 
-        required_types = [('trader_id', str), ('order_number', int), ('assets', dict), ('timestamp', float),
-                          ('timeout', int)]
+        required_types = [(b'trader_id', binary_type), (b'order_number', int), (b'assets', dict), (b'timestamp', float),
+                          (b'timeout', int)]
 
-        if not MarketBlock.is_valid_trader_id(tick['trader_id']):
+        if not MarketBlock.is_valid_trader_id(tick[b'trader_id']):
             return False
-        if not MarketBlock.is_valid_asset_pair(tick['assets']):
+        if not MarketBlock.is_valid_asset_pair(tick[b'assets']):
             return False
         if not MarketBlock.has_required_types(required_types, tick):
             return False
-        if tick['timeout'] < 0 or tick['timeout'] > MAX_ORDER_TIMEOUT:
+        if tick[b'timeout'] < 0 or tick[b'timeout'] > MAX_ORDER_TIMEOUT:
             return False
 
         return True
@@ -87,23 +89,25 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether a dictionary that contains a transaction, is valid.
         """
-        required_fields = ['trader_id', 'order_number', 'partner_trader_id', 'partner_order_number',
-                           'transaction_number', 'assets', 'transferred', 'timestamp', 'payment_complete', 'status']
+        required_fields = [b'trader_id', b'order_number', b'partner_trader_id', b'partner_order_number',
+                           b'transaction_number', b'assets', b'transferred', b'timestamp', b'payment_complete',
+                           b'status']
         if not MarketBlock.has_fields(required_fields, tx):
             return False
         if len(tx) != len(required_fields):
             return False
 
-        required_types = [('trader_id', str), ('order_number', int), ('partner_trader_id', str),
-                          ('partner_order_number', int), ('transaction_number', int), ('assets', dict),
-                          ('transferred', dict), ('timestamp', float), ('payment_complete', bool), ('status', str)]
+        required_types = [(b'trader_id', binary_type), (b'order_number', int), (b'partner_trader_id', binary_type),
+                          (b'partner_order_number', int), (b'transaction_number', int), (b'assets', dict),
+                          (b'transferred', dict), (b'timestamp', float), (b'payment_complete', bool),
+                          (b'status', binary_type)]
 
-        if not MarketBlock.is_valid_trader_id(tx['trader_id']) or not \
-                MarketBlock.is_valid_trader_id(tx['partner_trader_id']):
+        if not MarketBlock.is_valid_trader_id(tx[b'trader_id']) or not \
+                MarketBlock.is_valid_trader_id(tx[b'partner_trader_id']):
             return False
-        if not MarketBlock.is_valid_asset_pair(tx['assets']):
+        if not MarketBlock.is_valid_asset_pair(tx[b'assets']):
             return False
-        if not MarketBlock.is_valid_asset_pair(tx['transferred'], amount_positive=False):
+        if not MarketBlock.is_valid_asset_pair(tx[b'transferred'], amount_positive=False):
             return False
         if not MarketBlock.has_required_types(required_types, tx):
             return False
@@ -115,16 +119,17 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether a dictionary that contains a payment, is valid.
         """
-        required_fields = ['trader_id', 'transaction_number', 'transferred', 'payment_id', 'address_from',
-                           'address_to', 'timestamp', 'success']
+        required_fields = [b'trader_id', b'transaction_number', b'transferred', b'payment_id', b'address_from',
+                           b'address_to', b'timestamp', b'success']
         if not MarketBlock.has_fields(required_fields, payment):
             return False
         if len(payment) != len(required_fields):
             return False
 
-        required_types = [('trader_id', str), ('transaction_number', int), ('transferred', dict), ('payment_id', str),
-                          ('address_from', str), ('address_to', str), ('timestamp', float), ('success', bool)]
-        if not MarketBlock.is_valid_trader_id(payment['trader_id']):
+        required_types = [(b'trader_id', binary_type), (b'transaction_number', int), (b'transferred', dict),
+                          (b'payment_id', binary_type), (b'address_from', binary_type), (b'address_to', binary_type),
+                          (b'timestamp', float), (b'success', bool)]
+        if not MarketBlock.is_valid_trader_id(payment[b'trader_id']):
             return False
         if not MarketBlock.has_required_types(required_types, payment):
             return False
@@ -135,11 +140,11 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether an incoming block with the tick type is valid.
         """
-        if self.type != "ask" and self.type != "bid":
+        if self.type != b"ask" and self.type != b"bid":
             return False
-        if not MarketBlock.has_fields(['tick'], self.transaction):
+        if not MarketBlock.has_fields([b'tick'], self.transaction):
             return False
-        if not MarketBlock.is_valid_tick(self.transaction['tick']):
+        if not MarketBlock.is_valid_tick(self.transaction[b'tick']):
             return False
 
         return True
@@ -148,13 +153,13 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether an incoming block with cancel type is valid.
         """
-        if self.type != "cancel_order":
+        if self.type != b"cancel_order":
             return False
 
-        if not MarketBlock.has_fields(['trader_id', 'order_number'], self.transaction):
+        if not MarketBlock.has_fields([b'trader_id', b'order_number'], self.transaction):
             return False
 
-        required_types = [('trader_id', str), ('order_number', int)]
+        required_types = [(b'trader_id', binary_type), (b'order_number', int)]
         if not MarketBlock.has_required_types(required_types, self.transaction):
             return False
 
@@ -164,17 +169,17 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether an incoming block with tx_init/tx_done type is valid.
         """
-        if self.type != "tx_init" and self.type != "tx_done":
+        if self.type != b"tx_init" and self.type != b"tx_done":
             return False
 
-        if not MarketBlock.has_fields(['ask', 'bid', 'tx'], self.transaction):
+        if not MarketBlock.has_fields([b'ask', b'bid', b'tx'], self.transaction):
             return False
 
-        if not MarketBlock.is_valid_tick(self.transaction['ask']):
+        if not MarketBlock.is_valid_tick(self.transaction[b'ask']):
             return False
-        if not MarketBlock.is_valid_tick(self.transaction['bid']):
+        if not MarketBlock.is_valid_tick(self.transaction[b'bid']):
             return False
-        if not MarketBlock.is_valid_tx(self.transaction['tx']):
+        if not MarketBlock.is_valid_tx(self.transaction[b'tx']):
             return False
 
         return True
@@ -183,12 +188,12 @@ class MarketBlock(TrustChainBlock):
         """
         Verify whether an incoming block with tx_payment type is valid.
         """
-        if self.type != "tx_payment":
+        if self.type != b"tx_payment":
             return False
 
-        if not MarketBlock.has_fields(['payment'], self.transaction):
+        if not MarketBlock.has_fields([b'payment'], self.transaction):
             return False
-        if not MarketBlock.is_valid_payment(self.transaction['payment']):
+        if not MarketBlock.is_valid_payment(self.transaction[b'payment']):
             return False
 
         return True

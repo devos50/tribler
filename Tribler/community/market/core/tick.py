@@ -183,12 +183,12 @@ class Tick(object):
         Return a block dictionary representation of the tick, will be stored on the TrustChain
         """
         return {
-            "trader_id": bytes(self.order_id.trader_id),
-            "order_number": int(self.order_id.order_number),
-            "assets": self.assets.to_dictionary(),
-            "timeout": int(self.timeout),
-            "timestamp": float(self.timestamp),
-            "traded": self.traded
+            b"trader_id": bytes(self.order_id.trader_id),
+            b"order_number": int(self.order_id.order_number),
+            b"assets": self.assets.to_dictionary(),
+            b"timeout": int(self.timeout),
+            b"timestamp": float(self.timestamp),
+            b"traded": self.traded
         }
 
     def to_dictionary(self):
@@ -196,13 +196,13 @@ class Tick(object):
         Return a dictionary with a representation of this tick.
         """
         return {
-            "trader_id": bytes(self.order_id.trader_id),
-            "order_number": int(self.order_id.order_number),
-            "assets": self.assets.to_dictionary(),
-            "timeout": int(self.timeout),
-            "timestamp": float(self.timestamp),
-            "traded": self.traded,
-            "block_hash": hexlify(self.block_hash),
+            b"trader_id": bytes(self.order_id.trader_id),
+            b"order_number": int(self.order_id.order_number),
+            b"assets": self.assets.to_dictionary(),
+            b"timeout": int(self.timeout),
+            b"timestamp": float(self.timestamp),
+            b"traded": self.traded,
+            b"block_hash": hexlify(self.block_hash),
         }
 
     def __str__(self):

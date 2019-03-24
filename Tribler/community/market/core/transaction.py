@@ -303,8 +303,8 @@ class Transaction(object):
         :rtype: str
         """
         if len([payment for payment in self.payments if not payment.success]):
-            return "error"
-        return "completed" if self.is_payment_complete() else "pending"
+            return b"error"
+        return b"completed" if self.is_payment_complete() else b"pending"
 
     def add_payment(self, payment):
         """
@@ -337,16 +337,16 @@ class Transaction(object):
         Return a dictionary with a representation of this transaction.
         """
         return {
-            "trader_id": bytes(self.transaction_id.trader_id),
-            "order_number": int(self.order_id.order_number),
-            "partner_trader_id": bytes(self.partner_order_id.trader_id),
-            "partner_order_number": int(self.partner_order_id.order_number),
-            "transaction_number": int(self.transaction_id.transaction_number),
-            "assets": self.assets.to_dictionary(),
-            "transferred": self.transferred_assets.to_dictionary(),
-            "timestamp": float(self.timestamp),
-            "payment_complete": self.is_payment_complete(),
-            "status": self.status
+            b"trader_id": bytes(self.transaction_id.trader_id),
+            b"order_number": int(self.order_id.order_number),
+            b"partner_trader_id": bytes(self.partner_order_id.trader_id),
+            b"partner_order_number": int(self.partner_order_id.order_number),
+            b"transaction_number": int(self.transaction_id.transaction_number),
+            b"assets": self.assets.to_dictionary(),
+            b"transferred": self.transferred_assets.to_dictionary(),
+            b"timestamp": float(self.timestamp),
+            b"payment_complete": self.is_payment_complete(),
+            b"status": self.status
         }
 
 
