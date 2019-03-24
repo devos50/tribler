@@ -9,15 +9,9 @@ class TestPrice(unittest.TestCase):
     """
 
     def setUp(self):
-        self.price1 = Price(2, 'MB', 'BTC')
-        self.price2 = Price(3, 'MB', 'BTC')
-        self.price3 = Price(2, 'MB', 'BTC')
-
-    def test_str(self):
-        """
-        Test the str method of a Price object
-        """
-        self.assertEqual(str(self.price1), "2 MB/BTC")
+        self.price1 = Price(2, b'MB', b'BTC')
+        self.price2 = Price(3, b'MB', b'BTC')
+        self.price3 = Price(2, b'MB', b'BTC')
 
     def test_equality(self):
         """
