@@ -3,8 +3,6 @@ from __future__ import absolute_import
 import time
 from binascii import hexlify
 
-from six import text_type
-
 from Tribler.community.market import MAX_ORDER_TIMEOUT
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
@@ -57,15 +55,15 @@ class Tick(object):
 
         tick_cls = Ask if is_ask else Bid
         order_id = OrderId(TraderId(trader_id), OrderNumber(order_number))
-        return tick_cls(order_id, AssetPair(AssetAmount(asset1_amount, str(asset1_type)),
-                                            AssetAmount(asset2_amount, str(asset2_type))),
-                        Timeout(timeout), Timestamp(timestamp), traded=traded, block_hash=str(block_hash))
+        return tick_cls(order_id, AssetPair(AssetAmount(asset1_amount, bytes(asset1_type)),
+                                            AssetAmount(asset2_amount, bytes(asset2_type))),
+                        Timeout(timeout), Timestamp(timestamp), traded=traded, block_hash=bytes(block_hash))
 
     def to_database(self):
         return (database_blob(bytes(self.order_id.trader_id)), int(self.order_id.order_number),
-                self.assets.first.amount, text_type(self.assets.first.asset_id), self.assets.second.amount,
-                text_type(self.assets.second.asset_id), int(self.timeout), float(self.timestamp), self.is_ask(),
-                self.traded, database_blob(self.block_hash))
+                self.assets.first.amount, database_blob(bytes(self.assets.first.asset_id)), self.assets.second.amount,
+                database_blob(bytes(self.assets.second.asset_id)), int(self.timeout), float(self.timestamp),
+                self.is_ask(), self.traded, database_blob(self.block_hash))
 
     @classmethod
     def from_order(cls, order):
@@ -238,17 +236,17 @@ class Ask(Tick):
         """
         Restore an ask from a TrustChain block
 
-        :param data: TrustChainBlock
+        :param block: TrustChainBlock
         :return: Restored ask
         :rtype: Ask
         """
-        tx_dict = block.transaction["tick"]
+        tx_dict = block.transaction[b"tick"]
         return cls(
-            OrderId(TraderId(tx_dict["trader_id"]), OrderNumber(tx_dict["order_number"])),
-            AssetPair.from_dictionary(tx_dict["assets"]),
-            Timeout(tx_dict["timeout"]),
-            Timestamp(tx_dict["timestamp"]),
-            traded=tx_dict["traded"],
+            OrderId(TraderId(tx_dict[b"trader_id"]), OrderNumber(tx_dict[b"order_number"])),
+            AssetPair.from_dictionary(tx_dict[b"assets"]),
+            Timeout(tx_dict[b"timeout"]),
+            Timestamp(tx_dict[b"timestamp"]),
+            traded=tx_dict[b"traded"],
             block_hash=block.hash
         )
 
@@ -278,16 +276,16 @@ class Bid(Tick):
         """
         Restore a bid from a TrustChain block
 
-        :param data: TrustChainBlock
+        :param block: TrustChainBlock
         :return: Restored bid
         :rtype: Bid
         """
-        tx_dict = block.transaction["tick"]
+        tx_dict = block.transaction[b"tick"]
         return cls(
-            OrderId(TraderId(tx_dict["trader_id"]), OrderNumber(tx_dict["order_number"])),
-            AssetPair.from_dictionary(tx_dict["assets"]),
-            Timeout(tx_dict["timeout"]),
-            Timestamp(tx_dict["timestamp"]),
-            traded=tx_dict["traded"],
+            OrderId(TraderId(tx_dict[b"trader_id"]), OrderNumber(tx_dict[b"order_number"])),
+            AssetPair.from_dictionary(tx_dict[b"assets"]),
+            Timeout(tx_dict[b"timeout"]),
+            Timestamp(tx_dict[b"timestamp"]),
+            traded=tx_dict[b"traded"],
             block_hash=block.hash
         )
