@@ -18,9 +18,6 @@ class TraderId(object):
 
         trader_id = trader_id if isinstance(trader_id, bytes) else binary_type(trader_id)
 
-        if not isinstance(trader_id, binary_type):
-            raise ValueError("Trader id must be a binary type")
-
         try:
             int(trader_id, 16)
         except ValueError:  # Not a hexadecimal

@@ -1,4 +1,6 @@
 # pylint: disable=long-builtin,redefined-builtin
+from six import binary_type
+
 try:
     long
 except NameError:
@@ -20,14 +22,13 @@ class AssetAmount(object):
         """
         super(AssetAmount, self).__init__()
 
+        asset_id = asset_id if isinstance(asset_id, bytes) else binary_type(asset_id)
+
         if isinstance(amount, int):
             amount = long(amount)
 
         if not isinstance(amount, long):
             raise ValueError("Price must be a long")
-
-        if not isinstance(asset_id, str):
-            raise ValueError("Asset id must be a string")
 
         self._amount = amount
         self._asset_id = asset_id
@@ -35,7 +36,7 @@ class AssetAmount(object):
     @property
     def asset_id(self):
         """
-        :rtype: str
+        :rtype: binary_type
         """
         return self._asset_id
 
@@ -99,6 +100,6 @@ class AssetAmount(object):
 
     def to_dictionary(self):
         return {
-            "amount": self.amount,
-            "type": self.asset_id
+            b"amount": self.amount,
+            b"type": self.asset_id
         }

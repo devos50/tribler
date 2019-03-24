@@ -10,30 +10,28 @@ class TestAssetAmount(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.assetamount1 = AssetAmount(2, 'BTC')
-        self.assetamount2 = AssetAmount(100, 'BTC')
-        self.assetamount3 = AssetAmount(0, 'BTC')
-        self.assetamount4 = AssetAmount(2, 'MC')
+        self.assetamount1 = AssetAmount(2, b'BTC')
+        self.assetamount2 = AssetAmount(100, b'BTC')
+        self.assetamount3 = AssetAmount(0, b'BTC')
+        self.assetamount4 = AssetAmount(2, b'MC')
 
     def test_init(self):
         """
         Test the initialization of a price
         """
         with self.assertRaises(ValueError):
-            AssetAmount('1', 'MC')
-        with self.assertRaises(ValueError):
-            AssetAmount(1, 2)
+            AssetAmount('1', b'MC')
 
     def test_addition(self):
         # Test for addition
-        self.assertEqual(AssetAmount(102, 'BTC'), self.assetamount1 + self.assetamount2)
+        self.assertEqual(AssetAmount(102, b'BTC'), self.assetamount1 + self.assetamount2)
         self.assertFalse(self.assetamount1 is (self.assetamount1 + self.assetamount2))
         self.assertEqual(NotImplemented, self.assetamount1.__add__(10))
         self.assertEqual(NotImplemented, self.assetamount1.__add__(self.assetamount4))
 
     def test_subtraction(self):
         # Test for subtraction
-        self.assertEqual(AssetAmount(98, 'BTC'), self.assetamount2 - self.assetamount1)
+        self.assertEqual(AssetAmount(98, b'BTC'), self.assetamount2 - self.assetamount1)
         self.assertEqual(NotImplemented, self.assetamount1.__sub__(10))
         self.assertEqual(NotImplemented, self.assetamount1.__sub__(self.assetamount4))
 
@@ -52,14 +50,14 @@ class TestAssetAmount(unittest.TestCase):
 
     def test_equality(self):
         # Test for equality
-        self.assertTrue(self.assetamount1 == AssetAmount(2, 'BTC'))
+        self.assertTrue(self.assetamount1 == AssetAmount(2, b'BTC'))
         self.assertTrue(self.assetamount1 != self.assetamount2)
         self.assertFalse(self.assetamount1 == 2)
         self.assertFalse(self.assetamount1 == self.assetamount4)
 
     def test_hash(self):
         # Test for hashes
-        self.assertEqual(self.assetamount1.__hash__(), AssetAmount(2, 'BTC').__hash__())
+        self.assertEqual(self.assetamount1.__hash__(), AssetAmount(2, b'BTC').__hash__())
         self.assertNotEqual(self.assetamount1.__hash__(), self.assetamount2.__hash__())
 
     def test_str(self):
