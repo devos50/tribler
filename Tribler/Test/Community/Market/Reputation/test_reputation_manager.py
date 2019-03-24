@@ -12,4 +12,4 @@ class TestReputationManager(TestReputationBase):
         Test the base compute method of the reputation manager
         """
         rep_mgr = ReputationManager(None)
-        self.assertRaises(NotImplementedError, rep_mgr.compute, 'a')
+        self.assertRaises(NotImplementedError, rep_mgr.compute, b'a')

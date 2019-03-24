@@ -15,8 +15,8 @@ class TemporalPagerankReputationManager(ReputationManager):
         G = nx.DiGraph()
 
         for block in self.blocks:
-            if block.link_sequence_number == UNKNOWN_SEQ or block.type != 'tx_done' \
-                    or 'tx' not in block.transaction:
+            if block.link_sequence_number == UNKNOWN_SEQ or block.type != b'tx_done' \
+                    or b'tx' not in block.transaction:
                 continue  # Don't consider half interactions
 
             pubkey_requester = block.link_public_key
@@ -28,7 +28,7 @@ class TemporalPagerankReputationManager(ReputationManager):
             # In our market, we consider the amount of Bitcoin that have been transferred from A -> B.
             # For now, we assume that the value from B -> A is of equal worth.
 
-            value_exchange = block.transaction["tx"]["transferred"]["first"]["amount"]
+            value_exchange = block.transaction[b"tx"][b"transferred"][b"first"][b"amount"]
 
             G.add_edge((pubkey_requester, sequence_number_requester), (pubkey_requester, sequence_number_requester + 1),
                        contribution=value_exchange)

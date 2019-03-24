@@ -19,9 +19,9 @@ class TestReputationBase(AbstractServer):
 
     def insert_transaction(self, pubkey1, pubkey2, assets_traded):
         transaction = {
-            "tx": {
-                "assets": assets_traded.to_dictionary(),
-                "transferred": assets_traded.to_dictionary()
+            b"tx": {
+                b"assets": assets_traded.to_dictionary(),
+                b"transferred": assets_traded.to_dictionary()
             },
         }
         block = TrustChainBlock.create(b'tx_done', transaction, self.market_db, pubkey1,
@@ -35,6 +35,6 @@ class TestReputationBase(AbstractServer):
     def compute_reputations(self):
         blocks = self.market_db.get_all_blocks()
         rep_manager = TemporalPagerankReputationManager(blocks)
-        rep = rep_manager.compute(own_public_key='a')
+        rep = rep_manager.compute(own_public_key=b'a')
         self.assertIsInstance(rep, dict)
         return rep
