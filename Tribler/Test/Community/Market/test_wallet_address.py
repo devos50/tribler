@@ -8,15 +8,9 @@ class WalletAddressTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.wallet_address = WalletAddress("0")
-        self.wallet_address2 = WalletAddress("1")
-
-    def test_init(self):
-        # Test for init validation
-        with self.assertRaises(ValueError):
-            WalletAddress(1)
+        self.wallet_address = WalletAddress(b"0")
+        self.wallet_address2 = WalletAddress(b"1")
 
     def test_conversion(self):
         # Test for conversions
-        self.assertEqual("0", str(self.wallet_address))
-        self.assertEqual("1", str(self.wallet_address2))
+        self.assertEqual(b"1", bytes(self.wallet_address2))

@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from six import string_types
+from six import binary_type
 
 
 class WalletAddress(object):
@@ -14,8 +14,7 @@ class WalletAddress(object):
         """
         super(WalletAddress, self).__init__()
 
-        if not isinstance(wallet_address, string_types):
-            raise ValueError("Wallet address must be a string, found %s instead" % type(wallet_address))
+        wallet_address = wallet_address if isinstance(wallet_address, bytes) else binary_type(wallet_address)
 
         self._wallet_address = wallet_address
 
@@ -24,3 +23,6 @@ class WalletAddress(object):
 
     def __str__(self):
         return "%s" % self._wallet_address
+
+    def __bytes__(self):
+        return self._wallet_address
