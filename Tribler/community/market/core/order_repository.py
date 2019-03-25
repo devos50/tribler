@@ -2,7 +2,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 
 from Tribler.community.market.core.message import TraderId
-from Tribler.community.market.core.order import OrderNumber, OrderId, Order
+from Tribler.community.market.core.order import Order, OrderId, OrderNumber
 
 
 class OrderRepository(object):
