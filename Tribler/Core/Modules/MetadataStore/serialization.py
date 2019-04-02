@@ -202,9 +202,9 @@ class TorrentMetadataPayload(ChannelNodePayload):
         self.infohash = bytes(infohash)
         self.size = size
         self.torrent_date = time2int(torrent_date) if isinstance(torrent_date, datetime) else torrent_date
-        self.title = title.decode('utf-8') if isinstance(title, str) else title
-        self.tags = tags.decode('utf-8') if isinstance(tags, str) else tags
-        self.tracker_info = tracker_info.decode('utf-8') if isinstance(tracker_info, str) else tracker_info
+        self.title = title.decode('utf-8') if isinstance(title, bytes) else title
+        self.tags = tags.decode('utf-8') if isinstance(tags, bytes) else tags
+        self.tracker_info = tracker_info.decode('utf-8') if isinstance(tracker_info, bytes) else tracker_info
         super(TorrentMetadataPayload, self).__init__(metadata_type, reserved_flags, public_key,
                                                      id_, origin_id, timestamp,
                                                      **kwargs)

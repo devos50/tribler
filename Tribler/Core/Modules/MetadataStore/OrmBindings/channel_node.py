@@ -115,7 +115,7 @@ def define_binding(db, logger=None, key=None, clock=None):
                 kwargs = generate_dict_from_pony_args(self.__class__, skip_list=["signature", "public_key"], **kwargs)
                 payload = self._payload_class(
                     **dict(kwargs,
-                           public_key=str(private_key_override.pub().key_to_bin()[10:]),
+                           public_key=private_key_override.pub().key_to_bin()[10:],
                            key=private_key_override,
                            metadata_type=self.metadata_type))
                 kwargs["public_key"] = payload.public_key
