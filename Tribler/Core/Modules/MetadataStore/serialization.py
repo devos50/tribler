@@ -84,8 +84,8 @@ class SignedPayload(Payload):
         super(SignedPayload, self).__init__()
         self.metadata_type = metadata_type
         self.reserved_flags = reserved_flags
-        self.public_key = str(public_key)
-        self.signature = str(kwargs["signature"]) if "signature" in kwargs else EMPTY_SIG
+        self.public_key = bytes(public_key)
+        self.signature = bytes(kwargs["signature"]) if "signature" in kwargs else EMPTY_SIG
 
         skip_key_check = kwargs["skip_key_check"] if "skip_key_check" in kwargs else False
 
@@ -93,8 +93,8 @@ class SignedPayload(Payload):
         if not skip_key_check:
             if "key" in kwargs and kwargs["key"]:
                 key = kwargs["key"]
-                if self.public_key != str(key.pub().key_to_bin()[10:]):
-                    raise KeysMismatchException(self.public_key, str(key.pub().key_to_bin()[10:]))
+                if self.public_key != bytes(key.pub().key_to_bin()[10:]):
+                    raise KeysMismatchException(self.public_key, bytes(key.pub().key_to_bin()[10:]))
 
                 self.signature = default_eccrypto.create_signature(key, serialized_data)
             elif "signature" in kwargs:
@@ -141,7 +141,7 @@ class SignedPayload(Payload):
 
     def _serialized(self):
         serialized_data = default_serializer.pack_multiple(self.to_pack_list())[0]
-        return str(serialized_data), str(self.signature)
+        return bytes(serialized_data), bytes(self.signature)
 
     def serialized(self):
         return ''.join(self._serialized())
@@ -199,7 +199,7 @@ class TorrentMetadataPayload(ChannelNodePayload):
                  id_, origin_id, timestamp,
                  infohash, size, torrent_date, title, tags, tracker_info,
                  **kwargs):
-        self.infohash = str(infohash)
+        self.infohash = bytes(infohash)
         self.size = size
         self.torrent_date = time2int(torrent_date) if isinstance(torrent_date, datetime) else torrent_date
         self.title = title.decode('utf-8') if isinstance(title, str) else title
@@ -298,7 +298,7 @@ class DeletedMetadataPayload(SignedPayload):
     def __init__(self, metadata_type, reserved_flags, public_key,
                  delete_signature,
                  **kwargs):
-        self.delete_signature = str(delete_signature)
+        self.delete_signature = bytes(delete_signature)
         super(DeletedMetadataPayload, self).__init__(metadata_type, reserved_flags, public_key,
                                                      **kwargs)
 
