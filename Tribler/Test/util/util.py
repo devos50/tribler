@@ -110,23 +110,6 @@ class UnhandledTwistedExceptionCatcher(object):
                             % (num_twisted_exceptions, '\n-------------------\n'.join(exceptions)))
 
 
-def prepare_xml_rss(target_path, filename):
-    """
-    Function to prepare test_rss.xml file, replace the port with a random one
-    """
-    files_path = os.path.join(target_path, 'http_torrent_files')
-    os.mkdir(files_path)
-
-    port = get_random_port()
-
-    from Tribler.Test.common import TESTS_DATA_DIR
-    with open(os.path.join(TESTS_DATA_DIR, filename), 'r') as source_xml,\
-            open(os.path.join(target_path, filename), 'w') as destination_xml:
-        for line in source_xml:
-            destination_xml.write(line.replace('RANDOMPORT', str(port)))
-
-    return files_path, port
-
 _catcher = UnhandledExceptionCatcher()
 _twisted_catcher = UnhandledTwistedExceptionCatcher()
 
