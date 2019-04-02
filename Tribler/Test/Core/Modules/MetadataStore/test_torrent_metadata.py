@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import random
 from datetime import datetime
 
 from pony import orm
@@ -14,12 +13,13 @@ from twisted.internet.defer import inlineCallbacks
 from Tribler.Core.Modules.MetadataStore.OrmBindings.channel_node import TODELETE
 from Tribler.Core.Modules.MetadataStore.store import MetadataStore
 from Tribler.Test.Core.base_test import TriblerCoreTest
+from Tribler.Test.util.util import get_random_infohash
 from Tribler.pyipv8.ipv8.keyvault.crypto import default_eccrypto
 
 
 def rnd_torrent():
     return {"title": "",
-            "infohash": str(random.getrandbits(160)),
+            "infohash": get_random_infohash(),
             "torrent_date": datetime(1970, 1, 1),
             "tags": "video"}
 
@@ -45,7 +45,7 @@ class TestTorrentMetadata(TriblerCoreTest):
         """
         Test converting torrent metadata to serialized data
         """
-        torrent_metadata = self.mds.TorrentMetadata.from_dict({"infohash": str(random.getrandbits(160))})
+        torrent_metadata = self.mds.TorrentMetadata.from_dict({"infohash": get_random_infohash()})
         self.assertTrue(torrent_metadata.serialized())
 
     @db_session
@@ -53,10 +53,10 @@ class TestTorrentMetadata(TriblerCoreTest):
         """
         Test converting torrent metadata to a magnet link
         """
-        torrent_metadata = self.mds.TorrentMetadata.from_dict({"infohash": str(random.getrandbits(160))})
+        torrent_metadata = self.mds.TorrentMetadata.from_dict({"infohash": get_random_infohash()})
         self.assertTrue(torrent_metadata.get_magnet())
         torrent_metadata2 = self.mds.TorrentMetadata.from_dict(
-            {'title': u'\U0001f4a9', "infohash": str(random.getrandbits(160))})
+            {'title': u'\U0001f4a9', "infohash": get_random_infohash()})
         self.assertTrue(torrent_metadata2.get_magnet())
 
     @db_session
@@ -182,9 +182,9 @@ class TestTorrentMetadata(TriblerCoreTest):
         for ind in xrange(5):
             self.mds.ChannelNode._my_key = default_eccrypto.generate_key('curve25519')
             _ = self.mds.ChannelMetadata(title='channel%d' % ind, subscribed=(ind % 2 == 0),
-                                         infohash=str(random.getrandbits(160)))
+                                         infohash=get_random_infohash())
             tlist.extend(
-                [self.mds.TorrentMetadata(title='torrent%d' % torrent_ind, infohash=str(random.getrandbits(160))) for
+                [self.mds.TorrentMetadata(title='torrent%d' % torrent_ind, infohash=get_random_infohash()) for
                  torrent_ind in xrange(5)])
         tlist[-1].xxx = 1
         tlist[-2].status = TODELETE
@@ -219,7 +219,7 @@ class TestTorrentMetadata(TriblerCoreTest):
         """
         Test the updating of several properties of a TorrentMetadata object
         """
-        metadata = self.mds.TorrentMetadata(title='torrent', infohash=str(random.getrandbits(160)))
+        metadata = self.mds.TorrentMetadata(title='torrent', infohash=get_random_infohash())
         self.assertRaises(NotImplementedError, metadata.update_properties, {"status": 3, "name": "bla"})
         self.assertRaises(NotImplementedError, metadata.update_properties, {"name": "bla"})
 

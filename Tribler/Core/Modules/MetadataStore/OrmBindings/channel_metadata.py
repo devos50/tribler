@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import os
-import random
 import sys
 from binascii import hexlify
 from datetime import datetime
@@ -20,6 +19,7 @@ from Tribler.Core.Modules.MetadataStore.serialization import CHANNEL_TORRENT, Ch
 from Tribler.Core.TorrentDef import TorrentDef
 from Tribler.Core.Utilities.tracker_utils import get_uniformed_tracker_url
 from Tribler.Core.exceptions import DuplicateChannelIdError, DuplicateTorrentFileError
+from Tribler.Test.util.util import get_random_infohash
 from Tribler.pyipv8.ipv8.database import database_blob
 
 CHANNEL_DIR_NAME_LENGTH = 32  # Its not 40 so it could be distinguished from infohash
@@ -144,7 +144,7 @@ def define_binding(db):
                 raise DuplicateChannelIdError()
 
             my_channel = cls(id_=ROOT_CHANNEL_ID, public_key=database_blob(cls._my_key.pub().key_to_bin()[10:]),
-                             title=title, tags=description, subscribed=True, infohash=str(random.getrandbits(160)))
+                             title=title, tags=description, subscribed=True, infohash=get_random_infohash())
             my_channel.sign()
             return my_channel
 

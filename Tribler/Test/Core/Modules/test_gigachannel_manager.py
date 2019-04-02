@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import random
 from datetime import datetime
 
 from pony.orm import db_session
@@ -13,6 +12,7 @@ from Tribler.Core.Modules.gigachannel_manager import GigaChannelManager
 from Tribler.Core.TorrentDef import TorrentDef
 from Tribler.Test.Core.base_test import MockObject, TriblerCoreTest
 from Tribler.Test.common import TORRENT_UBUNTU_FILE
+from Tribler.Test.util.util import get_random_infohash
 from Tribler.pyipv8.ipv8.database import database_blob
 from Tribler.pyipv8.ipv8.keyvault.crypto import default_eccrypto
 
@@ -83,11 +83,11 @@ class TestGigaChannelManager(TriblerCoreTest):
             _ = self.mock_session.lm.mds.ChannelMetadata(title="bla", public_key=database_blob(str(123)),
                                                          signature=database_blob(str(345)), skip_key_check=True,
                                                          timestamp=123, local_version=123, subscribed=True,
-                                                         infohash=str(random.getrandbits(160)))
+                                                         infohash=get_random_infohash())
             _ = self.mock_session.lm.mds.ChannelMetadata(title="bla", public_key=database_blob(str(124)),
                                                          signature=database_blob(str(346)), skip_key_check=True,
                                                          timestamp=123, local_version=122, subscribed=False,
-                                                         infohash=str(random.getrandbits(160)))
+                                                         infohash=get_random_infohash())
         self.mock_session.has_download = lambda _: False
         self.torrents_added = 0
 

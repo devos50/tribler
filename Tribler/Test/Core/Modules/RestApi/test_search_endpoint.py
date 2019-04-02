@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import json
-import random
 
 from pony.orm import db_session
 
@@ -11,7 +10,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from Tribler.Test.Core.Modules.RestApi.base_api_test import AbstractApiTest
 from Tribler.Test.tools import trial_timeout
-from Tribler.pyipv8.ipv8.database import database_blob
+from Tribler.Test.util.util import get_random_infohash
 
 
 class TestSearchEndpoint(AbstractApiTest):
@@ -45,12 +44,11 @@ class TestSearchEndpoint(AbstractApiTest):
         num_hay = 100
         with db_session:
             _ = self.session.lm.mds.ChannelMetadata(title='test', tags='test', subscribed=True,
-                                                    infohash=str(random.getrandbits(160)))
+                                                    infohash=get_random_infohash())
             for x in xrange(0, num_hay):
-                self.session.lm.mds.TorrentMetadata(title='hay ' + str(x), infohash=str(random.getrandbits(160)))
+                self.session.lm.mds.TorrentMetadata(title='hay ' + str(x), infohash=get_random_infohash())
             self.session.lm.mds.TorrentMetadata(title='needle',
-                                                infohash=database_blob(
-                                                    bytearray(random.getrandbits(8) for _ in xrange(20))))
+                                                infohash=get_random_infohash())
 
         self.should_check_equality = False
 

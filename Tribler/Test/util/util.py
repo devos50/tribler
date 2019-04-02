@@ -5,16 +5,17 @@ Partially based on the code from http://code.activestate.com/recipes/52215/
 
 Author(s): Elric Milon
 """
+from __future__ import absolute_import
+
 import logging
-import os
+import random
 import sys
-# logging.basicConfig()
+from binascii import unhexlify
 
 from twisted.python.log import addObserver
 
-from Tribler.Core.Utilities.network_utils import get_random_port
 
-__all__ = ["process_unhandled_exceptions"]
+__all__ = ["process_unhandled_exceptions", "get_random_infohash"]
 
 
 class UnhandledExceptionCatcher(object):
@@ -108,6 +109,13 @@ class UnhandledTwistedExceptionCatcher(object):
         if num_twisted_exceptions > 0:
             raise Exception("Test raised %d unhandled Twisted exceptions:\n%s"
                             % (num_twisted_exceptions, '\n-------------------\n'.join(exceptions)))
+
+
+def get_random_infohash():
+    """
+    Return a random infohash as bytes.
+    """
+    return unhexlify(''.join(random.choice('0123456789abcdef') for _ in range(40)))
 
 
 _catcher = UnhandledExceptionCatcher()

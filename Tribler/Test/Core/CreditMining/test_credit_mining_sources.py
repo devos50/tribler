@@ -5,8 +5,6 @@ Author(s): Mihai Capota, Ardhi Putra
 """
 from __future__ import absolute_import
 
-import random
-
 from pony.orm import db_session
 
 from twisted.internet.defer import Deferred
@@ -14,6 +12,7 @@ from twisted.internet.defer import Deferred
 from Tribler.Core.CreditMining.CreditMiningSource import ChannelSource
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.Test.tools import trial_timeout
+from Tribler.Test.util.util import get_random_infohash
 
 
 class TestCreditMiningSources(TestAsServer):
@@ -31,7 +30,7 @@ class TestCreditMiningSources(TestAsServer):
 
         with db_session:
             my_channel = self.session.lm.mds.ChannelMetadata.create_channel('test', 'test')
-            _ = self.session.lm.mds.TorrentMetadata(title='testtorrent', infohash=str(random.getrandbits(160)))
+            _ = self.session.lm.mds.TorrentMetadata(title='testtorrent', infohash=get_random_infohash())
 
         source = ChannelSource(self.session, str(my_channel.public_key), lambda *_: test_deferred.callback(None))
         source.start()

@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import random
 import socket
 import time
 from binascii import hexlify
@@ -19,6 +18,7 @@ from Tribler.Core.TorrentChecker.torrent_checker import TorrentChecker
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.Test.test_as_server import TestAsServer
 from Tribler.Test.tools import trial_timeout
+from Tribler.Test.util.util import get_random_infohash
 
 
 class TestTorrentChecker(TestAsServer):
@@ -255,7 +255,7 @@ class TestTorrentChecker(TestAsServer):
         """
         Test whether legacy torrents are not health checked
         """
-        torrent1 = self.session.lm.mds.TorrentMetadata(title='torrent1', infohash=str(random.getrandbits(160)))
+        torrent1 = self.session.lm.mds.TorrentMetadata(title='torrent1', infohash=get_random_infohash())
         torrent1.status = LEGACY_ENTRY
 
         self.assertIsNone(self.torrent_checker.check_random_torrent())
@@ -266,7 +266,7 @@ class TestTorrentChecker(TestAsServer):
         Test that the random torrent health checking mechanism picks the right torrents
         """
         for ind in xrange(1, 20):
-            torrent = self.session.lm.mds.TorrentMetadata(title='torrent1', infohash=str(random.getrandbits(160)))
+            torrent = self.session.lm.mds.TorrentMetadata(title='torrent1', infohash=get_random_infohash())
             torrent.health.last_check = ind
 
         self.torrent_checker.check_torrent_health = lambda _: None

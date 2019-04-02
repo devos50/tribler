@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import os
-import random
 from binascii import unhexlify
 from datetime import datetime
 
@@ -20,6 +19,7 @@ from Tribler.Core.TorrentDef import TorrentDef
 from Tribler.Core.exceptions import DuplicateChannelIdError, DuplicateTorrentFileError
 from Tribler.Test.Core.base_test import TriblerCoreTest
 from Tribler.Test.common import TORRENT_UBUNTU_FILE
+from Tribler.Test.util.util import get_random_infohash
 from Tribler.pyipv8.ipv8.database import database_blob
 from Tribler.pyipv8.ipv8.keyvault.crypto import default_eccrypto
 
@@ -75,7 +75,7 @@ class TestChannelMetadata(TriblerCoreTest):
         """
         Test converting channel metadata to serialized data
         """
-        channel_metadata = self.mds.ChannelMetadata.from_dict({"infohash": str(random.getrandbits(160))})
+        channel_metadata = self.mds.ChannelMetadata.from_dict({"infohash": get_random_infohash()})
         self.assertTrue(channel_metadata.serialized())
 
     @db_session
@@ -84,11 +84,11 @@ class TestChannelMetadata(TriblerCoreTest):
         Test whether a correct list with channel content is returned from the database
         """
         self.mds.ChannelNode._my_key = default_eccrypto.generate_key('low')
-        channel1 = self.mds.ChannelMetadata(infohash=str(random.getrandbits(160)))
+        channel1 = self.mds.ChannelMetadata(infohash=get_random_infohash())
         self.mds.TorrentMetadata.from_dict(dict(self.torrent_template))
 
         self.mds.ChannelNode._my_key = default_eccrypto.generate_key('low')
-        channel2 = self.mds.ChannelMetadata(infohash=str(random.getrandbits(160)))
+        channel2 = self.mds.ChannelMetadata(infohash=get_random_infohash())
         self.mds.TorrentMetadata.from_dict(dict(self.torrent_template, infohash="1"))
         self.mds.TorrentMetadata.from_dict(dict(self.torrent_template, infohash="2"))
 
@@ -288,7 +288,7 @@ class TestChannelMetadata(TriblerCoreTest):
 
     def test_mdblob_dont_fit_exception(self):
         with db_session:
-            md_list = [self.mds.TorrentMetadata(title='test' + str(x), infohash=str(random.getrandbits(160))) for x in
+            md_list = [self.mds.TorrentMetadata(title='test' + str(x), infohash=get_random_infohash()) for x in
                        xrange(0, 1)]
         self.assertRaises(Exception, entries_to_chunk, md_list, chunk_size=1)
 
@@ -302,7 +302,7 @@ class TestChannelMetadata(TriblerCoreTest):
         for ind in xrange(10):
             self.mds.ChannelNode._my_key = default_eccrypto.generate_key('low')
             _ = self.mds.ChannelMetadata(title='channel%d' % ind, subscribed=(ind % 2 == 0),
-                                         infohash=str(random.getrandbits(160)))
+                                         infohash=get_random_infohash())
         channels = self.mds.ChannelMetadata.get_entries(first=1, last=5)
         self.assertEqual(len(channels[0]), 5)
         self.assertEqual(channels[1], 10)
