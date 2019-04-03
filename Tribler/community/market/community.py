@@ -609,7 +609,7 @@ class MarketCommunity(Community, BlockListener):
 
         def on_block_created(blocks):
             block, _ = blocks
-            self.trustchain.send_block(block, ttl=2)
+            self.trustchain.send_block(block, ttl=1)
             if self.is_matchmaker:
                 tick.block_hash = block.hash
                 # Search for matches
@@ -644,7 +644,7 @@ class MarketCommunity(Community, BlockListener):
 
         def on_block_created(blocks):
             block, _ = blocks
-            self.trustchain.send_block(block, ttl=2)
+            self.trustchain.send_block(block, ttl=1)
             if self.is_matchmaker:
                 tick.block_hash = block.hash
                 # Search for matches
@@ -1028,7 +1028,7 @@ class MarketCommunity(Community, BlockListener):
 
             if order.verified:
                 return self.create_new_cancel_order_block(order)\
-                    .addCallback(lambda blocks: self.trustchain.send_block(blocks[0], ttl=2))
+                    .addCallback(lambda blocks: self.trustchain.send_block(blocks[0], ttl=1))
 
         return succeed(None)
 
