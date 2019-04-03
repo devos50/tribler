@@ -5,7 +5,7 @@ from binascii import hexlify, unhexlify
 from functools import wraps
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks, succeed
+from twisted.internet.defer import Deferred, fail, inlineCallbacks, succeed
 
 from Tribler.Core.Modules.wallet.tc_wallet import TrustchainWallet
 from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_ASK_TIMEOUT, NTFY_MARKET_ON_BID,\
@@ -148,7 +148,7 @@ class MarketCommunity(Community, BlockListener):
         self.record_transactions = kwargs.pop('record_transactions', False)
         self.trustchain.settings.broadcast_blocks = False
         self.trustchain.add_listener(self, [b'ask', b'bid', b'cancel_order', b'tx_init', b'tx_payment', b'tx_done'])
-        self.dht = kwargs.pop('dht')
+        self.dht = kwargs.pop('dht', None)
 
         use_database = kwargs.pop('use_database', True)
         db_working_dir = kwargs.pop('working_directory', '')
@@ -230,6 +230,9 @@ class MarketCommunity(Community, BlockListener):
         def on_dht_error(failure):
             self._logger.warning("Unable to get address for trader %s", trader_id)
             deferred.errback(failure)
+
+        if not self.dht:
+            return fail(RuntimeError("DHT not available"))
 
         self.dht.connect_peer(bytes(trader_id)).addCallbacks(on_peers, on_dht_error)
 
