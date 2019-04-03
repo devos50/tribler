@@ -104,8 +104,8 @@ class PriceTimeStrategy(MatchingStrategy):
         # We now start to iterate through price levels and tick entries and match on the fly
         while cur_tick_entry and quantity_to_match > 0:
             if cur_tick_entry.is_blocked_for_matching(order_id) or \
-                            order_id.trader_id == cur_tick_entry.order_id.trader_id:
-                cur_tick_entry = cur_tick_entry.next_tick
+                            order_id._trader_id._trader_id == cur_tick_entry._tick._order_id._trader_id._trader_id:
+                cur_tick_entry = cur_tick_entry._next_tick
                 continue
 
             quantity_matched = min(quantity_to_match, cur_tick_entry.available_for_matching)
@@ -113,7 +113,7 @@ class PriceTimeStrategy(MatchingStrategy):
                 matched_ticks.append((self.get_unique_match_id(), cur_tick_entry, quantity_matched))
                 quantity_to_match -= quantity_matched
 
-            cur_tick_entry = cur_tick_entry.next_tick
+            cur_tick_entry = cur_tick_entry._next_tick
             if not cur_tick_entry:
                 # We probably reached the end of a price level, check whether we have a next price level
                 try:
@@ -158,8 +158,6 @@ class MatchingEngine(object):
         :return: A list of tuples containing a random match id, ticks and the matched quantity
         :rtype: [(str, TickEntry, Quantity)]
         """
-        now = time()
-
         matched_ticks = self.matching_strategy.match(tick_entry.order_id,
                                                      tick_entry.price,
                                                      tick_entry.available_for_matching,
@@ -167,7 +165,4 @@ class MatchingEngine(object):
 
         for match_id, matched_tick_entry, quantity in matched_ticks:  # Store the matches
             self.matches[match_id] = (tick_entry.order_id, matched_tick_entry.order_id, quantity)
-
-        diff = time() - now
-        self._logger.debug("Matching engine completed in %.2f seconds", diff)
         return matched_ticks

@@ -85,7 +85,7 @@ class PriceLevel(object):
             raise StopIteration
         else:
             return_value = self._last
-            self._last = self._last.next_tick
+            self._last = self._last._next_tick
             return return_value
 
     def next(self):

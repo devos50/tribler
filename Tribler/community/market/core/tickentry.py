@@ -25,7 +25,9 @@ class TickEntry(TaskManager):
         self._prev_tick = None
         self._next_tick = None
         self._reserved_for_matching = 0
-        self._blocked_for_matching = []
+        self.available_for_matching = 0
+        self.update_available_for_matching()
+        self._blocked_for_matching = set()
 
     @property
     def tick(self):
@@ -58,6 +60,7 @@ class TickEntry(TaskManager):
     @traded.setter
     def traded(self, new_traded):
         self._tick.traded = new_traded
+        self.update_available_for_matching()
 
     @property
     def price(self):
@@ -79,7 +82,7 @@ class TickEntry(TaskManager):
             self._blocked_for_matching.remove(unblock_id)
 
         self._logger.debug("Blocking %s for tick %s", order_id, self.order_id)
-        self._blocked_for_matching.append(order_id)
+        self._blocked_for_matching.add(order_id)
         self.register_task("unblock_%s" % order_id, reactor.callLater(10, unblock_order_id, order_id))
 
     def is_blocked_for_matching(self, order_id):
@@ -97,6 +100,7 @@ class TickEntry(TaskManager):
 
         self._reserved_for_matching += reserve_quantity
         self._price_level.reserved += reserve_quantity
+        self.update_available_for_matching()
 
     def release_for_matching(self, release_quantity):
         """
@@ -107,6 +111,7 @@ class TickEntry(TaskManager):
 
         self._reserved_for_matching -= release_quantity
         self._price_level.reserved -= release_quantity
+        self.update_available_for_matching()
 
     def is_valid(self):
         """
@@ -153,13 +158,8 @@ class TickEntry(TaskManager):
         """
         return self._reserved_for_matching
 
-    @property
-    def available_for_matching(self):
-        """
-        Return the amount that we can match in this TickEntry object.
-        :rtype: long
-        """
-        return self.assets.first.amount - self.reserved_for_matching - self.tick.traded
+    def update_available_for_matching(self):
+        self.available_for_matching = self._tick._assets.first._amount - self._reserved_for_matching - self._tick._traded
 
     @next_tick.setter
     def next_tick(self, new_next_tick):
