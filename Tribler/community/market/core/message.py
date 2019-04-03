@@ -35,12 +35,12 @@ class TraderId(object):
         return hexlify(bytes(self)).decode('utf-8')
 
     def __eq__(self, other):
-        if not isinstance(other, TraderId):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            return self._trader_id == bytes(other)
+        # if not isinstance(other, TraderId):
+        #     return NotImplemented
+        # elif self is other:
+        #     return True
+        # else:
+        return self._trader_id == other._trader_id
 
     def __ne__(self, other):
         return not self.__eq__(other)

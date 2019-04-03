@@ -40,13 +40,12 @@ class OrderNumber(object):
         return "%s" % self._order_number
 
     def __eq__(self, other):
-        if not isinstance(other, OrderNumber):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            return self._order_number == \
-                   other._order_number
+        # if not isinstance(other, OrderNumber):
+        #     return NotImplemented
+        # elif self is other:
+        #     return True
+        # else:
+        return self._order_number == other._order_number
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -69,6 +68,7 @@ class OrderId(object):
 
         self._trader_id = trader_id
         self._order_number = order_number
+        self._hash = hash((self._trader_id, self._order_number))
 
     @property
     def trader_id(self):
@@ -94,19 +94,18 @@ class OrderId(object):
         return b"%s.%d" % (self._trader_id.as_hex().encode('utf-8'), self._order_number)
 
     def __eq__(self, other):
-        if not isinstance(other, OrderId):
-            return NotImplemented
-        elif self is other:
-            return True
-        else:
-            return (self._trader_id, self._order_number) == \
-                   (other.trader_id, other.order_number)
+        # if not isinstance(other, OrderId):
+        #     return NotImplemented
+        # elif self is other:
+        #     return True
+        # else:
+        return (self._trader_id._trader_id, self._order_number._order_number) == (other._trader_id._trader_id, other._order_number._order_number)
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash((self._trader_id, self._order_number))
+        return self._hash
 
 
 class Order(object):
