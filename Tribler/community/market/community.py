@@ -20,7 +20,7 @@ from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.order_manager import OrderManager
 from Tribler.community.market.core.order_repository import DatabaseOrderRepository, MemoryOrderRepository
-from Tribler.community.market.core.orderbook import DatabaseOrderBook
+from Tribler.community.market.core.orderbook import DatabaseOrderBook, OrderBook
 from Tribler.community.market.core.payment import Payment
 from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.tick import Ask, Bid, Tick
@@ -149,8 +149,7 @@ class MarketCommunity(Community, BlockListener):
         self.trustchain.settings.broadcast_blocks = False
         self.trustchain.add_listener(self, [b'ask', b'bid', b'cancel_order', b'tx_init', b'tx_payment', b'tx_done'])
         self.dht = kwargs.pop('dht', None)
-
-        use_database = kwargs.pop('use_database', True)
+        self.use_database = kwargs.pop('use_database', True)
         db_working_dir = kwargs.pop('working_directory', '')
 
         Community.__init__(self, *args, **kwargs)
@@ -172,7 +171,7 @@ class MarketCommunity(Community, BlockListener):
         self.request_cache = RequestCache()
         self.cancelled_orders = set()  # Keep track of cancelled orders so we don't add them again to the orderbook.
 
-        if use_database:
+        if self.use_database:
             order_repository = DatabaseOrderRepository(self.mid, self.market_database)
             transaction_repository = DatabaseTransactionRepository(self.mid, self.market_database)
         else:
@@ -260,8 +259,12 @@ class MarketCommunity(Community, BlockListener):
         """
         Enable this node to be a matchmaker
         """
-        self.order_book = DatabaseOrderBook(self.market_database)
-        self.order_book.restore_from_database()
+        if self.use_database:
+            self.order_book = DatabaseOrderBook(self.market_database)
+            self.order_book.restore_from_database()
+        else:
+            self.order_book = OrderBook()
+
         self.matching_engine = MatchingEngine(PriceTimeStrategy(self.order_book))
         self.is_matchmaker = True
 
