@@ -332,7 +332,8 @@ class MarketCommunity(Community, BlockListener):
 
         # Save the ticks to the database
         if self.is_matchmaker:
-            self.order_book.save_to_database()
+            if self.use_database:
+                self.order_book.save_to_database()
             self.order_book.shutdown_task_manager()
         self.market_database.close()
         yield super(MarketCommunity, self).unload()
