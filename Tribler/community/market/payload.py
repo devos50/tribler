@@ -4,11 +4,8 @@ from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import OrderId, OrderNumber
-from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
-from Tribler.community.market.core.transaction import TransactionId, TransactionNumber
-from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.pyipv8.ipv8.messaging.bloomfilter import BloomFilter
 from Tribler.pyipv8.ipv8.messaging.payload import Payload
 
@@ -53,42 +50,92 @@ class InfoPayload(MessagePayload):
         return InfoPayload(TraderId(trader_id), timestamp, is_matchmaker)
 
 
-class OfferPayload(MessagePayload):
+class TTLPayload(Payload):
+    """
+    Payload for a TTL
+    """
+
+    format_list = ['B']
+
+    def __init__(self, ttl):
+        super(TTLPayload, self).__init__()
+        self.ttl = ttl
+
+    def to_pack_list(self):
+        return [('B', self.ttl)]
+
+    @classmethod
+    def from_unpack_list(cls, ttl):
+        return TTLPayload(ttl)
+
+
+class CancelOrderPayload(MessagePayload):
+    """
+    Payload with cancellation of an order in the market.
+    """
+
+    format_list = MessagePayload.format_list + ['I']
+
+    def __init__(self, trader_id, timestamp, order_number):
+        super(CancelOrderPayload, self).__init__(trader_id, timestamp)
+        self.order_number = order_number
+
+    def to_pack_list(self):
+        data = super(CancelOrderPayload, self).to_pack_list()
+        data += [('I', int(self.order_number))]
+        return data
+
+    @classmethod
+    def from_unpack_list(cls, trader_id, timestamp, order_number):
+        return CancelOrderPayload(TraderId(trader_id), timestamp, OrderNumber(order_number))
+
+
+class OrderPayload(MessagePayload):
     """
     Payload for a message with an offer in the market community.
     """
 
-    format_list = MessagePayload.format_list + ['I', 'Q', 'varlenI', 'Q', 'varlenI', 'I', 'Q']
+    format_list = MessagePayload.format_list + ['I', 'Q', 'varlenI', 'Q', 'varlenI', 'I', 'Q', '?']
 
-    def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded):
-        super(OfferPayload, self).__init__(trader_id, timestamp)
+    def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded, is_ask):
+        super(OrderPayload, self).__init__(trader_id, timestamp)
         self.order_number = order_number
         self.assets = assets
         self.timeout = timeout
         self.traded = traded
+        self.is_ask = is_ask
 
     def to_pack_list(self):
-        data = super(OfferPayload, self).to_pack_list()
+        data = super(OrderPayload, self).to_pack_list()
         data += [('I', int(self.order_number)),
                  ('Q', self.assets.first.amount),
                  ('varlenI', self.assets.first.asset_id.encode('utf-8')),
                  ('Q', self.assets.second.amount),
                  ('varlenI', self.assets.second.asset_id.encode('utf-8')),
                  ('I', int(self.timeout)),
-                 ('Q', self.traded)]
+                 ('Q', self.traded),
+                 ('?', self.is_ask)]
         return data
 
+    @classmethod
+    def from_unpack_list(cls, trader_id, timestamp, order_number, asset1_amount, asset1_type, asset2_amount,
+                         asset2_type, timeout, traded, is_ask):
+        return OrderPayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number),
+                            AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
+                                      AssetAmount(asset2_amount, asset2_type.decode('utf-8'))),
+                            Timeout(timeout), traded, is_ask)
 
-class MatchPayload(OfferPayload):
+
+class MatchPayload(OrderPayload):
     """
     Payload for a match in the market community.
     """
 
-    format_list = OfferPayload.format_list + ['I', 'Q', 'varlenI', 'varlenI', 'varlenI']
+    format_list = OrderPayload.format_list + ['I', 'Q', 'varlenI', 'varlenI', 'varlenI']
 
-    def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded, recipient_order_number,
+    def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded, is_ask, recipient_order_number,
                  match_quantity, match_trader_id, matchmaker_trader_id, match_id):
-        super(MatchPayload, self).__init__(trader_id, timestamp, order_number, assets, timeout, traded)
+        super(MatchPayload, self).__init__(trader_id, timestamp, order_number, assets, timeout, traded, is_ask)
         self.recipient_order_number = recipient_order_number
         self.match_quantity = match_quantity
         self.match_trader_id = match_trader_id
@@ -106,12 +153,12 @@ class MatchPayload(OfferPayload):
 
     @classmethod
     def from_unpack_list(cls, trader_id, timestamp, order_number, asset1_amount, asset1_type, asset2_amount,
-                         asset2_type, timeout, traded, recipient_order_number, match_quantity,
+                         asset2_type, timeout, traded, is_ask, recipient_order_number, match_quantity,
                          match_trader_id, matchmaker_trader_id, match_id):
         return MatchPayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number),
                             AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
                                       AssetAmount(asset2_amount, asset2_type.decode('utf-8'))),
-                            Timeout(timeout), traded, OrderNumber(recipient_order_number),
+                            Timeout(timeout), traded, is_ask, OrderNumber(recipient_order_number),
                             match_quantity, TraderId(match_trader_id), TraderId(matchmaker_trader_id),
                             match_id.decode('utf-8'))
 
@@ -197,6 +244,31 @@ class TradePayload(MessagePayload):
                                       AssetAmount(asset2_amount, asset2_type.decode('utf-8'))))
 
 
+class CompletedTradePayload(TradePayload):
+    """
+    Payload that contains information on a completed trade.
+    """
+
+    format_list = TradePayload.format_list + ['varlenI']
+
+    def __init__(self, trader_id, timestamp, order_number, recipient_order_id, proposal_id, assets, trade_id):
+        super(CompletedTradePayload, self).__init__(trader_id, timestamp, order_number, recipient_order_id, proposal_id, assets)
+        self.trade_id = trade_id
+
+    def to_pack_list(self):
+        data = super(CompletedTradePayload, self).to_pack_list()
+        data += [('varlenI', self.trade_id)]
+        return data
+
+    @classmethod
+    def from_unpack_list(cls, trader_id, timestamp, order_number, recipient_trader_id, recipient_order_number,
+                         proposal_id, asset1_amount, asset1_type, asset2_amount, asset2_type, trade_id):
+        return CompletedTradePayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number),
+                            OrderId(TraderId(recipient_trader_id), OrderNumber(recipient_order_number)), proposal_id,
+                            AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
+                                      AssetAmount(asset2_amount, asset2_type.decode('utf-8'))), trade_id)
+
+
 class DeclineTradePayload(MessagePayload):
 
     format_list = MessagePayload.format_list + ['I', 'varlenI', 'I', 'I', 'I']
@@ -241,159 +313,6 @@ class TransactionPayload(MessagePayload):
         data += [('varlenI', bytes(self.transaction_id.trader_id)),
                  ('I', int(self.transaction_id.transaction_number))]
         return data
-
-
-class StartTransactionPayload(TransactionPayload):
-    """
-    This payload contains a transaction and order information in the market community.
-    """
-
-    format_list = TransactionPayload.format_list + ['varlenI', 'I', 'varlenI', 'I', 'I', 'Q', 'varlenI', 'Q', 'varlenI']
-
-    def __init__(self, trader_id, timestamp, transaction_id, order_id, recipient_order_id,
-                 proposal_id, assets):
-        super(StartTransactionPayload, self).__init__(trader_id, timestamp, transaction_id)
-        self.order_id = order_id
-        self.recipient_order_id = recipient_order_id
-        self.proposal_id = proposal_id
-        self.assets = assets
-
-    def to_pack_list(self):
-        data = super(StartTransactionPayload, self).to_pack_list()
-        data += [('varlenI', bytes(self.order_id.trader_id)),
-                 ('I', int(self.order_id.order_number)),
-                 ('varlenI', bytes(self.recipient_order_id.trader_id)),
-                 ('I', int(self.recipient_order_id.order_number)),
-                 ('I', self.proposal_id),
-                 ('Q', self.assets.first.amount),
-                 ('varlenI', self.assets.first.asset_id.encode('utf-8')),
-                 ('Q', self.assets.second.amount),
-                 ('varlenI', self.assets.second.asset_id.encode('utf-8'))]
-        return data
-
-    @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, tx_trader_id, transaction_number,
-                         order_trader_id, order_number, recipient_trader_id, recipient_order_number, proposal_id,
-                         asset1_amount, asset1_type, asset2_amount, asset2_type):
-        return StartTransactionPayload(TraderId(trader_id), Timestamp(timestamp),
-                                       TransactionId(TraderId(tx_trader_id), TransactionNumber(transaction_number)),
-                                       OrderId(TraderId(order_trader_id), OrderNumber(order_number)),
-                                       OrderId(TraderId(recipient_trader_id), OrderNumber(recipient_order_number)),
-                                       proposal_id, AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
-                                                              AssetAmount(asset2_amount, asset2_type.decode('utf-8'))))
-
-
-class WalletInfoPayload(TransactionPayload):
-    """
-    This payload contains wallet information.
-    """
-
-    format_list = TransactionPayload.format_list + ['varlenI', 'varlenI']
-
-    def __init__(self, trader_id, timestamp, transaction_id, incoming_address, outgoing_address):
-        super(WalletInfoPayload, self).__init__(trader_id, timestamp, transaction_id)
-        self.incoming_address = incoming_address
-        self.outgoing_address = outgoing_address
-
-    def to_pack_list(self):
-        data = super(WalletInfoPayload, self).to_pack_list()
-        data += [('varlenI', self.incoming_address.address.encode('utf-8')),
-                 ('varlenI', self.outgoing_address.address.encode('utf-8'))]
-        return data
-
-    @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, transaction_trader_id, transaction_number,
-                         incoming_address, outgoing_address):
-        return WalletInfoPayload(TraderId(trader_id), Timestamp(timestamp),
-                                 TransactionId(TraderId(transaction_trader_id), TransactionNumber(transaction_number)),
-                                 WalletAddress(incoming_address.decode('utf-8')),
-                                 WalletAddress(outgoing_address.decode('utf-8')))
-
-
-class PaymentPayload(TransactionPayload):
-    """
-    This payload contains a payment in the market community.
-    """
-
-    format_list = TransactionPayload.format_list + ['Q', 'varlenI', 'varlenI', 'varlenI', 'varlenI', '?']
-
-    def __init__(self, trader_id, timestamp, transaction_id, transferred_assets, address_from,
-                 address_to, payment_id, success):
-        super(PaymentPayload, self).__init__(trader_id, timestamp, transaction_id)
-        self.transferred_assets = transferred_assets
-        self.address_from = address_from
-        self.address_to = address_to
-        self.payment_id = payment_id
-        self.success = success
-
-    def to_pack_list(self):
-        data = super(PaymentPayload, self).to_pack_list()
-        data += [('Q', self.transferred_assets.amount),
-                 ('varlenI', self.transferred_assets.asset_id.encode('utf-8')),
-                 ('varlenI', self.address_from.address.encode('utf-8')),
-                 ('varlenI', self.address_to.address.encode('utf-8')),
-                 ('varlenI', self.payment_id.payment_id.encode('utf-8')),
-                 ('?', self.success)]
-        return data
-
-    @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, transaction_trader_id, transaction_number,
-                         transferred_amount, transferred_type, address_from, address_to, payment_id, success):
-        return PaymentPayload(TraderId(trader_id), Timestamp(timestamp),
-                              TransactionId(TraderId(transaction_trader_id), TransactionNumber(transaction_number)),
-                              AssetAmount(transferred_amount, transferred_type.decode('utf-8')),
-                              WalletAddress(address_from.decode('utf-8')),
-                              WalletAddress(address_to.decode('utf-8')), PaymentId(payment_id.decode('utf-8')), success)
-
-
-class OrderStatusRequestPayload(MessagePayload):
-    """
-    This payload contains a request for an order status.
-    """
-
-    format_list = MessagePayload.format_list + ['varlenI', 'I', 'I']
-
-    def __init__(self, trader_id, timestamp, order_id, identifier):
-        super(OrderStatusRequestPayload, self).__init__(trader_id, timestamp)
-        self.order_id = order_id
-        self.identifier = identifier
-
-    def to_pack_list(self):
-        data = super(OrderStatusRequestPayload, self).to_pack_list()
-        data += [('varlenI', bytes(self.order_id.trader_id)),
-                 ('I', int(self.order_id.order_number)),
-                 ('I', self.identifier)]
-        return data
-
-    @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, order_trader_id, order_number, identifier):
-        return OrderStatusRequestPayload(TraderId(trader_id), Timestamp(timestamp),
-                                         OrderId(TraderId(order_trader_id), OrderNumber(order_number)), identifier)
-
-
-class OrderStatusResponsePayload(OfferPayload):
-    """
-    This payload contains the status of an order in the market community.
-    """
-
-    format_list = OfferPayload.format_list + ['I']
-
-    def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded, identifier):
-        super(OrderStatusResponsePayload, self).__init__(trader_id, timestamp, order_number, assets, timeout, traded)
-        self.identifier = identifier
-
-    def to_pack_list(self):
-        data = super(OrderStatusResponsePayload, self).to_pack_list()
-        data += [('I', self.identifier)]
-        return data
-
-    @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, order_number, asset1_amount, asset1_type, asset2_amount,
-                         asset2_type, timeout, traded, identifier):
-        return OrderStatusResponsePayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number),
-                                          AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
-                                                    AssetAmount(asset2_amount, asset2_type.decode('utf-8'))),
-                                          Timeout(timeout), traded, identifier)
 
 
 class OrderbookSyncPayload(MessagePayload):

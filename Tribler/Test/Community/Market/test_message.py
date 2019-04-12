@@ -21,12 +21,6 @@ class TraderIdTestSuite(unittest.TestCase):
         # Test for conversions
         self.assertEqual(b'0' * 20, bytes(self.trader_id))
 
-    def test_equality(self):
-        # Test for equality
-        self.assertTrue(self.trader_id == self.trader_id2)
-        self.assertTrue(self.trader_id != self.trader_id3)
-        self.assertFalse(self.trader_id == 6)
-
     def test_hash(self):
         # Test for hashes
         self.assertEqual(self.trader_id.__hash__(), self.trader_id2.__hash__())

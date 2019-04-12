@@ -170,45 +170,6 @@ class TestOrderBook(AbstractTestOrderBook):
         self.order_book.insert_bid(self.bid)
         self.assertEqual(len(self.order_book.get_order_ids()), 2)
 
-    def test_update_ticks(self):
-        """
-        Test updating ticks in an order book
-        """
-        self.order_book.insert_ask(self.ask)
-        self.order_book.insert_bid(self.bid)
-
-        ask_dict = {
-            "trader_id": self.ask.order_id.trader_id.as_hex(),
-            "order_number": int(self.ask.order_id.order_number),
-            "assets": self.ask.assets.to_dictionary(),
-            "traded": 100,
-            "timeout": 3600,
-            "timestamp": int(Timestamp.now())
-        }
-        bid_dict = {
-            "trader_id": self.bid.order_id.trader_id.as_hex(),
-            "order_number": int(self.bid.order_id.order_number),
-            "assets": self.bid.assets.to_dictionary(),
-            "traded": 100,
-            "timeout": 3600,
-            "timestamp": int(Timestamp.now())
-        }
-
-        self.order_book.get_tick(self.ask.order_id).reserve_for_matching(100)
-        self.order_book.get_tick(self.bid.order_id).reserve_for_matching(100)
-        self.order_book.update_ticks(ask_dict, bid_dict, 100, unreserve=True)
-
-        self.assertEqual(len(self.order_book.asks), 0)
-        self.assertEqual(len(self.order_book.bids), 1)
-        self.order_book.remove_bid(self.bid.order_id)
-
-        ask_dict["traded"] = 50
-        bid_dict["traded"] = 50
-        self.order_book.completed_orders = []
-        self.order_book.update_ticks(ask_dict, bid_dict, 100)
-        self.assertEqual(len(self.order_book.asks), 1)
-        self.assertEqual(len(self.order_book.bids), 1)
-
     def test_str(self):
         # Test for order book string representation
         self.order_book.insert_ask(self.ask)

@@ -1,26 +1,34 @@
 from __future__ import absolute_import
 
-from nose.tools import raises
+import hashlib
+import random
+import string
 
 from twisted.internet.defer import fail, inlineCallbacks
 from twisted.python.failure import Failure
 
-from Tribler.Core.Modules.wallet.dummy_wallet import DummyWallet1, DummyWallet2
-from Tribler.Core.Modules.wallet.tc_wallet import TrustchainWallet
 from Tribler.Test.Core.base_test import MockObject
 from Tribler.Test.tools import trial_timeout
-from Tribler.community.market.block import MarketBlock
 from Tribler.community.market.community import MarketCommunity
 from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.message import TraderId
-from Tribler.community.market.core.order import Order, OrderId, OrderNumber
-from Tribler.community.market.core.tick import Ask, Bid
-from Tribler.community.market.core.timeout import Timeout
-from Tribler.community.market.core.timestamp import Timestamp
-from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
+from Tribler.community.market.core.tradingengine import TradingEngine
 from Tribler.pyipv8.ipv8.test.base import TestBase
 from Tribler.pyipv8.ipv8.test.mocking.ipv8 import MockIPv8
+
+
+class MockTradingEngine(TradingEngine):
+    """
+    Trading engine that immediately completes a trade.
+    """
+
+    def trade(self, trade, match_id):
+        self.completed_trades.append(trade)
+
+        # The trade ID must be the same on the two nodes
+        trade_id = hashlib.sha1(str(trade.proposal_id)).digest()
+        self.matching_community.on_trade_completed(trade, match_id, trade_id)
 
 
 class TestMarketCommunityBase(TestBase):
@@ -34,18 +42,8 @@ class TestMarketCommunityBase(TestBase):
             node.overlay._use_main_thread = True
 
     def create_node(self):
-        dum1_wallet = DummyWallet1()
-        dum2_wallet = DummyWallet2()
-        dum1_wallet.MONITOR_DELAY = 0
-        dum2_wallet.MONITOR_DELAY = 0
-
-        wallets = {'DUM1': dum1_wallet, 'DUM2': dum2_wallet}
-
-        mock_ipv8 = MockIPv8(u"curve25519", MarketCommunity, create_trustchain=True, create_dht=True,
-                             is_matchmaker=True, wallets=wallets, use_database=False, working_directory=u":memory:")
-        tc_wallet = TrustchainWallet(mock_ipv8.trustchain)
-        mock_ipv8.overlay.wallets['MB'] = tc_wallet
-
+        trading_engine = MockTradingEngine()
+        mock_ipv8 = MockIPv8(u"curve25519", MarketCommunity, is_matchmaker=True, create_dht=True, use_database=False, working_directory=u":memory:", trading_engine=trading_engine)
         return mock_ipv8
 
 
@@ -67,13 +65,12 @@ class TestMarketCommunity(TestMarketCommunityBase):
         """
         yield self.introduce_nodes()
 
-        yield self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+        self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
         yield self.sleep(0.5)
 
         orders = list(self.nodes[0].overlay.order_manager.order_repository.find_all())
         self.assertTrue(orders)
-        self.assertTrue(orders[0].verified)
         self.assertTrue(orders[0].is_ask())
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
 
@@ -85,13 +82,12 @@ class TestMarketCommunity(TestMarketCommunityBase):
         """
         yield self.introduce_nodes()
 
-        yield self.nodes[0].overlay.create_bid(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+        self.nodes[0].overlay.create_bid(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
         yield self.sleep(0.5)
 
         orders = list(self.nodes[0].overlay.order_manager.order_repository.find_all())
         self.assertTrue(orders)
-        self.assertTrue(orders[0].verified)
         self.assertFalse(orders[0].is_ask())
         self.assertEqual(len(self.nodes[2].overlay.order_book.bids), 1)
 
@@ -124,7 +120,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         # The ask should be removed since this node thinks the order is already completed
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 0)
 
-    @trial_timeout(2)
+    @trial_timeout(3)
     @inlineCallbacks
     def test_counter_trade(self):
         """
@@ -142,8 +138,52 @@ class TestMarketCommunity(TestMarketCommunityBase):
 
         yield self.sleep(0.5)
 
-        self.assertTrue(list(self.nodes[0].overlay.transaction_manager.find_all()))
-        self.assertTrue(list(self.nodes[1].overlay.transaction_manager.find_all()))
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, 1)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+
+    @trial_timeout(3)
+    @inlineCallbacks
+    def test_completed_trade(self):
+        """
+        Test whether a completed trade is removed from the orderbook of a matchmaker
+        """
+        yield self.introduce_nodes()
+
+        yield self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)  # Give it some time to disseminate
+
+        self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
+        order = self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+        order._traded_quantity = 2  # Fulfill this order
+
+        yield self.sleep(0.5)
+
+        # Matchmaker should have removed this order from the orderbook
+        self.assertFalse(self.nodes[2].overlay.order_book.tick_exists(order.order_id))
+
+    @trial_timeout(3)
+    @inlineCallbacks
+    def test_other_completed_trade(self):
+        """
+        Test whether a completed trade of a counterparty is removed from the orderbook of a matchmaker
+        """
+        yield self.introduce_nodes()
+
+        order = yield self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)  # Give it some time to disseminate
+
+        order._traded_quantity = 2  # Fulfill this order
+        self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
+        self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)
+
+        # Matchmaker should have removed this order from the orderbook
+        self.assertFalse(self.nodes[2].overlay.order_book.tick_exists(order.order_id))
 
     @trial_timeout(2)
     @inlineCallbacks
@@ -158,22 +198,13 @@ class TestMarketCommunity(TestMarketCommunityBase):
 
         yield self.sleep(0.5)  # Give it some time to complete the trade
 
-        # Compute reputation
-        self.nodes[0].overlay.compute_reputation()
-
         # Verify that the trade has been made
-        self.assertTrue(list(self.nodes[0].overlay.transaction_manager.find_all()))
-        self.assertTrue(list(self.nodes[1].overlay.transaction_manager.find_all()))
-
-        balance1 = yield self.nodes[0].overlay.wallets['DUM1'].get_balance()
-        balance2 = yield self.nodes[0].overlay.wallets['MB'].get_balance()
-        self.assertEqual(balance1['available'], 950)
-        self.assertEqual(balance2['available'], 50)
-
-        balance1 = yield self.nodes[1].overlay.wallets['DUM1'].get_balance()
-        balance2 = yield self.nodes[1].overlay.wallets['MB'].get_balance()
-        self.assertEqual(balance1['available'], 1050)
-        self.assertEqual(balance2['available'], -50)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 50)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, 50)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 50)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 50)
 
     @trial_timeout(2)
     @inlineCallbacks
@@ -203,8 +234,12 @@ class TestMarketCommunity(TestMarketCommunityBase):
         yield self.sleep(0.5)
 
         # Verify that the trade has been made
-        self.assertTrue(list(self.nodes[0].overlay.transaction_manager.find_all()))
-        self.assertTrue(list(self.nodes[1].overlay.transaction_manager.find_all()))
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, 10)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 10)
 
     @inlineCallbacks
     def test_cancel(self):
@@ -216,31 +251,15 @@ class TestMarketCommunity(TestMarketCommunityBase):
         ask_order = yield self.nodes[0].overlay.create_ask(
             AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
 
+        yield self.sleep(0.5)
+
+        self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
         self.nodes[0].overlay.cancel_order(ask_order.order_id)
 
         yield self.sleep(0.5)
 
         self.assertTrue(self.nodes[0].overlay.order_manager.order_repository.find_by_id(ask_order.order_id).cancelled)
-
-    @trial_timeout(2)
-    @inlineCallbacks
-    def test_failing_payment(self):
-        """
-        Test trading between two persons when a payment fails
-        """
-        yield self.introduce_nodes()
-
-        for node_nr in [0, 1]:
-            self.nodes[node_nr].overlay.wallets['DUM1'].transfer = lambda *_: fail(RuntimeError("oops"))
-            self.nodes[node_nr].overlay.wallets['DUM2'].transfer = lambda *_: fail(RuntimeError("oops"))
-
-        yield self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
-        yield self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
-
-        yield self.sleep(0.5)
-
-        self.assertEqual(list(self.nodes[0].overlay.transaction_manager.find_all())[0].status, "error")
-        self.assertEqual(list(self.nodes[1].overlay.transaction_manager.find_all())[0].status, "error")
+        self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 0)
 
     @trial_timeout(3)
     @inlineCallbacks
@@ -344,16 +363,116 @@ class TestMarketCommunity(TestMarketCommunityBase):
         yield self.sleep(0.5)
 
         # Verify that the trade has been made
-        self.assertTrue(list(self.nodes[0].overlay.transaction_manager.find_all()))
-        self.assertTrue(list(self.nodes[1].overlay.transaction_manager.find_all()))
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 2)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, 2)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 2)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 2)
 
         yield self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(8, 'DUM1'), AssetAmount(8, 'DUM2')), 3600)
 
         yield self.sleep(1)
 
         # Verify that the trade has been made
-        self.assertEqual(len(list(self.nodes[0].overlay.transaction_manager.find_all())), 2)
-        self.assertEqual(len(list(self.nodes[1].overlay.transaction_manager.find_all())), 2)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 2)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[1].assets.first.amount, 8)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[1].assets.second.amount, 8)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 2)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[1].assets.first.amount, 8)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[1].assets.second.amount, 8)
+
+
+class TestMarketCommunityFourNodes(TestMarketCommunityBase):
+    __testing__ = True
+    NUM_NODES = 5
+
+    def setUp(self):
+        super(TestMarketCommunityFourNodes, self).setUp()
+
+        self.nodes[0].overlay.disable_matchmaker()
+        self.nodes[1].overlay.disable_matchmaker()
+        self.nodes[2].overlay.disable_matchmaker()
+
+    @trial_timeout(2)
+    @inlineCallbacks
+    def test_partial_match(self):
+        """
+        Test matchmaking with partial orders
+        """
+        yield self.introduce_nodes()
+
+        self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(5, 'DUM1'), AssetAmount(5, 'DUM2')), 3600)
+        self.nodes[1].overlay.create_ask(AssetPair(AssetAmount(5, 'DUM1'), AssetAmount(5, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)
+
+        self.nodes[2].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)
+
+        # Verify that the trade has been made
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(len(self.nodes[2].overlay.trading_engine.completed_trades), 2)
+        self.assertEqual(self.nodes[2].overlay.trading_engine.completed_trades[0].assets.first.amount, 5)
+        self.assertEqual(self.nodes[2].overlay.trading_engine.completed_trades[0].assets.second.amount, 5)
+        self.assertEqual(self.nodes[2].overlay.trading_engine.completed_trades[1].assets.first.amount, 5)
+        self.assertEqual(self.nodes[2].overlay.trading_engine.completed_trades[1].assets.second.amount, 5)
+
+    @inlineCallbacks
+    def match_window_impl(self, test_ask):
+        yield self.introduce_nodes()
+
+        self.nodes[2].overlay.settings.match_window = 0.5  # Wait 1 sec before accepting (the best) match
+
+        if test_ask:
+            order1 = self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
+            order2 = self.nodes[0].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(20, 'DUM2')), 3600)
+            expected_amount = 20
+        else:
+            order1 = self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
+            order2 = self.nodes[1].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(20, 'DUM2')), 3600)
+            expected_amount = 10
+
+        yield self.sleep(0.2)
+
+        # Make sure that the two matchmaker match different orders
+        order1_tick = self.nodes[3].overlay.order_book.get_tick(order1.order_id)
+        order2_tick = self.nodes[4].overlay.order_book.get_tick(order2.order_id)
+        order1_tick.available_for_matching = 0
+        order2_tick.available_for_matching = 0
+
+        if test_ask:
+            self.nodes[2].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(20, 'DUM2')), 3600)
+        else:
+            self.nodes[2].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(20, 'DUM2')), 3600)
+
+        yield self.sleep(1)
+
+        # Verify that the trade has been made
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, expected_amount)
+        self.assertEqual(len(self.nodes[2].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[2].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
+        self.assertEqual(self.nodes[2].overlay.trading_engine.completed_trades[0].assets.second.amount, expected_amount)
+
+    @trial_timeout(4)
+    @inlineCallbacks
+    def test_match_window_bid(self):
+        """
+        Test the match window when one is matching a new bid
+        """
+        yield self.match_window_impl(False)
+
+    @trial_timeout(4)
+    @inlineCallbacks
+    def test_match_window_ask(self):
+        """
+        Test the match window when one is matching a new ask
+        """
+        yield self.match_window_impl(True)
 
 
 class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
@@ -373,18 +492,12 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         yield self.sleep(0.5)
 
         # Verify that the trade has been made
-        self.assertTrue(list(self.nodes[0].overlay.transaction_manager.find_all()))
-        self.assertTrue(list(self.nodes[1].overlay.transaction_manager.find_all()))
-
-        balance1 = yield self.nodes[0].overlay.wallets['DUM1'].get_balance()
-        balance2 = yield self.nodes[0].overlay.wallets['DUM2'].get_balance()
-        self.assertEqual(balance1['available'], 990)
-        self.assertEqual(balance2['available'], 10013)
-
-        balance1 = yield self.nodes[1].overlay.wallets['DUM1'].get_balance()
-        balance2 = yield self.nodes[1].overlay.wallets['DUM2'].get_balance()
-        self.assertEqual(balance1['available'], 1010)
-        self.assertEqual(balance2['available'], 9987)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, 13)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 13)
 
     @trial_timeout(2)
     @inlineCallbacks
@@ -400,27 +513,31 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         yield self.sleep(0.5)
 
         # Verify that the trade has been made
-        transactions1 = list(self.nodes[0].overlay.transaction_manager.find_all())
-        transactions2 = list(self.nodes[1].overlay.transaction_manager.find_all())
-        self.assertEqual(len(transactions1), 1)
-        self.assertEqual(len(transactions1[0].payments), 2)
-        self.assertEqual(len(transactions2), 1)
-        self.assertEqual(len(transactions2[0].payments), 2)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 2)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.second.amount, 2)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 2)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 2)
 
         # There should be no reserved quantity in the orderbook
         ask_order_id = list(self.nodes[0].overlay.order_manager.order_repository.find_all())[0].order_id
         for node_nr in [0, 1]:
             ask_tick_entry = self.nodes[node_nr].overlay.order_book.get_tick(ask_order_id)
             if ask_tick_entry:
-                self.assertEqual(ask_tick_entry.reserved_for_matching, 0)
+                self.assertEqual(ask_tick_entry.reserved_for_matching, 0, "Node %d" % node_nr)
 
         yield self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(8, 'DUM1'), AssetAmount(8, 'DUM2')), 3600)
 
         yield self.sleep(1)
 
         # Verify that the trade has been made
-        self.assertEqual(len(list(self.nodes[0].overlay.transaction_manager.find_all())), 2)
-        self.assertEqual(len(list(self.nodes[1].overlay.transaction_manager.find_all())), 2)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 2)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[1].assets.first.amount, 8)
+        self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[1].assets.second.amount, 8)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 2)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[1].assets.first.amount, 8)
+        self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[1].assets.second.amount, 8)
 
         for node_nr in [0, 1]:
             self.assertEqual(len(self.nodes[node_nr].overlay.order_book.asks), 0)
@@ -432,97 +549,3 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         Test the ping/pong mechanism of the market
         """
         yield self.nodes[0].overlay.ping_peer(self.nodes[1].overlay.my_peer)
-
-
-class TestMarketCommunitySingle(TestMarketCommunityBase):
-    __testing__ = True
-    NUM_NODES = 1
-
-    @staticmethod
-    def get_tick_block(return_ask, pair):
-        tick_cls = Ask if return_ask else Bid
-        ask = tick_cls(OrderId(TraderId(b'0' * 20), OrderNumber(1)), pair, Timeout(3600), Timestamp.now(), return_ask)
-        ask_tx = ask.to_block_dict()
-        ask_tx["address"], ask_tx["port"] = "127.0.0.1", 1337
-        tick_block = MarketBlock()
-        tick_block.type = b'ask' if return_ask else b'bid'
-        tick_block.transaction = {'tick': ask_tx, 'version': MarketCommunity.PROTOCOL_VERSION}
-        return tick_block
-
-    @staticmethod
-    def get_tx_done_block(ask_amount, bid_amount, traded_amount, ask_total_traded, bid_total_traded):
-        ask_pair = AssetPair(AssetAmount(ask_amount, 'BTC'), AssetAmount(ask_amount, 'MB'))
-        bid_pair = AssetPair(AssetAmount(bid_amount, 'BTC'), AssetAmount(bid_amount, 'MB'))
-        ask = Order(OrderId(TraderId(b'0' * 20), OrderNumber(1)), ask_pair, Timeout(3600), Timestamp.now(), True)
-        ask._traded_quantity = ask_total_traded
-        bid = Order(OrderId(TraderId(b'1' * 20), OrderNumber(1)), bid_pair, Timeout(3600), Timestamp.now(), False)
-        bid._traded_quantity = bid_total_traded
-        tx = Transaction(TransactionId(TraderId(b'0' * 20), TransactionNumber(1)),
-                         AssetPair(AssetAmount(traded_amount, 'BTC'), AssetAmount(traded_amount, 'MB')),
-                         OrderId(TraderId(b'0' * 20), OrderNumber(1)),
-                         OrderId(TraderId(b'1' * 20), OrderNumber(1)), Timestamp(0))
-        tx.transferred_assets.first += AssetAmount(traded_amount, 'BTC')
-        tx.transferred_assets.second += AssetAmount(traded_amount, 'MB')
-        tx_done_block = MarketBlock()
-        tx_done_block.type = b'tx_done'
-        tx_done_block.transaction = {
-            'ask': ask.to_status_dictionary(),
-            'bid': bid.to_status_dictionary(),
-            'tx': tx.to_dictionary(),
-            'version': MarketCommunity.PROTOCOL_VERSION
-        }
-        tx_done_block.transaction['ask']['address'], tx_done_block.transaction['ask']['port'] = "1.1.1.1", 1234
-        tx_done_block.transaction['bid']['address'], tx_done_block.transaction['bid']['port'] = "1.1.1.1", 1234
-        return tx_done_block
-
-    def test_insert_ask_bid(self):
-        """
-        Test whether an ask is successfully inserted when a tick block is received
-        """
-        ask = TestMarketCommunitySingle.get_tick_block(True, AssetPair(AssetAmount(30, 'BTC'), AssetAmount(30, 'MB')))
-        bid = TestMarketCommunitySingle.get_tick_block(False, AssetPair(AssetAmount(30, 'BTC'), AssetAmount(29, 'MB')))
-        bid.transaction["tick"]["order_number"] = 2  # To give it a different order number
-
-        self.nodes[0].overlay.trustchain.persistence.get_linked = lambda _: True
-        self.nodes[0].overlay.received_block(ask)
-        self.nodes[0].overlay.received_block(bid)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.asks), 1)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.bids), 1)
-
-    def test_tx_done_block_new(self):
-        """
-        Test whether receiving a tx_done block, update the entries in the order book correctly
-        """
-        tx_done = TestMarketCommunitySingle.get_tx_done_block(10, 3, 3, 3, 3)
-        self.nodes[0].overlay.received_block(tx_done)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.asks), 1)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.bids), 0)
-
-    def test_tx_done_block_asc(self):
-        """
-        Test whether receiving multiple tx_done blocks, update the entries in the order book correctly
-        """
-        tx_done = TestMarketCommunitySingle.get_tx_done_block(10, 3, 3, 3, 3)
-        self.nodes[0].overlay.received_block(tx_done)
-        tx_done = TestMarketCommunitySingle.get_tx_done_block(10, 7, 7, 10, 7)
-        self.nodes[0].overlay.received_block(tx_done)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.asks), 0)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.bids), 0)
-
-    def test_tx_done_block_desc(self):
-        """
-        Test whether receiving multiple tx_done blocks, update the entries in the order book correctly
-        """
-        tx_done = TestMarketCommunitySingle.get_tx_done_block(10, 7, 7, 10, 7)
-        self.nodes[0].overlay.received_block(tx_done)
-        tx_done = TestMarketCommunitySingle.get_tx_done_block(10, 3, 3, 3, 3)
-        self.nodes[0].overlay.received_block(tx_done)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.asks), 0)
-        self.assertEqual(len(self.nodes[0].overlay.order_book.bids), 0)
-
-    @raises(RuntimeError)
-    def test_order_invalid_timeout(self):
-        """
-        Test whether we cannot create an order with an invalid timeout
-        """
-        self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600 * 1000)

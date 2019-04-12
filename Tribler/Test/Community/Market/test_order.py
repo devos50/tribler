@@ -11,7 +11,6 @@ from Tribler.community.market.core.tick import Tick
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.community.market.core.trade import Trade
-from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
 from Tribler.pyipv8.ipv8.util import old_round
 
 
@@ -20,10 +19,6 @@ class OrderTestSuite(unittest.TestCase):
 
     def setUp(self):
         # Object creation
-        self.transaction_id = TransactionId(TraderId(b'0' * 20), TransactionNumber(1))
-        self.transaction = Transaction(self.transaction_id, AssetPair(AssetAmount(100, 'BTC'), AssetAmount(30, 'MC')),
-                                       OrderId(TraderId(b'0' * 20), OrderNumber(2)),
-                                       OrderId(TraderId(b'1' * 20), OrderNumber(1)), Timestamp(0))
         self.proposed_trade = Trade.propose(TraderId(b'0' * 20),
                                             OrderId(TraderId(b'0' * 20), OrderNumber(2)),
                                             OrderId(TraderId(b'1' * 20), OrderNumber(3)),
@@ -40,11 +35,9 @@ class OrderTestSuite(unittest.TestCase):
         self.order = Order(OrderId(TraderId(b'0' * 20), OrderNumber(3)),
                            AssetPair(AssetAmount(50, 'BTC'), AssetAmount(5, 'MC')),
                            Timeout(5000), self.order_timestamp, False)
-        self.order.set_verified()
         self.order2 = Order(OrderId(TraderId(b'0' * 20), OrderNumber(4)),
                             AssetPair(AssetAmount(50, 'BTC'), AssetAmount(5, 'MC')),
                             Timeout(5), Timestamp(int(old_round(time.time() * 1000)) - 1000 * 1000), True)
-        self.order2.set_verified()
 
     def test_add_trade(self):
         """
@@ -130,9 +123,6 @@ class OrderTestSuite(unittest.TestCase):
         """
         Test the status of an order
         """
-        self.order._verified = False
-        self.assertEqual(self.order.status, "unverified")
-        self.order.set_verified()
         self.assertEqual(self.order.status, "open")
         self.order._timeout = Timeout(0)
         self.assertEqual(self.order.status, "expired")
@@ -178,17 +168,6 @@ class OrderIDTestSuite(unittest.TestCase):
         self.order_id2 = OrderId(TraderId(b'0' * 20), OrderNumber(1))
         self.order_id3 = OrderId(TraderId(b'0' * 20), OrderNumber(2))
 
-    def test_equality(self):
-        # Test for equality
-        self.assertEquals(self.order_id, self.order_id)
-        self.assertEquals(self.order_id, self.order_id2)
-        self.assertFalse(self.order_id == self.order_id3)
-        self.assertEquals(NotImplemented, self.order_id.__eq__(""))
-
-    def test_non_equality(self):
-        # Test for non equality
-        self.assertNotEquals(self.order_id, self.order_id3)
-
     def test_hashes(self):
         # Test for hashes
         self.assertEquals(self.order_id.__hash__(), self.order_id2.__hash__())
@@ -212,17 +191,6 @@ class OrderNumberTestSuite(unittest.TestCase):
         # Test for init validation
         with self.assertRaises(ValueError):
             OrderNumber(1.0)
-
-    def test_equality(self):
-        # Test for equality
-        self.assertEquals(self.order_number, self.order_number)
-        self.assertEquals(self.order_number, self.order_number2)
-        self.assertFalse(self.order_number == self.order_number3)
-        self.assertEquals(NotImplemented, self.order_number.__eq__(""))
-
-    def test_non_equality(self):
-        # Test for non equality
-        self.assertNotEquals(self.order_number, self.order_number3)
 
     def test_hashes(self):
         # Test for hashes

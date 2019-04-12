@@ -39,7 +39,7 @@ class TickTestSuite(unittest.TestCase):
     def test_to_network(self):
         # Test for to network
         self.assertEquals((TraderId(b'0' * 20), self.tick.timestamp, OrderNumber(1),
-                           AssetPair(AssetAmount(30, 'BTC'), AssetAmount(30, 'MB')), self.tick.timeout, 0),
+                           AssetPair(AssetAmount(30, 'BTC'), AssetAmount(30, 'MB')), self.tick.timeout, 0, True),
                           self.tick.to_network())
 
     def test_traded_setter(self):
@@ -78,5 +78,4 @@ class TickTestSuite(unittest.TestCase):
             "timeout": 30,
             "timestamp": 0.0,
             "traded": 0,
-            "block_hash": hexlify(b'0' * 32)
         })

@@ -28,6 +28,8 @@ class TickEntry(TaskManager):
         self.available_for_matching = 0
         self.update_available_for_matching()
         self._blocked_for_matching = set()
+        self.trades = set()
+        self.unreserved_trades = set()
 
     @property
     def tick(self):
@@ -96,9 +98,9 @@ class TickEntry(TaskManager):
         Reserve some quantity of this tick entry for matching.
         :param reserve_quantity: The quantity to reserve
         """
-        self._logger.debug("Reserved %s quantity for matching (in tick %s)", reserve_quantity, self.tick)
-
         self._reserved_for_matching += reserve_quantity
+        self._logger.debug("Reserved %s quantity for matching (in tick %s), new quantity: %d",
+                           reserve_quantity, self.tick, self._reserved_for_matching)
         self._price_level.reserved += reserve_quantity
         self.update_available_for_matching()
 
@@ -107,9 +109,9 @@ class TickEntry(TaskManager):
         Release some quantity of this tick entry for matching.
         :param release_quantity: The quantity to release
         """
-        self._logger.debug("Released %s quantity for matching (in tick %s)", release_quantity, self.tick)
-
         self._reserved_for_matching -= release_quantity
+        self._logger.debug("Released %s quantity for matching (in tick %s), new quantity: %d",
+                           release_quantity, self.tick, self._reserved_for_matching)
         self._price_level.reserved -= release_quantity
         self.update_available_for_matching()
 

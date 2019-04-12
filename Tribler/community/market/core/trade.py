@@ -90,7 +90,7 @@ class Trade(Message):
         :param timestamp: A timestamp when the trade was countered
         :param proposed_trade: A proposed trade that needs to be countered
         :type trader_id: TraderId
-        :type quantity: Quantity
+        :type assets: AssetPair
         :type timestamp: Timestamp
         :type proposed_trade: ProposedTrade
         :return: A counter trade
@@ -101,6 +101,31 @@ class Trade(Message):
             proposed_trade.recipient_order_id,
             proposed_trade.order_id,
             proposed_trade.proposal_id,
+            assets,
+            timestamp
+        )
+
+    @classmethod
+    def start(cls, trader_id, assets, timestamp, trade):
+        """
+        Start a trade from another node
+
+        :param trader_id: A message id to identify the trade
+        :param assets: The assets to be traded in this counter offer
+        :param timestamp: A timestamp when the trade was countered
+        :param trade: A proposed or counter trade
+        :type trader_id: TraderId
+        :type assets: AssetPair
+        :type timestamp: Timestamp
+        :type trade: ProposedTrade or CounterTrade
+        :return: A counter trade
+        :rtype: CounterTrade
+        """
+        return StartTrade(
+            trader_id,
+            trade.recipient_order_id,
+            trade.order_id,
+            trade.proposal_id,
             assets,
             timestamp
         )
@@ -207,56 +232,21 @@ class CounterTrade(ProposedTrade):
     is not fully available anymore, a counter offer is made with the quantity that is still left. This was
     done to insure that trades were made quickly and efficiently.
     """
+    pass
 
-    def __init__(self, trader_id, order_id, recipient_order_id, proposal_id, assets, timestamp):
-        """
-        Don't use this method directly, use one of the class methods of Trade or use from_network
 
-        :param trader_id: String representing the trader id
-        :param order_id: A order id to identify the order
-        :param recipient_order_id: A order id to identify the traded party
-        :param proposal_id: The ID of the trade proposal
-        :param assets: The assets to be traded in the proposal
-        :param timestamp: A timestamp wen this trade was created
-        :type trader_id: TraderId
-        :type order_id: OrderId
-        :type recipient_order_id: OrderId
-        :type proposal_id: int
-        :type assets: AssetPair
-        :type timestamp: Timestamp
-        """
-        super(CounterTrade, self).__init__(trader_id, order_id, recipient_order_id, proposal_id, assets, timestamp)
+class StartTrade(ProposedTrade):
+    """
+    Start trades are sent when a peer agrees with a trade proposal or counter proposal from a potential trading partner.
+    """
+    pass
 
-    @classmethod
-    def from_network(cls, data):
-        """
-        Restore a counter trade from the network
 
-        :param data: TradePayload
-        :return: Restored counter trade
-        :rtype: CounterTrade
-        """
-        return cls(
-            data.trader_id,
-            OrderId(data.trader_id, data.order_number),
-            data.recipient_order_id,
-            data.proposal_id,
-            data.assets,
-            data.timestamp
-        )
-
-    def to_network(self):
-        """
-        Return network representation of a counter trade
-        """
-        return (
-            self._trader_id,
-            self._timestamp,
-            self._order_id.order_number,
-            self._recipient_order_id,
-            self._proposal_id,
-            self._assets
-        )
+class CompletedTrade(ProposedTrade):
+    """
+    Contains information about a completed trade.
+    """
+    pass
 
 
 class DeclinedTrade(Trade):

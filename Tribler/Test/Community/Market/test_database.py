@@ -11,13 +11,9 @@ from Tribler.community.market.core.assetamount import AssetAmount
 from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import Order, OrderId, OrderNumber
-from Tribler.community.market.core.payment import Payment
-from Tribler.community.market.core.payment_id import PaymentId
 from Tribler.community.market.core.tick import Tick
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
-from Tribler.community.market.core.transaction import Transaction, TransactionId, TransactionNumber
-from Tribler.community.market.core.wallet_address import WalletAddress
 from Tribler.community.market.database import LATEST_DB_VERSION, MarketDB
 
 
@@ -40,16 +36,6 @@ class TestDatabase(AbstractServer):
         self.order2 = Order(self.order_id2, AssetPair(AssetAmount(5, 'BTC'), AssetAmount(6, 'EUR')),
                             Timeout(3600), Timestamp.now(), False)
         self.order2.reserve_quantity_for_tick(OrderId(TraderId(b'3' * 20), OrderNumber(4)), 3)
-
-        self.transaction_id1 = TransactionId(TraderId(b'0' * 20), TransactionNumber(4))
-        self.transaction1 = Transaction(self.transaction_id1, AssetPair(AssetAmount(100, 'BTC'), AssetAmount(30, 'MB')),
-                                        OrderId(TraderId(b'0' * 20), OrderNumber(1)),
-                                        OrderId(TraderId(b'1' * 20), OrderNumber(2)), Timestamp(20000))
-
-        self.payment1 = Payment(TraderId(b'0' * 20), self.transaction_id1, AssetAmount(5, 'BTC'),
-                                WalletAddress('abc'), WalletAddress('def'), PaymentId("abc"), Timestamp(20000), False)
-
-        self.transaction1.add_payment(self.payment1)
 
     def test_add_get_order(self):
         """
@@ -94,74 +80,6 @@ class TestDatabase(AbstractServer):
         self.assertEqual(len(self.database.get_reserved_ticks(self.order_id1)), 1)
         self.database.delete_reserved_ticks(self.order_id1)
         self.assertEqual(len(self.database.get_reserved_ticks(self.order_id1)), 0)
-
-    def test_add_get_transaction(self):
-        """
-        Test the insertion and retrieval of a transaction in the database
-        """
-        self.database.add_transaction(self.transaction1)
-        transactions = self.database.get_all_transactions()
-        self.assertEqual(len(transactions), 1)
-        self.assertEqual(len(self.database.get_payments(self.transaction1.transaction_id)), 1)
-
-    def test_insert_or_update_transaction(self):
-        """
-        Test the conditional insertion or update of a transaction in the database
-        """
-        # Test insertion
-        self.database.insert_or_update_transaction(self.transaction1)
-        transactions = self.database.get_all_transactions()
-        self.assertEqual(len(transactions), 1)
-
-        # Test try to update with older timestamp
-        before_trans1 = Transaction(self.transaction1.transaction_id, self.transaction1.assets,
-                                    self.transaction1.order_id, self.transaction1.partner_order_id,
-                                    Timestamp(int(self.transaction1.timestamp) - 1000))
-        self.database.insert_or_update_transaction(before_trans1)
-        transaction = self.database.get_transaction(self.transaction1.transaction_id)
-        self.assertEqual(int(transaction.timestamp), int(self.transaction1.timestamp))
-
-        # Test update with newer timestamp
-        after_trans1 = Transaction(self.transaction1.transaction_id, self.transaction1.assets,
-                                   self.transaction1.order_id, self.transaction1.partner_order_id,
-                                   Timestamp(int(self.transaction1.timestamp) + 1000))
-        self.database.insert_or_update_transaction(after_trans1)
-        transaction = self.database.get_transaction(self.transaction1.transaction_id)
-        self.assertEqual(int(transaction.timestamp), int(after_trans1.timestamp))
-
-    def test_get_specific_transaction(self):
-        """
-        Test the retrieval of a specific transaction
-        """
-        transaction_id = TransactionId(TraderId(b'0' * 20), TransactionNumber(4))
-        self.assertIsNone(self.database.get_transaction(transaction_id))
-        self.database.add_transaction(self.transaction1)
-        self.assertIsNotNone(self.database.get_transaction(transaction_id))
-
-    def test_delete_transaction(self):
-        """
-        Test the deletion of a transaction from the database
-        """
-        self.database.add_transaction(self.transaction1)
-        self.assertEqual(len(self.database.get_all_transactions()), 1)
-        self.database.delete_transaction(self.transaction_id1)
-        self.assertEqual(len(self.database.get_all_transactions()), 0)
-
-    def test_get_next_transaction_number(self):
-        """
-        Test the retrieval of the next transaction number from the database
-        """
-        self.assertEqual(self.database.get_next_transaction_number(), 1)
-        self.database.add_transaction(self.transaction1)
-        self.assertEqual(self.database.get_next_transaction_number(), 5)
-
-    def test_add_get_payment(self):
-        """
-        Test the insertion and retrieval of a payment in the database
-        """
-        self.database.add_payment(self.payment1)
-        payments = self.database.get_payments(self.transaction_id1)
-        self.assertEqual(len(payments), 1)
 
     def test_add_remove_tick(self):
         """
