@@ -129,6 +129,7 @@ class MarketCommunity(Community):
         self.cancelled_orders = set()  # Keep track of cancelled orders so we don't add them again to the orderbook.
 
         self.incoming_matches = {}  # Keep track of incoming matches if our match window > 0
+        self.fixed_broadcast_set = []  # Used if we need to broadcast to a fixed set of other peers
 
         if self.use_database:
             order_repository = DatabaseOrderRepository(self.mid, self.market_database)
@@ -414,11 +415,17 @@ class MarketCommunity(Community):
         packet = self._ez_pack(self._prefix, MSG_ORDER_BROADCAST, [auth, dist, payload])
         packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
 
-        for peer in random.sample(self.network.verified_peers,
-                                  min(len(self.network.verified_peers), self.settings.fanout)):
+        if self.fixed_broadcast_set:
+            send_peers = self.fixed_broadcast_set
+        else:
+            send_peers = random.sample(self.network.verified_peers,
+                                       min(len(self.network.verified_peers), self.settings.fanout))
+
+        for peer in send_peers:
             self.endpoint.send(peer.address, packet)
 
     def broadcast_trade_completed(self, trade, trade_id, ttl=None):
+        self.logger.debug("Broadcasting trade complete (%s and %s)", trade.order_id, trade.recipient_order_id)
         ttl = ttl or self.settings.ttl
         auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
         global_time = self.claim_global_time()
@@ -428,8 +435,20 @@ class MarketCommunity(Community):
         packet = self._ez_pack(self._prefix, MSG_COMPLETE_TRADE, [auth, dist, payload])
         packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
 
-        for peer in random.sample(self.network.verified_peers,
-                                  min(len(self.network.verified_peers), self.settings.fanout)):
+        if self.fixed_broadcast_set:
+            send_peers = self.fixed_broadcast_set
+        else:
+            send_peers = random.sample(self.network.verified_peers,
+                                       min(len(self.network.verified_peers), self.settings.fanout))
+
+        # Also process it locally if you are a matchmaker
+        if self.is_matchmaker:
+            # Update ticks in order book, release the reserved quantity and find a new match
+            quantity = trade.assets.first.amount
+            self.order_book.update_ticks(trade.order_id, trade.recipient_order_id, quantity, trade_id, unreserve=False)
+            self.match_order_ids([trade.order_id, trade.recipient_order_id])
+
+        for peer in send_peers:
             self.endpoint.send(peer.address, packet)
 
     def send_order(self, order, address):
@@ -612,8 +631,13 @@ class MarketCommunity(Community):
         ttl_payload.ttl -= 1
         if ttl_payload.ttl > 0:
             data = data[:-1] + self.serializer.pack_multiple(ttl_payload.to_pack_list())[0]
-            for peer in random.sample(self.network.verified_peers,
-                                      min(len(self.network.verified_peers), self.settings.fanout)):
+            if self.fixed_broadcast_set:
+                send_peers = self.fixed_broadcast_set
+            else:
+                send_peers = random.sample(self.network.verified_peers,
+                                           min(len(self.network.verified_peers), self.settings.fanout))
+
+            for peer in send_peers:
                 self.endpoint.send(peer.address, data)
 
     @lazy_wrapper(OrderPayload)
@@ -636,8 +660,13 @@ class MarketCommunity(Community):
         ttl_payload.ttl -= 1
         if ttl_payload.ttl > 0:
             data = data[:-1] + self.serializer.pack_multiple(ttl_payload.to_pack_list())[0]
-            for peer in random.sample(self.network.verified_peers,
-                                      min(len(self.network.verified_peers), self.settings.fanout)):
+            if self.fixed_broadcast_set:
+                send_peers = self.fixed_broadcast_set
+            else:
+                send_peers = random.sample(self.network.verified_peers,
+                                           min(len(self.network.verified_peers), self.settings.fanout))
+
+            for peer in send_peers:
                 self.endpoint.send(peer.address, data)
 
     def received_trade_complete_broadcast(self, source_address, data):
@@ -660,8 +689,13 @@ class MarketCommunity(Community):
         ttl_payload.ttl -= 1
         if ttl_payload.ttl > 0:
             data = data[:-1] + self.serializer.pack_multiple(ttl_payload.to_pack_list())[0]
-            for peer in random.sample(self.network.verified_peers,
-                                      min(len(self.network.verified_peers), self.settings.fanout)):
+            if self.fixed_broadcast_set:
+                send_peers = self.fixed_broadcast_set
+            else:
+                send_peers = random.sample(self.network.verified_peers,
+                                           min(len(self.network.verified_peers), self.settings.fanout))
+
+            for peer in send_peers:
                 self.endpoint.send(peer.address, data)
 
     @lazy_wrapper(MatchPayload)
@@ -891,9 +925,13 @@ class MarketCommunity(Community):
             payload = CancelOrderPayload(order.order_id.trader_id, order.timestamp, order.order_id.order_number).to_pack_list()
             packet = self._ez_pack(self._prefix, MSG_CANCEL_ORDER, [auth, dist, payload])
             packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
+            if self.fixed_broadcast_set:
+                send_peers = self.fixed_broadcast_set
+            else:
+                send_peers = random.sample(self.network.verified_peers,
+                                           min(len(self.network.verified_peers), self.settings.fanout))
 
-            for peer in random.sample(self.network.verified_peers,
-                                      min(len(self.network.verified_peers), self.settings.fanout)):
+            for peer in send_peers:
                 self.endpoint.send(peer.address, packet)
 
     # Proposed trade
@@ -1085,10 +1123,14 @@ class MarketCommunity(Community):
             order.release_quantity_for_tick(counter_trade.order_id, request.proposed_trade.assets.first.amount)
             order.reserve_quantity_for_tick(counter_trade.order_id, counter_trade.assets.first.amount)
             self.order_manager.order_repository.update(order)
+
+            # Get the match payload before it is removed by the trade completing mechanism
+            match_payload = self.incoming_match_messages[request.match_id]
+
+            # Trade!
             self.start_trade(counter_trade, request.match_id)
 
             # Let the matchmaker know that we have a match
-            match_payload = self.incoming_match_messages[request.match_id]
             self.send_accept_match_message(request.match_id, match_payload.matchmaker_trader_id,
                                            counter_trade.assets.first.amount)
 

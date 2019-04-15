@@ -176,5 +176,6 @@ class TickEntry(TaskManager):
         format: <quantity>\t@\t<price>
         :rtype: str
         """
-        return "%s\t@\t%g %s (R: %s)" % (self._tick.assets.first, self._tick.price.amount,
-                                         self._tick.assets.second.asset_id, self.reserved_for_matching)
+        return "%s\t@\t%g %s (R: %s) - %s" % (self._tick.assets.first, self._tick.price.amount,
+                                              self._tick.assets.second.asset_id, self.reserved_for_matching,
+                                              str(self.order_id))
