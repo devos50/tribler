@@ -30,14 +30,15 @@ class Trade(Message):
         self._proposal_id = proposal_id
 
     @classmethod
-    def propose(cls, trader_id, order_id, recipient_order_id, assets, timestamp):
+    def propose(cls, trader_id, order_id, recipient_order_id, latitude, longitude, timestamp):
         """
         Propose a trade to another node
 
         :param trader_id: String representing the trader id
         :param order_id: A order id to identify the order
         :param recipient_order_id: A order id to identify the traded party
-        :param assets: The assets to be traded
+        :param latitude: The latitude of the trade
+        :param longitude: The longitude of the trade
         :param timestamp: A timestamp wen this trade was created
         :type trader_id: TraderId
         :type order_id: OrderId
@@ -51,7 +52,8 @@ class Trade(Message):
             order_id,
             recipient_order_id,
             random.randint(0, 100000000),
-            assets,
+            latitude,
+            longitude,
             timestamp
         )
 
@@ -81,16 +83,16 @@ class Trade(Message):
         )
 
     @classmethod
-    def counter(cls, trader_id, assets, timestamp, proposed_trade):
+    def counter(cls, trader_id, latitude, longitude, timestamp, proposed_trade):
         """
         Counter a trade from another node
 
         :param trader_id: A message id to identify the trade
-        :param assets: The assets to be traded in this counter offer
+        :param latitude: The latitude of the trade
+        :param longitude: The longitude of the trade
         :param timestamp: A timestamp when the trade was countered
         :param proposed_trade: A proposed trade that needs to be countered
         :type trader_id: TraderId
-        :type assets: AssetPair
         :type timestamp: Timestamp
         :type proposed_trade: ProposedTrade
         :return: A counter trade
@@ -101,21 +103,22 @@ class Trade(Message):
             proposed_trade.recipient_order_id,
             proposed_trade.order_id,
             proposed_trade.proposal_id,
-            assets,
+            latitude,
+            longitude,
             timestamp
         )
 
     @classmethod
-    def start(cls, trader_id, assets, timestamp, trade):
+    def start(cls, trader_id, latitude, longitude, timestamp, trade):
         """
         Start a trade from another node
 
         :param trader_id: A message id to identify the trade
-        :param assets: The assets to be traded in this counter offer
+        :param latitude: The latitude of the trade
+        :param longitude: The longitude of the trade
         :param timestamp: A timestamp when the trade was countered
         :param trade: A proposed or counter trade
         :type trader_id: TraderId
-        :type assets: AssetPair
         :type timestamp: Timestamp
         :type trade: ProposedTrade or CounterTrade
         :return: A counter trade
@@ -126,7 +129,8 @@ class Trade(Message):
             trade.recipient_order_id,
             trade.order_id,
             trade.proposal_id,
-            assets,
+            latitude,
+            longitude,
             timestamp
         )
 
@@ -165,7 +169,7 @@ class ProposedTrade(Trade):
     proposed trade is send first.
     """
 
-    def __init__(self, trader_id, order_id, recipient_order_id, proposal_id, assets, timestamp):
+    def __init__(self, trader_id, order_id, recipient_order_id, proposal_id, latitude, longitude, timestamp):
         """
         Don't use this method directly, use the class methods from Trade or use the from_network
 
@@ -173,18 +177,19 @@ class ProposedTrade(Trade):
         :param order_id: A order id to identify the order
         :param recipient_order_id: A order id to identify the traded party
         :param proposal_id: The ID of the trade proposal
-        :param assets: The assets to be traded in the proposal
+        :param latitude: The latitude of the trade
+        :param longitude: The longitude of the trade
         :param timestamp: A timestamp wen this trade was created
         :type trader_id: TraderId
         :type order_id: OrderId
         :type recipient_order_id: OrderId
         :type proposal_id: int
-        :type assets: AssetPair
         :type timestamp: Timestamp
         """
         super(ProposedTrade, self).__init__(trader_id, order_id, recipient_order_id, proposal_id, timestamp)
 
-        self._assets = assets
+        self._latitude = latitude
+        self._longitude = longitude
 
     @classmethod
     def from_network(cls, data):
@@ -200,17 +205,26 @@ class ProposedTrade(Trade):
             OrderId(data.trader_id, data.order_number),
             data.recipient_order_id,
             data.proposal_id,
-            data.assets,
+            data.latitude,
+            data.longitude,
             data.timestamp
         )
 
     @property
-    def assets(self):
+    def latitude(self):
         """
-        :return: The assets to be exchanged
-        :rtype: AssetPair
+        :return: The latitude of the trade
+        :rtype: float
         """
-        return self._assets
+        return self._latitude
+
+    @property
+    def longitude(self):
+        """
+        :return: The longitude of the trade
+        :rtype: float
+        """
+        return self._longitude
 
     def to_network(self):
         """
@@ -222,7 +236,8 @@ class ProposedTrade(Trade):
             self._order_id.order_number,
             self._recipient_order_id,
             self._proposal_id,
-            self._assets
+            self._latitude,
+            self._longitude
         )
 
 

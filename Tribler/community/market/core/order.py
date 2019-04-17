@@ -4,8 +4,6 @@ import logging
 
 from six import integer_types, text_type
 
-from Tribler.community.market.core.assetamount import AssetAmount
-from Tribler.community.market.core.assetpair import AssetPair
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
@@ -111,15 +109,17 @@ class OrderId(object):
 class Order(object):
     """Class for representing an ask or a bid created by the user"""
 
-    def __init__(self, order_id, assets, timeout, timestamp, is_ask):
+    def __init__(self, order_id, latitude, longitude, timeout, timestamp, is_ask):
         """
         :param order_id: An order id to identify the order
-        :param assets: The assets to exchange in this order
+        :param latitude: The latitude
+        :param longitude: The longitude
         :param timeout: A timeout when this tick is going to expire
         :param timestamp: A timestamp when the order was created
         :param is_ask: A bool to indicate if this order is an ask
         :type order_id: OrderId
-        :type assets: AssetPair
+        :type latitude: float
+        :type longitude: float
         :type timeout: Timeout
         :type timestamp: Timestamp
         :type is_ask: bool
@@ -128,7 +128,8 @@ class Order(object):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         self._order_id = order_id
-        self._assets = assets
+        self._latitude = latitude
+        self._longitude = longitude
         self._reserved_quantity = 0
         self._traded_quantity = 0
         self._timeout = timeout
@@ -188,18 +189,18 @@ class Order(object):
         return self._order_id
 
     @property
-    def assets(self):
+    def latitude(self):
         """
-        :rtype: AssetPair
+        :rtype: float
         """
-        return self._assets
+        return self._latitude
 
     @property
-    def price(self):
+    def longitude(self):
         """
-        :rtype: Price
+        :rtype: float
         """
-        return self.assets.price
+        return self._longitude
 
     @property
     def total_quantity(self):
@@ -207,7 +208,7 @@ class Order(object):
         Return the total assets to buy/sell in the order
         :rtype: long
         """
-        return self.assets.first.amount
+        return 1
 
     @property
     def available_quantity(self):
@@ -215,7 +216,7 @@ class Order(object):
         Return the quantity that is not reserved
         :rtype: long
         """
-        return self.assets.first.amount - self._reserved_quantity - self._traded_quantity
+        return 1 - self._reserved_quantity - self._traded_quantity
 
     @property
     def reserved_quantity(self):
@@ -276,7 +277,7 @@ class Order(object):
         :return: True if the order is completed.
         :rtype: bool
         """
-        return self._traded_quantity >= self.assets.first.amount
+        return self._traded_quantity >= 1
 
     @property
     def status(self):
@@ -292,15 +293,6 @@ class Order(object):
         elif self._timeout.is_timed_out(self._timestamp):
             return "expired"
         return "open"
-
-    def has_acceptable_price(self, proposal_assets):
-        """
-        Return whether an incoming trade proposal has an acceptable price.
-        :rtype: bool
-        """
-        my_price = self.assets.price
-        other_price = proposal_assets.price
-        return (self.is_ask() and (my_price <= other_price or abs(float(my_price.frac - other_price.frac)) < 0.0001)) or (not self.is_ask() and (my_price >= other_price or abs(float(my_price.frac - other_price.frac)) < 0.0001))
 
     def reserve_quantity_for_tick(self, order_id, quantity):
         """
@@ -378,7 +370,8 @@ class Order(object):
             self._order_id.trader_id,
             self._timestamp,
             self._order_id.order_number,
-            self._assets,
+            self._latitude,
+            self._longitude,
             self._timeout,
             self._traded_quantity,
             self._is_ask
@@ -392,7 +385,8 @@ class Order(object):
         return {
             "trader_id": self.order_id.trader_id.as_hex(),
             "order_number": int(self.order_id.order_number),
-            "assets": self.assets.to_dictionary(),
+            "latitude": self.latitude,
+            "longitude": self.longitude,
             "reserved_quantity": self.reserved_quantity,
             "traded": self.traded_quantity,
             "timeout": int(self.timeout),

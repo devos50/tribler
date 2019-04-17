@@ -15,6 +15,7 @@ from Tribler.community.market.core.order import OrderId, OrderNumber
 from Tribler.community.market.core.price import Price
 from Tribler.community.market.core.side import Side
 from Tribler.community.market.core.tick import Ask, Bid
+from Tribler.community.market.core.tickentry import TickEntry
 from Tribler.community.market.core.timeout import Timeout
 from Tribler.community.market.core.timestamp import Timestamp
 from Tribler.pyipv8.ipv8.taskmanager import TaskManager
@@ -31,8 +32,8 @@ class OrderBook(TaskManager):
         super(OrderBook, self).__init__()
 
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._bids = Side()
-        self._asks = Side()
+        self._bids = {}
+        self._asks = {}
         self.completed_orders = set()
 
     def timeout_ask(self, order_id):
@@ -55,8 +56,8 @@ class OrderBook(TaskManager):
         """
         :type ask: Ask
         """
-        if not self._asks.tick_exists(ask.order_id) and ask.order_id not in self.completed_orders and ask.is_valid():
-            self._asks.insert_tick(ask)
+        if ask.order_id not in self._asks and ask.order_id not in self.completed_orders and ask.is_valid():
+            self._asks[ask.order_id] = TickEntry(ask)
             timeout_delay = int(ask.timestamp) + int(ask.timeout) * 1000 - int(old_round(time.time() * 1000))
             task = deferLater(reactor, timeout_delay, self.timeout_ask, ask.order_id)
             self.register_task("ask_%s_timeout" % ask.order_id, task)
@@ -67,16 +68,18 @@ class OrderBook(TaskManager):
         """
         :type order_id: OrderId
         """
-        if self._asks.tick_exists(order_id):
+        if order_id in self._asks:
+            tick = self._asks[order_id]
+            tick.shutdown_task_manager()
             self.cancel_pending_task("ask_%s_timeout" % order_id)
-            self._asks.remove_tick(order_id)
+            self._asks.pop(order_id)
 
     def insert_bid(self, bid):
         """
         :type bid: Bid
         """
-        if not self._bids.tick_exists(bid.order_id) and bid.order_id not in self.completed_orders and bid.is_valid():
-            self._bids.insert_tick(bid)
+        if bid.order_id not in self._bids and bid.order_id not in self.completed_orders and bid.is_valid():
+            self._bids[bid.order_id] = TickEntry(bid)
             timeout_delay = int(bid.timestamp) + int(bid.timeout) * 1000 - int(old_round(time.time() * 1000))
             task = deferLater(reactor, timeout_delay, self.timeout_bid, bid.order_id)
             self.register_task("bid_%s_timeout" % bid.order_id, task)
@@ -87,9 +90,11 @@ class OrderBook(TaskManager):
         """
         :type order_id: OrderId
         """
-        if self._bids.tick_exists(order_id):
+        if order_id in self._bids:
+            tick = self._bids[order_id]
+            tick.shutdown_task_manager()
             self.cancel_pending_task("bid_%s_timeout" % order_id)
-            self._bids.remove_tick(order_id)
+            self._bids.pop(order_id)
 
     def update_ticks(self, order_id1, order_id2, traded_quantity, trade_id):
         """
@@ -110,7 +115,7 @@ class OrderBook(TaskManager):
                     continue  # We already updated this tick
                 tick.traded += traded_quantity
                 tick.trades.add(trade_id)
-                if tick.traded >= tick.assets.first.amount:  # We completed the trade
+                if tick.traded >= 1:  # We completed the trade
                     self.remove_tick(tick.order_id)
                     self.completed_orders.add(tick.order_id)
                     completed.add(tick.order_id)
@@ -124,8 +129,8 @@ class OrderBook(TaskManager):
         :return: True if the tick exists, False otherwise
         :rtype: bool
         """
-        is_ask = self._asks.tick_exists(order_id)
-        is_bid = self._bids.tick_exists(order_id)
+        is_ask = order_id in self._asks
+        is_bid = order_id in self._bids
 
         return is_ask or is_bid
 
@@ -135,7 +140,7 @@ class OrderBook(TaskManager):
         :type order_id: OrderId
         :rtype: TickEntry
         """
-        return self._asks.get_tick(order_id)
+        return self._asks.get(order_id, None)
 
     def get_bid(self, order_id):
         """
@@ -143,7 +148,7 @@ class OrderBook(TaskManager):
         :type order_id: OrderId
         :rtype: TickEntry
         """
-        return self._bids.get_tick(order_id)
+        return self._bids.get(order_id, None)
 
     def get_tick(self, order_id):
         """
@@ -152,7 +157,7 @@ class OrderBook(TaskManager):
         :type order_id: OrderId
         :rtype: TickEntry
         """
-        return self._bids.get_tick(order_id) or self._asks.get_tick(order_id)
+        return self._bids.get(order_id, None) or self._asks.get(order_id, None)
 
     def ask_exists(self, order_id):
         """
@@ -161,7 +166,7 @@ class OrderBook(TaskManager):
         :return: True if the ask exists, False otherwise
         :rtype: bool
         """
-        return self._asks.tick_exists(order_id)
+        return order_id in self._asks
 
     def bid_exists(self, order_id):
         """
@@ -170,7 +175,7 @@ class OrderBook(TaskManager):
         :return: True if the bid exists, False otherwise
         :rtype: bool
         """
-        return self._bids.tick_exists(order_id)
+        return order_id in self._bids
 
     def remove_tick(self, order_id):
         """
@@ -289,35 +294,19 @@ class OrderBook(TaskManager):
         return self.get_bid_ids() + self.get_ask_ids()
 
     def get_ask_ids(self):
-        ids = []
-
-        for price_wallet_id, quantity_wallet_id in self.asks.get_price_level_list_wallets():
-            for price_level in self.asks.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
-                for ask in price_level:
-                    ids.append(ask.tick.order_id)
-
-        return ids
+        return self._asks.keys()
 
     def get_bid_ids(self):
-        ids = []
-
-        for price_wallet_id, quantity_wallet_id in self.bids.get_price_level_list_wallets():
-            for price_level in self.bids.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
-                for bid in price_level:
-                    ids.append(bid.tick.order_id)
-
-        return ids
+        return self._bids.keys()
 
     def __str__(self):
         res_str = ''
         res_str += "------ Bids -------\n"
-        for price_wallet_id, quantity_wallet_id in self.bids.get_price_level_list_wallets():
-            for price_level in self._bids.get_price_level_list(price_wallet_id, quantity_wallet_id).items(reverse=True):
-                res_str += '%s' % price_level
+        for bid in self._bids.itervalues():
+            res_str += '%s\n' % bid
         res_str += "\n------ Asks -------\n"
-        for price_wallet_id, quantity_wallet_id in self.asks.get_price_level_list_wallets():
-            for price_level in self._asks.get_price_level_list(price_wallet_id, quantity_wallet_id).items():
-                res_str += '%s' % price_level
+        for ask in self._asks.itervalues():
+            res_str += '%s\n' % ask
         res_str += "\n"
         return res_str
 
