@@ -758,6 +758,20 @@ class MarketCommunity(Community):
             return
 
         self.logger.info("Processing %d incoming matches", len(self.incoming_matches[order_id]))
+
+        # It could be that the order has already been completed while waiting
+        if order.status != "open" or order.available_quantity == 0:
+            for match_id, matches in self.incoming_matches[order_id].iteritems():
+                for match_payload in matches:
+                    # Send a declined trade back
+                    decline_reason = DeclineMatchReason.ORDER_COMPLETED if order.status != "open" \
+                        else DeclineMatchReason.OTHER
+
+                    self.send_decline_match_message(match_payload.match_id,
+                                                    match_payload.matchmaker_trader_id,
+                                                    decline_reason)
+            return
+
         best_match_id = None
         best_price = 0
         for match_id, matches in self.incoming_matches[order_id].iteritems():
