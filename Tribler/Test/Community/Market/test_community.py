@@ -474,6 +474,36 @@ class TestMarketCommunityFourNodes(TestMarketCommunityBase):
         """
         yield self.match_window_impl(True)
 
+    @trial_timeout(4)
+    @inlineCallbacks
+    def test_match_window_multiple(self):
+        """
+        Test whether multiple ask orders in the matching window will get matched
+        """
+        yield self.introduce_nodes()
+
+        self.nodes[2].overlay.settings.match_window = 0.5  # Wait 1 sec before accepting (the best) match
+
+        order1 = self.nodes[0].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
+        order2 = self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
+
+        yield self.sleep(0.2)
+
+        # Make sure that the two matchmaker match different orders
+        order1_tick = self.nodes[3].overlay.order_book.get_tick(order1.order_id)
+        order2_tick = self.nodes[4].overlay.order_book.get_tick(order2.order_id)
+        order1_tick.available_for_matching = 0
+        order2_tick.available_for_matching = 0
+
+        self.nodes[2].overlay.create_ask(AssetPair(AssetAmount(20, 'DUM1'), AssetAmount(20, 'DUM2')), 3600)
+
+        yield self.sleep(1)
+
+        # Verify that the trade has been made
+        self.assertEqual(len(self.nodes[2].overlay.trading_engine.completed_trades), 2)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 1)
+
 
 class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
     __testing__ = True

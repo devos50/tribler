@@ -91,12 +91,12 @@ class OrderBook(TaskManager):
             self.cancel_pending_task("bid_%s_timeout" % order_id)
             self._bids.remove_tick(order_id)
 
-    def update_ticks(self, order_id1, order_id2, traded_quantity, trade_id, unreserve=True):
+    def update_ticks(self, order_id1, order_id2, traded_quantity, trade_id):
         """
         Update ticks according to a TrustChain block containing the status of the ask/bid orders.
         """
-        self._logger.debug("Updating ticks in order book: %s and %s (traded quantity: %s), u? %s",
-                           str(order_id1), str(order_id2), str(traded_quantity), unreserve)
+        self._logger.debug("Updating ticks in order book: %s and %s (traded quantity: %s)",
+                           str(order_id1), str(order_id2), str(traded_quantity))
 
         # Update ticks
         for order_id in [order_id1, order_id2]:
@@ -104,15 +104,9 @@ class OrderBook(TaskManager):
             if tick_exists:
                 tick = self.get_tick(order_id)
                 if trade_id in tick.trades:
-                    if trade_id not in tick.unreserved_trades and unreserve:
-                        tick.release_for_matching(traded_quantity)
-                        tick.unreserved_trades.add(trade_id)
                     continue  # We already updated this tick
                 tick.traded += traded_quantity
                 tick.trades.add(trade_id)
-                if unreserve:
-                    tick.release_for_matching(traded_quantity)
-                    tick.unreserved_trades.add(trade_id)
                 if tick.traded >= tick.assets.first.amount:  # We completed the trade
                     self.remove_tick(tick.order_id)
                     self.completed_orders.add(tick.order_id)

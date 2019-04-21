@@ -131,13 +131,12 @@ class MatchPayload(OrderPayload):
     Payload for a match in the market community.
     """
 
-    format_list = OrderPayload.format_list + ['I', 'Q', 'varlenI', 'varlenI', 'varlenI']
+    format_list = OrderPayload.format_list + ['I', 'varlenI', 'varlenI', 'varlenI']
 
     def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded, is_ask, recipient_order_number,
-                 match_quantity, match_trader_id, matchmaker_trader_id, match_id):
+                 match_trader_id, matchmaker_trader_id, match_id):
         super(MatchPayload, self).__init__(trader_id, timestamp, order_number, assets, timeout, traded, is_ask)
         self.recipient_order_number = recipient_order_number
-        self.match_quantity = match_quantity
         self.match_trader_id = match_trader_id
         self.matchmaker_trader_id = matchmaker_trader_id
         self.match_id = match_id
@@ -145,7 +144,6 @@ class MatchPayload(OrderPayload):
     def to_pack_list(self):
         data = super(MatchPayload, self).to_pack_list()
         data += [('I', int(self.recipient_order_number)),
-                 ('Q', self.match_quantity),
                  ('varlenI', bytes(self.match_trader_id)),
                  ('varlenI', bytes(self.matchmaker_trader_id)),
                  ('varlenI', self.match_id.encode('utf-8'))]
@@ -153,14 +151,13 @@ class MatchPayload(OrderPayload):
 
     @classmethod
     def from_unpack_list(cls, trader_id, timestamp, order_number, asset1_amount, asset1_type, asset2_amount,
-                         asset2_type, timeout, traded, is_ask, recipient_order_number, match_quantity,
+                         asset2_type, timeout, traded, is_ask, recipient_order_number,
                          match_trader_id, matchmaker_trader_id, match_id):
         return MatchPayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number),
                             AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
                                       AssetAmount(asset2_amount, asset2_type.decode('utf-8'))),
                             Timeout(timeout), traded, is_ask, OrderNumber(recipient_order_number),
-                            match_quantity, TraderId(match_trader_id), TraderId(matchmaker_trader_id),
-                            match_id.decode('utf-8'))
+                            TraderId(match_trader_id), TraderId(matchmaker_trader_id), match_id.decode('utf-8'))
 
 
 class AcceptMatchPayload(MessagePayload):

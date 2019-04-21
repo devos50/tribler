@@ -53,6 +53,114 @@ MSG_MATCHED_TRADE_COMPLETE = 22
 MSG_COMPLETE_TRADE = 23
 
 
+class MatchCache(NumberCache):
+    """
+    This cache keeps track of incoming match messages for a specific order.
+    """
+
+    def __init__(self, community, order):
+        super(MatchCache, self).__init__(community.request_cache, u"match", int(order.order_id.order_number))
+        self.community = community
+        self.order = order
+        self.matches = {}
+        self.schedule_task = None
+        self.outstanding_request = None
+        self.received_responses_ids = set()
+
+    @property
+    def timeout_delay(self):
+        return 7200.0
+
+    def add_match(self, match_payload):
+        """
+        Add a match to the list.
+        """
+        other_order_id = OrderId(match_payload.trader_id, match_payload.order_number)
+        if other_order_id not in self.matches:
+            self.matches[other_order_id] = []
+        self.matches[other_order_id].append(match_payload)
+
+        if not self.schedule_task:
+            # Schedule a timer
+            self._logger.info("Scheduling batch match of order %s" % str(self.order.order_id))
+            self.schedule_task = reactor.callLater(self.community.settings.match_window, self.start_process_matches)
+
+    def start_process_matches(self):
+        """
+        Start processing the batch of matches.
+        """
+        self._logger.info("Processing %d incoming matches", len(self.matches.keys()))
+
+        # It could be that the order has already been completed while waiting - we should let the matchmaker know
+        if self.order.status != "open":
+            for match_id, matches in self.matches.iteritems():
+                for match_payload in matches:
+                    # Send a declined trade back
+                    self.community.send_decline_match_message(match_payload.match_id,
+                                                    match_payload.matchmaker_trader_id,
+                                                    DeclineMatchReason.ORDER_COMPLETED)
+            self.matches = {}
+            return
+
+        self.process_match()
+
+    def process_match(self):
+        """
+        Process the first eligible match. First, we sort the list based on price.
+        """
+        orders_list = []
+        for order_id, match_payloads in self.matches.iteritems():
+            if order_id in self.received_responses_ids or not match_payloads:
+                continue
+
+            orders_list.append((order_id, match_payloads[0].assets.price))
+
+        if not orders_list:
+            return
+
+        # Sort the orders list, based on price
+        orders_list = sorted(orders_list, key=lambda tup: tup[1], reverse=self.order.is_ask())
+
+        self.community.accept_match_and_propose(self.matches[orders_list[0][0]][0])
+
+    def received_decline_trade(self, payload):
+        """
+        The counterparty refused to trade - update the cache accordingly.
+        """
+        other_order_id = OrderId(payload.trader_id, payload.order_number)
+        self.received_responses_ids.add(other_order_id)
+        if payload.decline_reason == DeclinedTradeReason.ORDER_COMPLETED and other_order_id in self.matches:
+            # Let the matchmakers know that the order is complete
+            for match_payload in self.matches[other_order_id]:
+                self.community.send_decline_match_message(match_payload.match_id, match_payload.matchmaker_trader_id,
+                                                          DeclineMatchReason.OTHER_ORDER_COMPLETED)
+
+        if self.order.status == "open":
+            self.process_match()
+
+    def did_trade(self, trade, trade_id):
+        """
+        We just performed a trade with a counterparty.
+        """
+        other_order_id = trade.order_id
+        if other_order_id not in self.matches:
+            return
+
+        self.received_responses_ids.add(other_order_id)
+
+        for match_payload in self.matches[other_order_id]:
+            self._logger.info("Sending transaction completed to matchmaker (match id: %s)", match_payload.match_id)
+
+            auth = BinMemberAuthenticationPayload(self.community.my_peer.public_key.key_to_bin()).to_pack_list()
+            payload_content = trade.to_network() + (trade_id,)
+            payload = CompletedTradePayload(*payload_content).to_pack_list()
+            packet = self.community._ez_pack(self.community._prefix, MSG_MATCHED_TRADE_COMPLETE, [auth, payload])
+            self.community.endpoint.send(self.community.lookup_ip(match_payload.matchmaker_trader_id), packet)
+
+        if self.order.status == "open":
+            self.process_match()
+
+
 class ProposedTradeRequestCache(NumberCache):
     """
     This cache keeps track of outstanding proposed trade messages.
@@ -69,12 +177,6 @@ class ProposedTradeRequestCache(NumberCache):
         order = self.community.order_manager.order_repository.find_by_id(self.proposed_trade.order_id)
         order.release_quantity_for_tick(self.proposed_trade.recipient_order_id, self.proposed_trade.assets.first.amount)
         self.community.order_manager.order_repository.update(order)
-
-        if self.match_id:
-            # Inform the matchmaker about the failed trade
-            match_message = self.community.incoming_match_messages[self.match_id]
-            self.community.send_decline_match_message(self.match_id, match_message.matchmaker_trader_id,
-                                                      DeclineMatchReason.OTHER)
 
 
 class PingRequestCache(RandomNumberCache):
@@ -121,14 +223,12 @@ class MarketCommunity(Community):
         self.order_book = None
         self.market_database = MarketDB(db_working_dir, self.DB_NAME)
         self.matching_engine = None
-        self.incoming_match_messages = {}  # Map of TraderId -> Message (we save all incoming matches)
         self.use_local_address = False
         self.matching_enabled = True
         self.matchmakers = set()
         self.request_cache = RequestCache()
         self.cancelled_orders = set()  # Keep track of cancelled orders so we don't add them again to the orderbook.
 
-        self.incoming_matches = {}  # Keep track of incoming matches if our match window > 0
         self.fixed_broadcast_set = []  # Used if we need to broadcast to a fixed set of other peers
 
         if self.use_database:
@@ -147,7 +247,6 @@ class MarketCommunity(Community):
             chr(MSG_ORDER): self.received_order,
             chr(MSG_ORDER_BROADCAST): self.received_order_broadcast,
             chr(MSG_MATCH): self.received_match,
-            chr(MSG_MATCH_ACCEPT): self.received_accept_match,
             chr(MSG_MATCH_DECLINE): self.received_decline_match,
             chr(MSG_PROPOSED_TRADE): self.received_proposed_trade,
             chr(MSG_DECLINED_TRADE): self.received_decline_trade,
@@ -307,9 +406,6 @@ class MarketCommunity(Community):
             return 0
 
         matched_ticks = self.matching_engine.match(order_tick_entry)
-        for _, tick_entry, trading_quantity in matched_ticks:
-            tick_entry.reserve_for_matching(trading_quantity)
-            order_tick_entry.reserve_for_matching(trading_quantity)
         self.send_match_messages(matched_ticks, tick.order_id)
         return len(matched_ticks)
 
@@ -445,7 +541,7 @@ class MarketCommunity(Community):
         if self.is_matchmaker:
             # Update ticks in order book, release the reserved quantity and find a new match
             quantity = trade.assets.first.amount
-            self.order_book.update_ticks(trade.order_id, trade.recipient_order_id, quantity, trade_id, unreserve=False)
+            self.order_book.update_ticks(trade.order_id, trade.recipient_order_id, quantity, trade_id)
             self.match_order_ids([trade.order_id, trade.recipient_order_id])
 
         for peer in send_peers:
@@ -577,30 +673,29 @@ class MarketCommunity(Community):
                     self.match(tick)
 
     def send_match_messages(self, matching_ticks, order_id):
-        return [self.send_match_message(match_id, tick_entry.tick, order_id, matching_quantity)
-                for match_id, tick_entry, matching_quantity in matching_ticks]
+        return [self.send_match_message(match_id, tick_entry.tick, order_id)
+                for match_id, tick_entry in matching_ticks]
 
-    def send_match_message(self, match_id, tick, recipient_order_id, matched_quantity):
+    def send_match_message(self, match_id, tick, recipient_order_id):
         """
         Send a match message to a specific node
         :param match_id: The ID of the match
         :param tick: The matched tick
         :param recipient_order_id: The order id of the recipient, matching the tick
-        :param matched_quantity: The quantity that has been matched
         """
         payload_tup = tick.to_network()
 
         # Add recipient order number, matched quantity, trader ID of the matched person, our own trader ID and match ID
         my_id = TraderId(self.mid)
-        payload_tup += (recipient_order_id.order_number, matched_quantity, tick.order_id.trader_id, my_id, match_id)
+        payload_tup += (recipient_order_id.order_number, tick.order_id.trader_id, my_id, match_id)
 
         def on_peer_address(address):
             if not address:
                 return
 
-            self.logger.info("Sending match message with id %s, order id %s and tick order id %s to trader "
-                             "%s (quantity: %d)", match_id, str(recipient_order_id),
-                             str(tick.order_id), recipient_order_id.trader_id.as_hex(), matched_quantity)
+            self.logger.info("Sending match message with id %s, order id %s and tick order id %s to trader %s",
+                             match_id, str(recipient_order_id),
+                             str(tick.order_id), recipient_order_id.trader_id.as_hex())
 
             auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
             payload = MatchPayload(*payload_tup).to_pack_list()
@@ -683,7 +778,7 @@ class MarketCommunity(Community):
             quantity = payload.assets.first.amount
             order_id1 = OrderId(TraderId(payload.trader_id), payload.order_number)
             order_id2 = payload.recipient_order_id
-            self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id, unreserve=False)
+            self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id)
             self.match_order_ids([order_id1, order_id2])
 
         ttl_payload.ttl -= 1
@@ -703,8 +798,8 @@ class MarketCommunity(Community):
         """
         We received a match message from a matchmaker.
         """
-        self.logger.info("We received a match message from %s for order %s.%s (matched quantity: %s)",
-                         payload.matchmaker_trader_id.as_hex(), TraderId(self.mid).as_hex(), payload.recipient_order_number, payload.match_quantity)
+        self.logger.info("We received a match message from %s for order %s.%s",
+                         payload.matchmaker_trader_id.as_hex(), TraderId(self.mid).as_hex(), payload.recipient_order_number)
 
         # We got a match, check whether we can respond to this match
         self.update_ip(payload.matchmaker_trader_id, peer.address)
@@ -722,11 +817,8 @@ class MarketCommunity(Community):
             self.logger.warning("Cannot find order %s in order repository!", order_id)
             return
 
-        # Store the message for later
-        self.incoming_match_messages[payload.match_id] = payload
-
-        if order.status != "open" or order.available_quantity == 0:
-            # Send a declined trade back
+        if order.status != "open":
+            # Send a declined match back so the matchmaker removes the order from their book
             decline_reason = DeclineMatchReason.ORDER_COMPLETED if order.status != "open" \
                 else DeclineMatchReason.OTHER
             self.send_decline_match_message(payload.match_id,
@@ -734,66 +826,13 @@ class MarketCommunity(Community):
                                             decline_reason)
             return
 
-        if self.settings.match_window == 0:
-            self.accept_match_and_propose(payload)
-        else:
-            if order_id not in self.incoming_matches:
-                # Schedule a timer
-                self.logger.info("Scheduling batch match of order %s" % str(order_id))
-                self.register_task("accept_%s" % str(order_id), reactor.callLater(self.settings.match_window, self.process_match_batch, order_id))
-                self.incoming_matches[order_id] = {}
+        cache = self.request_cache.get(u"match", int(payload.recipient_order_number))
+        if not cache:
+            cache = MatchCache(self, order)
+            self.request_cache.add(cache)
 
-            if payload.match_id not in self.incoming_matches[order_id]:
-                self.incoming_matches[order_id][payload.match_id] = []
-
-            self.incoming_matches[order_id][payload.match_id].append(payload)
-
-    def process_match_batch(self, order_id):
-        if order_id not in self.incoming_matches:
-            return
-
-        order = self.order_manager.order_repository.find_by_id(order_id)
-        if not order:
-            self.logger.warning("Cannot find order %s in order repository!", order_id)
-            return
-
-        self.logger.info("Processing %d incoming matches", len(self.incoming_matches[order_id]))
-
-        # It could be that the order has already been completed while waiting
-        if order.status != "open" or order.available_quantity == 0:
-            for match_id, matches in self.incoming_matches[order_id].iteritems():
-                for match_payload in matches:
-                    # Send a declined trade back
-                    decline_reason = DeclineMatchReason.ORDER_COMPLETED if order.status != "open" \
-                        else DeclineMatchReason.OTHER
-
-                    self.send_decline_match_message(match_payload.match_id,
-                                                    match_payload.matchmaker_trader_id,
-                                                    decline_reason)
-            return
-
-        best_match_id = None
-        best_price = 0
-        for match_id, matches in self.incoming_matches[order_id].iteritems():
-            for match_payload in matches:
-                price = match_payload.assets.price
-                if best_price == 0 or (order.is_ask and price < order.assets.price):
-                    best_price = price
-                    best_match_id = match_id
-                elif best_price == 0 or (not order.is_ask and price > order.assets.price):
-                    best_price = price
-                    best_match_id = match_id
-
-        for match_id, matches in self.incoming_matches[order_id].iteritems():
-            for match_payload in matches:
-                if match_id == best_match_id:
-                    self.accept_match_and_propose(match_payload)
-                else:
-                    self.send_decline_match_message(match_payload.match_id,
-                                                    match_payload.matchmaker_trader_id,
-                                                    DeclineMatchReason.OTHER)
-
-        self.incoming_matches.pop(order_id, None)
+        # Add the match to the cache and process it
+        cache.add_match(payload)
 
     def accept_match_and_propose(self, match_payload):
         """
@@ -803,7 +842,7 @@ class MarketCommunity(Community):
         other_order_id = OrderId(match_payload.trader_id, match_payload.order_number)
         order = self.order_manager.order_repository.find_by_id(order_id)
 
-        propose_quantity = min(order.available_quantity, match_payload.match_quantity)
+        propose_quantity = order.available_quantity
         propose_trade = Trade.propose(
             TraderId(self.mid),
             order.order_id,
@@ -834,46 +873,7 @@ class MarketCommunity(Community):
 
         reactor.callFromThread(get_address)
 
-    def send_accept_match_message(self, match_id, matchmaker_trader_id, quantity):
-        address = self.lookup_ip(matchmaker_trader_id)
-
-        self.logger.debug("Sending accept match message with match id %s to trader "
-                          "%s (quantity: %d)", str(match_id), matchmaker_trader_id.as_hex(), quantity)
-
-        payload = (TraderId(self.mid), Timestamp.now(), match_id, quantity)
-
-        auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
-        payload = AcceptMatchPayload(*payload).to_pack_list()
-
-        packet = self._ez_pack(self._prefix, MSG_MATCH_ACCEPT, [auth, payload])
-        self.endpoint.send(address, packet)
-
-    @lazy_wrapper(AcceptMatchPayload)
-    def received_accept_match(self, _, payload):
-        if payload.match_id not in self.matching_engine.matches:
-            self._logger.warning("Received an accept match message for an unknown match ID")
-            return
-
-        order_id, matched_order_id, reserved_quantity = self.matching_engine.matches[payload.match_id]
-        self.logger.info("Received accept-match message (%s vs %s), modifying quantities if necessary",
-                         order_id, matched_order_id)
-        tick_entry = self.order_book.get_tick(order_id)
-        matched_tick_entry = self.order_book.get_tick(matched_order_id)
-
-        # The ticks could already have been removed
-        if tick_entry:
-            tick_entry.release_for_matching(reserved_quantity)
-            tick_entry.reserve_for_matching(payload.quantity)
-
-        if matched_tick_entry:
-            matched_tick_entry.release_for_matching(reserved_quantity)
-            matched_tick_entry.reserve_for_matching(payload.quantity)
-
-        del self.matching_engine.matches[payload.match_id]
-        self.matching_engine.matching_strategy.used_match_ids.remove(payload.match_id)
-
     def send_decline_match_message(self, match_id, matchmaker_trader_id, decline_reason):
-        del self.incoming_match_messages[match_id]
         address = self.lookup_ip(matchmaker_trader_id)
 
         self.logger.info("Sending decline match message with match id %s to trader "
@@ -892,7 +892,7 @@ class MarketCommunity(Community):
             self._logger.warning("Received a decline match message for an unknown match ID")
             return
 
-        order_id, matched_order_id, quantity = self.matching_engine.matches[payload.match_id]
+        order_id, matched_order_id = self.matching_engine.matches[payload.match_id]
         self.logger.info("Received decline-match message for tick %s matched with %s", order_id, matched_order_id)
 
         # It could be that one or both matched tick(s) have already been removed from the order book by a
@@ -900,14 +900,9 @@ class MarketCommunity(Community):
         tick_entry = self.order_book.get_tick(order_id)
         matched_tick_entry = self.order_book.get_tick(matched_order_id)
 
-        if tick_entry:
-            tick_entry.release_for_matching(quantity)
-
-        if matched_tick_entry:
-            matched_tick_entry.release_for_matching(quantity)
-            if tick_entry:
-                tick_entry.block_for_matching(matched_tick_entry.order_id)
-                matched_tick_entry.block_for_matching(tick_entry.order_id)
+        if tick_entry and matched_tick_entry:
+            tick_entry.block_for_matching(matched_tick_entry.order_id)
+            matched_tick_entry.block_for_matching(tick_entry.order_id)
 
         del self.matching_engine.matches[payload.match_id]
         self.matching_engine.matching_strategy.used_match_ids.remove(payload.match_id)
@@ -1080,16 +1075,12 @@ class MarketCommunity(Community):
         self.order_manager.order_repository.update(order)
 
         # Just remove the tick with the order id of the other party and try to find a new match
-        self.logger.debug("Received declined trade (proposal id: %d), trying to find a new match for this order",
-                          declined_trade.proposal_id)
+        self.logger.debug("Received declined trade (proposal id: %d)", declined_trade.proposal_id)
 
-        # Let the matchmaker know that we don't have a match
-        match_payload = self.incoming_match_messages[request.match_id]
-        match_decline_reason = DeclineMatchReason.OTHER
-        if declined_trade.decline_reason == DeclinedTradeReason.ORDER_COMPLETED:
-            match_decline_reason = DeclineMatchReason.OTHER_ORDER_COMPLETED
-
-        self.send_decline_match_message(request.match_id, match_payload.matchmaker_trader_id, match_decline_reason)
+        # Update the cache which will inform the related matchmakers
+        cache = self.request_cache.get(u"match", int(order.order_id.order_number))
+        if cache:
+            cache.received_decline_trade(payload)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
@@ -1138,15 +1129,8 @@ class MarketCommunity(Community):
             order.reserve_quantity_for_tick(counter_trade.order_id, counter_trade.assets.first.amount)
             self.order_manager.order_repository.update(order)
 
-            # Get the match payload before it is removed by the trade completing mechanism
-            match_payload = self.incoming_match_messages[request.match_id]
-
             # Trade!
             self.start_trade(counter_trade, request.match_id)
-
-            # Let the matchmaker know that we have a match
-            self.send_accept_match_message(request.match_id, match_payload.matchmaker_trader_id,
-                                           counter_trade.assets.first.amount)
 
     # Trade
     def start_trade(self, proposed_trade, match_id):
@@ -1174,12 +1158,6 @@ class MarketCommunity(Community):
             self._logger.warning("Recipient order in start trade payload is not ours!")
             return
 
-        # Let the matchmaker know that we have a match
-        if request.match_id != '':
-            match_payload = self.incoming_match_messages[request.match_id]
-            self.send_accept_match_message(request.match_id, match_payload.matchmaker_trader_id,
-                                           payload.assets.first.amount)
-
         self.trading_engine.trade(StartTrade.from_network(payload), request.match_id)
 
     def on_trade_completed(self, trade, match_id, trade_id):
@@ -1189,16 +1167,10 @@ class MarketCommunity(Community):
         order = self.order_manager.order_repository.find_by_id(trade.recipient_order_id)
         order.add_trade(trade.order_id, trade.assets.first.amount)
 
-        if match_id in self.incoming_match_messages:
-            self.logger.info("Sending transaction completed to matchmaker (match id: %s)", match_id)
-            match_payload = self.incoming_match_messages[match_id]
-            del self.incoming_match_messages[match_id]
-
-            auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
-            payload_content = trade.to_network() + (trade_id,)
-            payload = CompletedTradePayload(*payload_content).to_pack_list()
-            packet = self._ez_pack(self._prefix, MSG_MATCHED_TRADE_COMPLETE, [auth, payload])
-            self.endpoint.send(self.lookup_ip(match_payload.matchmaker_trader_id), packet)
+        # Update the cache and inform the matchmakers
+        cache = self.request_cache.get(u"match", int(order.order_id.order_number))
+        if cache:
+            cache.did_trade(trade, trade_id)
 
         # Let the rest of the network know
         self.broadcast_trade_completed(trade, trade_id)

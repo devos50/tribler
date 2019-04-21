@@ -55,7 +55,7 @@ class MatchingStrategy(object):
         :type quantity: Quantity
         :type is_ask: Bool
         :return: A list of tuples containing the ticks and the matched quantity
-        :rtype: [(str, TickEntry, Quantity)]
+        :rtype: [(str, TickEntry)]
         """
         return
 
@@ -110,7 +110,7 @@ class PriceTimeStrategy(MatchingStrategy):
 
             quantity_matched = min(quantity_to_match, cur_tick_entry.available_for_matching)
             if quantity_matched > 0:
-                matched_ticks.append((self.get_unique_match_id(), cur_tick_entry, quantity_matched))
+                matched_ticks.append((self.get_unique_match_id(), cur_tick_entry))
                 quantity_to_match -= quantity_matched
 
             cur_tick_entry = cur_tick_entry._next_tick
@@ -156,13 +156,13 @@ class MatchingEngine(object):
         :param tick_entry: The TickEntry that should be matched
         :type tick_entry: TickEntry
         :return: A list of tuples containing a random match id, ticks and the matched quantity
-        :rtype: [(str, TickEntry, Quantity)]
+        :rtype: [(str, TickEntry)]
         """
         matched_ticks = self.matching_strategy.match(tick_entry.order_id,
                                                      tick_entry.price,
                                                      tick_entry.available_for_matching,
                                                      tick_entry.tick.is_ask())
 
-        for match_id, matched_tick_entry, quantity in matched_ticks:  # Store the matches
-            self.matches[match_id] = (tick_entry.order_id, matched_tick_entry.order_id, quantity)
+        for match_id, matched_tick_entry in matched_ticks:  # Store the matches
+            self.matches[match_id] = (tick_entry.order_id, matched_tick_entry.order_id)
         return matched_ticks
