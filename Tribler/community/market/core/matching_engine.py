@@ -81,19 +81,19 @@ class PriceTimeStrategy(MatchingStrategy):
 
         # First check whether we can match our order at all in the order book
         if is_ask:
-            bid_price = self.order_book.get_bid_price(price.numerator, price.denominator)
+            bid_price = self.order_book.get_bid_price(price.num_type, price.denom_type)
             if not bid_price or price > bid_price:
                 return []
         if not is_ask:
-            ask_price = self.order_book.get_ask_price(price.numerator, price.denominator)
+            ask_price = self.order_book.get_ask_price(price.num_type, price.denom_type)
             if not ask_price or price < ask_price:
                 return []
 
         # Next, check whether we have a price level we can start our match search from
         if is_ask:
-            price_level = self.order_book.get_bid_price_level(price.numerator, price.denominator)
+            price_level = self.order_book.get_bid_price_level(price.num_type, price.denom_type)
         else:
-            price_level = self.order_book.get_ask_price_level(price.numerator, price.denominator)
+            price_level = self.order_book.get_ask_price_level(price.num_type, price.denom_type)
 
         if not price_level:
             return []
@@ -120,10 +120,10 @@ class PriceTimeStrategy(MatchingStrategy):
                     # Get the next price level
                     if is_ask:
                         next_price_level = self.order_book.bids.\
-                            get_price_level_list(price.numerator, price.denominator).prev_item(cur_price_level_price)
+                            get_price_level_list(price.num_type, price.denom_type).prev_item(cur_price_level_price)
                     else:
                         next_price_level = self.order_book.asks.\
-                            get_price_level_list(price.numerator, price.denominator).succ_item(cur_price_level_price)
+                            get_price_level_list(price.num_type, price.denom_type).succ_item(cur_price_level_price)
                     cur_price_level_price = next_price_level.price
                 except IndexError:
                     break

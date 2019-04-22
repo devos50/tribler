@@ -123,7 +123,7 @@ class TestOrderBook(AbstractTestOrderBook):
         # Test for properties
         self.order_book.insert_ask(self.ask2)
         self.order_book.insert_bid(self.bid2)
-        self.assertEquals(Price(-0.025, 'MB', 'BTC'), self.order_book.get_bid_ask_spread('MB', 'BTC'))
+        self.assertEquals(Price(-25, 1000, 'MB', 'BTC'), self.order_book.get_bid_ask_spread('MB', 'BTC'))
 
     def test_ask_price_level(self):
         self.order_book.insert_ask(self.ask)
@@ -140,16 +140,16 @@ class TestOrderBook(AbstractTestOrderBook):
         # Test for ask side depth
         self.order_book.insert_ask(self.ask)
         self.order_book.insert_ask(self.ask2)
-        self.assertEquals(100, self.order_book.ask_side_depth(Price(0.3, 'MB', 'BTC')))
-        self.assertEquals([(Price(0.075, 'MB', 'BTC'), 400), (Price(0.3, 'MB', 'BTC'), 100)],
+        self.assertEquals(100, self.order_book.ask_side_depth(Price(3, 10, 'MB', 'BTC')))
+        self.assertEquals([(Price(75, 1000, 'MB', 'BTC'), 400), (Price(3, 10, 'MB', 'BTC'), 100)],
                           self.order_book.get_ask_side_depth_profile('MB', 'BTC'))
 
     def test_bid_side_depth(self):
         # Test for bid side depth
         self.order_book.insert_bid(self.bid)
         self.order_book.insert_bid(self.bid2)
-        self.assertEquals(300, self.order_book.bid_side_depth(Price(0.1, 'MB', 'BTC')))
-        self.assertEquals([(Price(0.1, 'MB', 'BTC'), 300), (Price(0.15, 'MB', 'BTC'), 200)],
+        self.assertEquals(300, self.order_book.bid_side_depth(Price(1, 10, 'MB', 'BTC')))
+        self.assertEquals([(Price(1, 10, 'MB', 'BTC'), 300), (Price(15, 100, 'MB', 'BTC'), 200)],
                           self.order_book.get_bid_side_depth_profile('MB', 'BTC'))
 
     def test_remove_tick(self):

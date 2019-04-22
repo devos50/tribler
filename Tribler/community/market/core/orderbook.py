@@ -210,9 +210,9 @@ class OrderBook(TaskManager):
         Return the spread between the bid and the ask price
         :rtype: Price
         """
-        spread = self.get_ask_price(price_wallet_id, quantity_wallet_id).amount - \
-                 self.get_bid_price(price_wallet_id, quantity_wallet_id).amount
-        return Price(spread, price_wallet_id, quantity_wallet_id)
+        spread = self.get_ask_price(price_wallet_id, quantity_wallet_id).frac - \
+                 self.get_bid_price(price_wallet_id, quantity_wallet_id).frac
+        return Price(spread.numerator, spread.denominator, price_wallet_id, quantity_wallet_id)
 
     def bid_side_depth(self, price):
         """
