@@ -82,11 +82,8 @@ class PriceLevelList(object):
         :rtype: List[(Price, PriceLevel)]
         """
         items = []
-        for price in self._price_list:
-            if reverse:
-                items.insert(0, self._price_level_dictionary[price])
-            else:
-                items.append(self._price_level_dictionary[price])
+        for price in sorted(self._price_level_dictionary.keys(), reverse=reverse):
+            items.append(self._price_level_dictionary[price])
         return items
 
     def get_ticks_list(self):  # type: () -> List[Any]
