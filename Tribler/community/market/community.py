@@ -1009,9 +1009,7 @@ class MarketCommunity(Community):
             # Discard current outstanding proposed trade and continue
             for proposal_id, _ in outstanding_proposals:
                 request = self.request_cache.get(u"proposed-trade", int(proposal_id.split(':')[1]))
-                eq_and_ask = order.assets.first.amount == request.proposed_trade.assets.first.amount and order.is_ask()
-                have_largest_order = order.assets.first.amount > request.proposed_trade.assets.first.amount
-                if eq_and_ask or have_largest_order:
+                if order.is_ask():
                     self.logger.info("Discarding current outstanding proposals for order %s", proposed_trade.order_id)
                     self.request_cache.pop(u"proposed-trade", int(proposal_id.split(':')[1]))
                     request.on_timeout()
@@ -1157,6 +1155,7 @@ class MarketCommunity(Community):
     def received_start_trade(self, peer, payload):
         self._logger.info("Received start trade from trader %s" % payload.trader_id.as_hex())
         if not self.request_cache.has(u"proposed-trade", payload.proposal_id):
+            self._logger.warning("Do not have propose trade cache for proposal %s!", payload.proposal_id)
             return
 
         request = self.request_cache.pop(u"proposed-trade", payload.proposal_id)
