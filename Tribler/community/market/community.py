@@ -150,7 +150,7 @@ class MatchCache(NumberCache):
         self.received_responses_ids.add(other_order_id)
 
         for match_payload in self.matches[other_order_id]:
-            self._logger.info("Sending transaction completed to matchmaker (match id: %s)", match_payload.match_id)
+            self._logger.info("Sending transaction completed (order %s) to matchmaker %s", trade.order_id, match_payload.matchmaker_trader_id.as_hex())
 
             auth = BinMemberAuthenticationPayload(self.community.my_peer.public_key.key_to_bin()).to_pack_list()
             payload_content = trade.to_network() + (trade_id,)
@@ -795,8 +795,8 @@ class MarketCommunity(Community):
         """
         We received a match message from a matchmaker.
         """
-        self.logger.info("We received a match message from %s for order %s.%s",
-                         payload.matchmaker_trader_id.as_hex(), TraderId(self.mid).as_hex(), payload.recipient_order_number)
+        self.logger.info("We received a match message from %s for order %s.%s (matched against %s.%s)",
+                         payload.matchmaker_trader_id.as_hex(), TraderId(self.mid).as_hex(), payload.recipient_order_number, payload.trader_id.as_hex(), payload.order_number)
 
         # We got a match, check whether we can respond to this match
         self.update_ip(payload.matchmaker_trader_id, peer.address)
@@ -1109,6 +1109,8 @@ class MarketCommunity(Community):
         request = self.request_cache.pop(u"proposed-trade", counter_trade.proposal_id)
 
         order = self.order_manager.order_repository.find_by_id(counter_trade.recipient_order_id)
+        self.logger.info("Received counter trade for order %s (quantity: %d)", order.order_id, counter_trade.assets.first.amount)
+
         should_decline = True
         decline_reason = 0
         if not order.is_valid:
