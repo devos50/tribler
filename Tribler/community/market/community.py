@@ -1188,7 +1188,6 @@ class MarketCommunity(Community):
         order_id1 = OrderId(TraderId(payload.trader_id), payload.order_number)
         order_id2 = payload.recipient_order_id
         self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id)
-        self.match_order_ids([order_id1, order_id2])
 
 
 class MarketTestnetCommunity(MarketCommunity):
