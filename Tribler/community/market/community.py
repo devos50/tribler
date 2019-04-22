@@ -737,6 +737,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(OrderPayload)
     def received_order(self, peer, payload):
+        self.logger.debug("Received order from peer %s", peer)
         tick = Ask.from_network(payload) if payload.is_ask else Bid.from_network(payload)
         self.on_tick(tick)
 
@@ -750,6 +751,8 @@ class MarketCommunity(Community):
         auth, dist, payload = self._ez_unpack_auth(OrderPayload, data[:-1])
 
         tick = Ask.from_network(payload) if payload.is_ask else Bid.from_network(payload)
+        self.logger.debug("Received order broadcast from %s:%d, order %s",
+                          source_address[0], source_address[1], tick.order_id)
         self.on_tick(tick)
 
         ttl_payload.ttl -= 1
@@ -762,6 +765,7 @@ class MarketCommunity(Community):
                                            min(len(self.network.verified_peers), self.settings.fanout))
 
             for peer in send_peers:
+                self.logger.debug("Relaying order to %d peers", len(send_peers))
                 self.endpoint.send(peer.address, data)
 
     def received_trade_complete_broadcast(self, source_address, data):

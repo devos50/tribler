@@ -91,6 +91,22 @@ class TestMarketCommunity(TestMarketCommunityBase):
         self.assertFalse(orders[0].is_ask())
         self.assertEqual(len(self.nodes[2].overlay.order_book.bids), 1)
 
+    @trial_timeout(2)
+    @inlineCallbacks
+    def test_order_broadcast(self):
+        """
+        Test that an order is broadcast across multiple hops
+        """
+        self.nodes[0].overlay.walk_to(self.nodes[1].endpoint.wan_address)
+        self.nodes[1].overlay.walk_to(self.nodes[2].endpoint.wan_address)
+        yield self.deliver_messages()
+
+        self.nodes[0].overlay.create_bid(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)
+
+        self.assertEqual(len(self.nodes[2].overlay.order_book.bids), 1)
+
     def test_create_invalid_ask_bid(self):
         """
         Test creating an invalid ask/bid with invalid asset pairs.
