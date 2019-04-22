@@ -89,10 +89,11 @@ class MatchCache(NumberCache):
         """
         Start processing the batch of matches.
         """
-        self._logger.info("Processing %d incoming matches", len(self.matches.keys()))
+        self._logger.info("Processing incoming matches for order %s", self.order.order_id)
 
         # It could be that the order has already been completed while waiting - we should let the matchmaker know
         if self.order.status != "open":
+            self._logger.info("Order %s is already fulfilled - notifying matchmakers", self.order.order_id)
             for match_id, matches in self.matches.iteritems():
                 for match_payload in matches:
                     # Send a declined trade back
@@ -847,6 +848,10 @@ class MarketCommunity(Community):
         order = self.order_manager.order_repository.find_by_id(order_id)
 
         propose_quantity = order.available_quantity
+        if propose_quantity == 0:
+            self.logger.info("No available quantity for order %s - not sending outgoing proposal", order_id)
+            return
+
         propose_trade = Trade.propose(
             TraderId(self.mid),
             order.order_id,
@@ -1150,7 +1155,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(TradePayload)
     def received_start_trade(self, peer, payload):
-        self._logger.info("Received start trade from trader %s" % payload.recipient_order_id.trader_id.as_hex())
+        self._logger.info("Received start trade from trader %s" % payload.trader_id.as_hex())
         if not self.request_cache.has(u"proposed-trade", payload.proposal_id):
             return
 

@@ -319,9 +319,9 @@ class Order(object):
         else:
             raise ValueError("Order %s does not have enough available quantity for reservation", self.order_id)
 
-        self._logger.debug("reserved quantity for order id %s (own order id: %s),"
+        self._logger.debug("Reserved %d quantity for order id %s (own order id: %s),"
                            "total quantity: %d, traded quantity: %d, reserved quantity: %d",
-                           str(order_id), str(self.order_id), self.total_quantity, self.traded_quantity,
+                           quantity, str(order_id), str(self.order_id), self.total_quantity, self.traded_quantity,
                            self.reserved_quantity)
 
     def release_quantity_for_tick(self, order_id, quantity):
