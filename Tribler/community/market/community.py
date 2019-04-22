@@ -586,17 +586,13 @@ class MarketCommunity(Community):
         order = self.order_manager.create_ask_order(assets, Timeout(timeout))
         self.order_manager.order_repository.update(order)
 
-        # First try to match it ourselves
         if self.is_matchmaker:
             tick = Tick.from_order(order)
             self.order_book.insert_ask(tick).addCallback(self.on_ask_timeout)
-            num_matches = self.match(tick)
+            self.match(tick)
 
-            # Broadcast the order
-            if not num_matches:
-                self.broadcast_order(order)
-        else:
-            self.broadcast_order(order)
+        # Broadcast the order
+        self.broadcast_order(order)
 
         self.logger.info("Ask created with asset pair %s", assets)
         return order
@@ -618,17 +614,13 @@ class MarketCommunity(Community):
         order = self.order_manager.create_bid_order(assets, Timeout(timeout))
         self.order_manager.order_repository.update(order)
 
-        # First try to match it ourselves
         if self.is_matchmaker:
             tick = Tick.from_order(order)
             self.order_book.insert_bid(tick).addCallback(self.on_bid_timeout)
-            num_matches = self.match(tick)
+            self.match(tick)
 
-            # Broadcast the order
-            if not num_matches:
-                self.broadcast_order(order)
-        else:
-            self.broadcast_order(order)
+        # Broadcast the order
+        self.broadcast_order(order)
 
         return order
 
