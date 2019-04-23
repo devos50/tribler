@@ -21,27 +21,6 @@ class MatchingStrategy(object):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         self.order_book = order_book
-        self.used_match_ids = set()
-
-    def get_random_match_id(self):
-        """
-        Generate a random matching ID (20 hex characters).
-        :return: A random matching ID
-        :rtype: str
-        """
-        return ''.join(random.choice('0123456789abcdef') for _ in range(20))
-
-    def get_unique_match_id(self):
-        """
-        Generate a random, unique matching ID that has not been used yet.
-        :return: A random matching ID
-        :rtype: str
-        """
-        random_match_id = self.get_random_match_id()
-        while random_match_id in self.used_match_ids:
-            random_match_id = self.get_random_match_id()
-        self.used_match_ids.add(random_match_id)
-        return random_match_id
 
     @abstractmethod
     def match(self, order_id, price, quantity, is_ask):
@@ -110,7 +89,7 @@ class PriceTimeStrategy(MatchingStrategy):
 
             quantity_matched = min(quantity_to_match, cur_tick_entry.available_for_matching)
             if quantity_matched > 0:
-                matched_ticks.append((self.get_unique_match_id(), cur_tick_entry))
+                matched_ticks.append(cur_tick_entry)
                 quantity_to_match -= quantity_matched
 
             cur_tick_entry = cur_tick_entry._next_tick
@@ -149,7 +128,6 @@ class MatchingEngine(object):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         self.matching_strategy = matching_strategy
-        self.matches = {}  # Keep track of all matches
 
     def match(self, tick_entry):
         """
@@ -162,7 +140,4 @@ class MatchingEngine(object):
                                                      tick_entry.price,
                                                      tick_entry.available_for_matching,
                                                      tick_entry.tick.is_ask())
-
-        for match_id, matched_tick_entry in matched_ticks:  # Store the matches
-            self.matches[match_id] = (tick_entry.order_id, matched_tick_entry.order_id)
         return matched_ticks

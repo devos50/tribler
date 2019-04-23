@@ -58,26 +58,6 @@ class PriceTimeStrategyTestSuite(AbstractServer):
         self.order_book.shutdown_task_manager()
         yield super(PriceTimeStrategyTestSuite, self).tearDown()
 
-    def test_generate_match_id(self):
-        """
-        Test generation of a match id
-        """
-        def mocked_get_random_match_id():
-            if not mocked_get_random_match_id.called:
-                mocked_get_random_match_id.called = True
-                return 'a' * 20
-            else:
-                return 'b' * 20
-        mocked_get_random_match_id.called = False
-
-        rand_id = self.price_time_strategy.get_unique_match_id()
-        self.assertEqual(len(rand_id), 20)
-        self.assertEqual(len(self.price_time_strategy.used_match_ids), 1)
-
-        self.price_time_strategy.get_random_match_id = mocked_get_random_match_id
-        self.price_time_strategy.used_match_ids.add('a' * 20)
-        self.assertEqual(self.price_time_strategy.get_unique_match_id(), 'b' * 20)
-
     def test_empty_match_order(self):
         """
         Test for match order with an empty order book
@@ -292,8 +272,6 @@ class MatchingEngineTestSuite(AbstractServer):
         matching_ticks = self.matching_engine.match(self.order_book.get_ask(my_ask.order_id))
 
         self.assertEqual(len(matching_ticks), 3)
-        total_matched = sum([quantity for _, _, quantity in matching_ticks])
-        self.assertEqual(total_matched, 168)
 
     def test_price_time_priority_asks(self):
         """
@@ -308,8 +286,7 @@ class MatchingEngineTestSuite(AbstractServer):
         matching_ticks = self.matching_engine.match(self.order_book.get_bid(my_bid.order_id))
 
         self.assertEqual(len(matching_ticks), 3)
-        self.assertEqual(matching_ticks[-1][1].assets.first.amount, 10)
-        self.assertEqual(matching_ticks[-1][2], 5)
+        self.assertEqual(matching_ticks[-1].assets.first.amount, 10)
 
     def test_price_time_priority_bids(self):
         """
@@ -324,8 +301,7 @@ class MatchingEngineTestSuite(AbstractServer):
         matching_ticks = self.matching_engine.match(self.order_book.get_ask(my_ask.order_id))
 
         self.assertEqual(len(matching_ticks), 3)
-        self.assertEqual(matching_ticks[-1][1].assets.first.amount, 10)
-        self.assertEqual(matching_ticks[-1][2], 5)
+        self.assertEqual(matching_ticks[-1].assets.first.amount, 10)
 
     def test_matching_multiple_levels(self):
         """

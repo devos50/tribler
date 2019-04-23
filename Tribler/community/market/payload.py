@@ -131,56 +131,31 @@ class MatchPayload(OrderPayload):
     Payload for a match in the market community.
     """
 
-    format_list = OrderPayload.format_list + ['I', 'varlenI', 'varlenI', 'varlenI']
+    format_list = OrderPayload.format_list + ['I', 'varlenI', 'varlenI']
 
     def __init__(self, trader_id, timestamp, order_number, assets, timeout, traded, is_ask, recipient_order_number,
-                 match_trader_id, matchmaker_trader_id, match_id):
+                 match_trader_id, matchmaker_trader_id):
         super(MatchPayload, self).__init__(trader_id, timestamp, order_number, assets, timeout, traded, is_ask)
         self.recipient_order_number = recipient_order_number
         self.match_trader_id = match_trader_id
         self.matchmaker_trader_id = matchmaker_trader_id
-        self.match_id = match_id
 
     def to_pack_list(self):
         data = super(MatchPayload, self).to_pack_list()
         data += [('I', int(self.recipient_order_number)),
                  ('varlenI', bytes(self.match_trader_id)),
-                 ('varlenI', bytes(self.matchmaker_trader_id)),
-                 ('varlenI', self.match_id.encode('utf-8'))]
+                 ('varlenI', bytes(self.matchmaker_trader_id))]
         return data
 
     @classmethod
     def from_unpack_list(cls, trader_id, timestamp, order_number, asset1_amount, asset1_type, asset2_amount,
                          asset2_type, timeout, traded, is_ask, recipient_order_number,
-                         match_trader_id, matchmaker_trader_id, match_id):
+                         match_trader_id, matchmaker_trader_id):
         return MatchPayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number),
                             AssetPair(AssetAmount(asset1_amount, asset1_type.decode('utf-8')),
                                       AssetAmount(asset2_amount, asset2_type.decode('utf-8'))),
                             Timeout(timeout), traded, is_ask, OrderNumber(recipient_order_number),
-                            TraderId(match_trader_id), TraderId(matchmaker_trader_id), match_id.decode('utf-8'))
-
-
-class AcceptMatchPayload(MessagePayload):
-    """
-    Payload for an accepted match in the market community.
-    """
-
-    format_list = MessagePayload.format_list + ['varlenI', 'Q']
-
-    def __init__(self, trader_id, timestamp, match_id, quantity):
-        super(AcceptMatchPayload, self).__init__(trader_id, timestamp)
-        self.match_id = match_id
-        self.quantity = quantity
-
-    def to_pack_list(self):
-        data = super(AcceptMatchPayload, self).to_pack_list()
-        data += [('varlenI', self.match_id.encode('utf-8')),
-                 ('Q', self.quantity)]
-        return data
-
-    @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, match_id, quantity):
-        return AcceptMatchPayload(TraderId(trader_id), Timestamp(timestamp), match_id.decode('utf-8'), quantity)
+                            TraderId(match_trader_id), TraderId(matchmaker_trader_id))
 
 
 class DeclineMatchPayload(MessagePayload):
@@ -188,22 +163,25 @@ class DeclineMatchPayload(MessagePayload):
     Payload for a declined match in the market community.
     """
 
-    format_list = MessagePayload.format_list + ['varlenI', 'I']
+    format_list = MessagePayload.format_list + ['I', 'varlenI', 'I', 'I']
 
-    def __init__(self, trader_id, timestamp, match_id, decline_reason):
+    def __init__(self, trader_id, timestamp, order_number, other_order_id, decline_reason):
         super(DeclineMatchPayload, self).__init__(trader_id, timestamp)
-        self.match_id = match_id
+        self.order_number = order_number
+        self.other_order_id = other_order_id
         self.decline_reason = decline_reason
 
     def to_pack_list(self):
         data = super(DeclineMatchPayload, self).to_pack_list()
-        data += [('varlenI', self.match_id.encode('utf-8')),
+        data += [('I', int(self.order_number)),
+                 ('varlenI', bytes(self.other_order_id.trader_id)),
+                 ('I', int(self.other_order_id.order_number)),
                  ('I', self.decline_reason)]
         return data
 
     @classmethod
-    def from_unpack_list(cls, trader_id, timestamp, match_id, decline_reason):
-        return DeclineMatchPayload(TraderId(trader_id), Timestamp(timestamp), match_id.decode('utf-8'), decline_reason)
+    def from_unpack_list(cls, trader_id, timestamp, order_number, other_trader_id, other_order_number, decline_reason):
+        return DeclineMatchPayload(TraderId(trader_id), Timestamp(timestamp), OrderNumber(order_number), OrderId(TraderId(other_trader_id), OrderNumber(other_order_number)), decline_reason)
 
 
 class TradePayload(MessagePayload):

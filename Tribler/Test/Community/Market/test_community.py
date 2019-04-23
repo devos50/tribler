@@ -23,12 +23,12 @@ class MockTradingEngine(TradingEngine):
     Trading engine that immediately completes a trade.
     """
 
-    def trade(self, trade, match_id):
+    def trade(self, trade):
         self.completed_trades.append(trade)
 
         # The trade ID must be the same on the two nodes
         trade_id = hashlib.sha1(str(trade.proposal_id)).digest()
-        self.matching_community.on_trade_completed(trade, match_id, trade_id)
+        self.matching_community.on_trade_completed(trade, trade_id)
 
 
 class TestMarketCommunityBase(TestBase):

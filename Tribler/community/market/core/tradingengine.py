@@ -9,5 +9,5 @@ class TradingEngine(object):
         self.completed_trades = []
         self.matching_community = matching_community
 
-    def trade(self, trade, match_id):
+    def trade(self, trade):
         raise NotImplementedError()
