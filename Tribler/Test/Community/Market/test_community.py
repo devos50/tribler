@@ -303,31 +303,6 @@ class TestMarketCommunity(TestMarketCommunityBase):
         self.assertEqual(ask_order.reserved_quantity, 0)
         self.assertEqual(bid_order.reserved_quantity, 0)
 
-    @trial_timeout(3)
-    @inlineCallbacks
-    def test_address_resolv_fail(self):
-        """
-        Test whether an order is unreserved when address resolution fails
-        """
-        yield self.introduce_nodes()
-
-        # Clean the mid register of node 1 and make sure DHT peer connection fails
-        self.nodes[1].overlay.mid_register = {}
-        self.nodes[1].overlay.dht = MockObject()
-        self.nodes[1].overlay.dht.connect_peer = lambda *_: fail(Failure(RuntimeError()))
-
-        ask_order = yield self.nodes[0].overlay.create_ask(
-            AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
-        bid_order = yield self.nodes[1].overlay.create_bid(
-            AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
-
-        yield self.sleep(0.5)
-
-        ask_tick_entry = self.nodes[2].overlay.order_book.get_tick(ask_order.order_id)
-        bid_tick_entry = self.nodes[2].overlay.order_book.get_tick(bid_order.order_id)
-        self.assertEqual(bid_tick_entry.reserved_for_matching, 0)
-        self.assertEqual(ask_tick_entry.reserved_for_matching, 0)
-
     @trial_timeout(4)
     @inlineCallbacks
     def test_orderbook_sync(self):

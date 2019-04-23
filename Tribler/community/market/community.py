@@ -12,6 +12,7 @@ from Tribler.Core.simpledefs import NTFY_MARKET_ON_ASK, NTFY_MARKET_ON_ASK_TIMEO
 from Tribler.Core.simpledefs import NTFY_UPDATE
 from Tribler.community.market import MAX_ORDER_TIMEOUT
 from Tribler.community.market.core import DeclineMatchReason, DeclinedTradeReason
+from Tribler.community.market.core.match_queue import MatchPriorityQueue
 from Tribler.community.market.core.matching_engine import MatchingEngine, PriceTimeStrategy
 from Tribler.community.market.core.message import TraderId
 from Tribler.community.market.core.order import OrderId, OrderNumber
@@ -66,6 +67,8 @@ class MatchCache(NumberCache):
         self.schedule_task = None
         self.outstanding_request = None
         self.received_responses_ids = set()
+        self.queue = MatchPriorityQueue(self.order)
+        self.tries = {}  # Keep track of the number of tries
 
     @property
     def timeout_delay(self):
@@ -73,12 +76,31 @@ class MatchCache(NumberCache):
 
     def add_match(self, match_payload):
         """
-        Add a match to the list.
+        Add a match to the queue.
         """
+        if self.order.status != "open":
+            self._logger.info("Ignoring match payload, order %s not open anymore", self.order.order_id)
+            return
+
         other_order_id = OrderId(match_payload.trader_id, match_payload.order_number)
         if other_order_id not in self.matches:
             self.matches[other_order_id] = []
-        self.matches[other_order_id].append(match_payload)
+
+        # We do not want to add the match twice
+        exists = False
+        for match_payload in self.matches[other_order_id]:
+            match_order_id = OrderId(match_payload.trader_id, match_payload.order_number)
+            if match_order_id == other_order_id:
+                exists = True
+                break
+
+        if not exists:
+            self.matches[other_order_id].append(match_payload)
+
+        if not self.queue.contains_order(other_order_id) and not (self.outstanding_request and self.outstanding_request[2] == other_order_id):
+            self._logger.debug("Adding match payload with own order id %s and other id %s to queue",
+                               self.order.order_id, other_order_id)
+            self.queue.insert(0, match_payload.assets.price, other_order_id)
 
         if not self.schedule_task:
             # Schedule a timer
@@ -110,20 +132,18 @@ class MatchCache(NumberCache):
         """
         Process the first eligible match. First, we sort the list based on price.
         """
-        orders_list = []
-        for order_id, match_payloads in self.matches.iteritems():
-            if order_id in self.received_responses_ids or not match_payloads:
-                continue
-
-            orders_list.append((order_id, match_payloads[0].assets.price))
-
-        if not orders_list:
-            return
-
-        # Sort the orders list, based on price
-        orders_list = sorted(orders_list, key=lambda tup: tup[1], reverse=self.order.is_ask())
-
-        self.community.accept_match_and_propose(self.matches[orders_list[0][0]][0])
+        item = self.queue.delete()
+        if not item:
+            self._logger.info("Done with processsing match queue for order %s!", self.order.order_id)
+        else:
+            retries, _, other_order_id = item
+            self.outstanding_request = item
+            if retries == 0:
+                # To prevent all traders from proposing at the same time, we want a small delay
+                delay = random.uniform(0, 0.5)
+            else:
+                delay = random.uniform(2, 3)
+            reactor.callLater(delay, self.community.accept_match_and_propose, self.order, other_order_id)
 
     def received_decline_trade(self, other_order_id, decline_reason):
         """
@@ -137,6 +157,10 @@ class MatchCache(NumberCache):
                                                           other_order_id,
                                                           match_payload.matchmaker_trader_id,
                                                           DeclineMatchReason.OTHER_ORDER_COMPLETED)
+        elif decline_reason == DeclinedTradeReason.ORDER_RESERVED:
+            # Add it to the queue again
+            self._logger.debug("Adding entry (%d, %s, %s) to matching queue again", *self.outstanding_request)
+            self.queue.insert(self.outstanding_request[0] + 1, self.outstanding_request[1], self.outstanding_request[2])
 
         if self.order.status == "open":
             self.process_match()
@@ -836,24 +860,20 @@ class MarketCommunity(Community):
         # Add the match to the cache and process it
         cache.add_match(payload)
 
-    def accept_match_and_propose(self, match_payload):
+    def accept_match_and_propose(self, order, other_order_id):
         """
         Accept an incoming match payload and propose a trade to the counterparty
         """
-        order_id = OrderId(TraderId(self.mid), match_payload.recipient_order_number)
-        other_order_id = OrderId(match_payload.trader_id, match_payload.order_number)
-        order = self.order_manager.order_repository.find_by_id(order_id)
-
         propose_quantity = order.available_quantity
         if propose_quantity == 0:
-            self.logger.info("No available quantity for order %s - not sending outgoing proposal", order_id)
+            self.logger.info("No available quantity for order %s - not sending outgoing proposal", order.order_id)
             return
 
         propose_trade = Trade.propose(
             TraderId(self.mid),
             order.order_id,
             other_order_id,
-            match_payload.assets.proportional_downscale(propose_quantity),
+            order.assets.proportional_downscale(propose_quantity),
             Timestamp.now()
         )
 
@@ -862,9 +882,6 @@ class MarketCommunity(Community):
                 self.send_proposed_trade(propose_trade, address)
             else:
                 order.release_quantity_for_tick(other_order_id, propose_quantity)
-                self.send_decline_match_message(order, other_order_id,
-                                                match_payload.matchmaker_trader_id,
-                                                DeclineMatchReason.OTHER)
 
         # Reserve the quantity
         order.reserve_quantity_for_tick(other_order_id, propose_quantity)
@@ -1016,6 +1033,8 @@ class MarketCommunity(Community):
         elif order.available_quantity == 0:
             decline_reason = DeclinedTradeReason.ORDER_RESERVED
         elif not order.has_acceptable_price(proposed_trade.assets):
+            self.logger.info("Unacceptable price for order %s - %s vs %s", order.order_id,
+                             proposed_trade.assets, order.assets)
             decline_reason = DeclinedTradeReason.UNACCEPTABLE_PRICE
         else:
             should_decline = False
@@ -1027,7 +1046,7 @@ class MarketCommunity(Community):
                               str(declined_trade.order_id), str(declined_trade.recipient_order_id),
                               order.is_valid(), order.available_quantity, order.reserved_quantity,
                               order.traded_quantity, decline_reason)
-            self.send_declined_trade(declined_trade)
+            self.send_decline_trade(declined_trade)
         else:
             if order.available_quantity >= proposed_trade.assets.first.amount:  # Enough quantity left
                 order.reserve_quantity_for_tick(proposed_trade.order_id, proposed_trade.assets.first.amount)
@@ -1044,7 +1063,7 @@ class MarketCommunity(Community):
                 self.logger.debug("Counter trade made with asset pair %s for proposed trade", counter_trade.assets)
                 self.send_counter_trade(counter_trade)
 
-    def send_declined_trade(self, declined_trade):
+    def send_decline_trade(self, declined_trade):
         payload = declined_trade.to_network()
 
         auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
@@ -1073,7 +1092,8 @@ class MarketCommunity(Community):
         self.order_manager.order_repository.update(order)
 
         # Just remove the tick with the order id of the other party and try to find a new match
-        self.logger.debug("Received declined trade (proposal id: %d)", declined_trade.proposal_id)
+        self.logger.debug("Received decline trade (proposal id: %d, reason: %d)",
+                          declined_trade.proposal_id, declined_trade.decline_reason)
 
         # Update the cache which will inform the related matchmakers
         cache = self.request_cache.get(u"match", int(order.order_id.order_number))
@@ -1116,6 +1136,8 @@ class MarketCommunity(Community):
         if not order.is_valid:
             decline_reason = DeclinedTradeReason.ORDER_INVALID
         elif not order.has_acceptable_price(counter_trade.assets):
+            self.logger.info("Unacceptable price for order %s - %s vs %s", order.order_id,
+                             counter_trade.assets, order.assets)
             decline_reason = DeclinedTradeReason.UNACCEPTABLE_PRICE
         else:
             should_decline = False
@@ -1124,7 +1146,7 @@ class MarketCommunity(Community):
             declined_trade = Trade.decline(TraderId(self.mid), Timestamp.now(), counter_trade, decline_reason)
             self.logger.debug("Declined trade made for order id: %s and id: %s ",
                               str(declined_trade.order_id), str(declined_trade.recipient_order_id))
-            self.send_declined_trade(declined_trade)
+            self.send_decline_trade(declined_trade)
         else:
             order.release_quantity_for_tick(counter_trade.order_id, request.proposed_trade.assets.first.amount)
             order.reserve_quantity_for_tick(counter_trade.order_id, counter_trade.assets.first.amount)
