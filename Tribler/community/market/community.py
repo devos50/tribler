@@ -1158,6 +1158,8 @@ class MarketCommunity(Community):
             self._logger.warning("Recipient order in start trade payload is not ours!")
             return
 
+        self.request_cache.pop(u"proposed-trade", payload.proposal_id)
+
         self.trading_engine.trade(StartTrade.from_network(payload))
 
     def on_trade_completed(self, trade, trade_id):
