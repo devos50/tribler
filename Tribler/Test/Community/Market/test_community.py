@@ -300,10 +300,8 @@ class TestMarketCommunity(TestMarketCommunityBase):
 
         yield self.sleep(0.5)
 
-        ask_tick_entry = self.nodes[2].overlay.order_book.get_tick(ask_order.order_id)
-        bid_tick_entry = self.nodes[2].overlay.order_book.get_tick(bid_order.order_id)
-        self.assertEqual(bid_tick_entry.reserved_for_matching, 0)
-        self.assertEqual(ask_tick_entry.reserved_for_matching, 0)
+        self.assertEqual(ask_order.reserved_quantity, 0)
+        self.assertEqual(bid_order.reserved_quantity, 0)
 
     @trial_timeout(3)
     @inlineCallbacks

@@ -4,6 +4,7 @@ class DeclinedTradeReason(object):
     ORDER_RESERVED = 2
     ORDER_INVALID = 3
     UNACCEPTABLE_PRICE = 4
+    OTHER = 5
 
 
 class DeclineMatchReason(object):

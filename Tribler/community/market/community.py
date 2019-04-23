@@ -124,13 +124,12 @@ class MatchCache(NumberCache):
 
         self.community.accept_match_and_propose(self.matches[orders_list[0][0]][0])
 
-    def received_decline_trade(self, payload):
+    def received_decline_trade(self, other_order_id, decline_reason):
         """
         The counterparty refused to trade - update the cache accordingly.
         """
-        other_order_id = OrderId(payload.trader_id, payload.order_number)
         self.received_responses_ids.add(other_order_id)
-        if payload.decline_reason == DeclinedTradeReason.ORDER_COMPLETED and other_order_id in self.matches:
+        if decline_reason == DeclinedTradeReason.ORDER_COMPLETED and other_order_id in self.matches:
             # Let the matchmakers know that the order is complete
             for match_payload in self.matches[other_order_id]:
                 self.community.send_decline_match_message(match_payload.match_id, match_payload.matchmaker_trader_id,
@@ -178,6 +177,11 @@ class ProposedTradeRequestCache(NumberCache):
         order = self.community.order_manager.order_repository.find_by_id(self.proposed_trade.order_id)
         order.release_quantity_for_tick(self.proposed_trade.recipient_order_id, self.proposed_trade.assets.first.amount)
         self.community.order_manager.order_repository.update(order)
+
+        # Let the match cache know about the timeout
+        cache = self.community.request_cache.get(u"match", int(order.order_id.order_number))
+        if cache:
+            cache.received_decline_trade(self.proposed_trade.recipient_order_id, DeclinedTradeReason.OTHER)
 
 
 class PingRequestCache(RandomNumberCache):
@@ -1009,11 +1013,6 @@ class MarketCommunity(Community):
                     self.request_cache.pop(u"proposed-trade", int(proposal_id.split(':')[1]))
                     request.on_timeout()
 
-                    # Try to process another incoming match message
-                    cache = self.request_cache.get(u"match", int(order.order_id.order_number))
-                    if cache:
-                        cache.process_match()
-
         should_decline = True
         decline_reason = 0
         if not order.is_valid:
@@ -1087,7 +1086,8 @@ class MarketCommunity(Community):
         # Update the cache which will inform the related matchmakers
         cache = self.request_cache.get(u"match", int(order.order_id.order_number))
         if cache:
-            cache.received_decline_trade(payload)
+            other_order_id = OrderId(payload.trader_id, payload.order_number)
+            cache.received_decline_trade(other_order_id, payload.decline_reason)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
