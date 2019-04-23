@@ -700,7 +700,10 @@ class MarketCommunity(Community):
             err_handler = lambda _: on_peer_address(None)
             self.get_address_for_trader(recipient_order_id.trader_id).addCallbacks(on_peer_address, err_handler)
 
-        reactor.callFromThread(get_address)
+        if self.settings.match_send_interval == 0:
+            get_address()
+        else:
+            reactor.callLater(random.uniform(0, self.settings.match_send_interval), get_address)
 
     def received_cancel_order(self, source_address, data):
         """
