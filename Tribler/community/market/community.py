@@ -1006,6 +1006,11 @@ class MarketCommunity(Community):
                     self.request_cache.pop(u"proposed-trade", int(proposal_id.split(':')[1]))
                     request.on_timeout()
 
+                    # Try to process another incoming match message
+                    cache = self.request_cache.get(u"match", int(order.order_id.order_number))
+                    if cache:
+                        cache.process_match()
+
         should_decline = True
         decline_reason = 0
         if not order.is_valid:
