@@ -1211,6 +1211,10 @@ class MarketCommunity(Community):
             self.logger.debug("Declined trade made for order id: %s and id: %s ",
                               str(declined_trade.order_id), str(declined_trade.recipient_order_id))
             self.send_decline_trade(declined_trade)
+
+            # Release the quantity from the tick
+            order.release_quantity_for_tick(declined_trade.recipient_order_id, request.proposed_trade.assets.first.amount)
+            self.order_manager.order_repository.update(order)
         else:
             order.release_quantity_for_tick(counter_trade.order_id, request.proposed_trade.assets.first.amount)
             order.reserve_quantity_for_tick(counter_trade.order_id, counter_trade.assets.first.amount)
