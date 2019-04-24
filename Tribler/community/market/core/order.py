@@ -299,7 +299,7 @@ class Order(object):
         """
         my_price = self.assets.price
         other_price = proposal_assets.price
-        return (self.is_ask() and my_price <= other_price) or (not self.is_ask() and my_price >= other_price)
+        return (self.is_ask() and (my_price <= other_price or abs(float(my_price.frac - other_price.frac)) < 0.0001)) or (not self.is_ask() and (my_price >= other_price or abs(float(my_price.frac - other_price.frac)) < 0.0001))
 
     def reserve_quantity_for_tick(self, order_id, quantity):
         """
