@@ -262,6 +262,7 @@ class MarketCommunity(Community):
         self.request_cache = RequestCache()
         self.cancelled_orders = set()  # Keep track of cancelled orders so we don't add them again to the orderbook.
         self.sync_lc = None
+        self.sent_matches = set()
 
         self.fixed_broadcast_set = []  # Used if we need to broadcast to a fixed set of other peers
 
@@ -755,6 +756,10 @@ class MarketCommunity(Community):
         :param tick: The matched tick
         :param recipient_order_id: The order id of the recipient, matching the tick
         """
+        if (recipient_order_id, tick.order_id) in self.sent_matches:
+            return
+        self.sent_matches.add((recipient_order_id, tick.order_id))
+
         payload_tup = tick.to_network()
 
         # Add recipient order number, matched quantity, trader ID of the matched person, our own trader ID and match ID
