@@ -207,6 +207,10 @@ class ProposedTradeRequestCache(NumberCache):
         self.community = community
         self.proposed_trade = proposed_trade
 
+    @property
+    def timeout_delay(self):
+        return 2.0
+
     def on_timeout(self):
         # Just remove the reserved quantity from the order
         order = self.community.order_manager.order_repository.find_by_id(self.proposed_trade.order_id)
@@ -1062,6 +1066,12 @@ class MarketCommunity(Community):
                 if isinstance(cache, ProposedTradeRequestCache)
                 and cache.proposed_trade.order_id == order_id
                 and cache.proposed_trade.recipient_order_id == partner_order_id]
+
+    def get_match_caches(self):
+        """
+        Return all match caches.
+        """
+        return [cache for cache in self.request_cache._identifiers.values() if isinstance(cache, MatchCache)]
 
     @lazy_wrapper(TradePayload)
     def received_proposed_trade(self, peer, payload):
