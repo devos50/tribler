@@ -320,7 +320,9 @@ class MarketCommunity(Community):
         elif policy == SYNC_POLICY_NEIGHBOURS:
             if not self.sync_lc:
                 self.sync_lc = LoopingCall(self.sync_orderbook)
-                self.sync_lc.start(self.settings.sync_interval)
+
+                # Do not start at the same time
+                reactor.callLater(random.uniform(0, 10), self.sync_lc.start, self.settings.sync_interval)
 
     def sync_orderbook(self):
         """
