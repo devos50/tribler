@@ -136,7 +136,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         # The ask should be removed since this node thinks the order is already completed
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 0)
 
-    @trial_timeout(2)
+    @trial_timeout(3)
     @inlineCallbacks
     def test_decline_trade_cancel(self):
         """
@@ -153,7 +153,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
 
         self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # No trade should have been made
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 0)

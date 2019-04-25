@@ -174,6 +174,18 @@ class MatchCache(NumberCache):
         if self.order.status == "open":
             self.process_match()
 
+    def remove_order(self, order_id):
+        """
+        Remove all entries from the queue that match the passed order id.
+        """
+        to_remove = []
+        for item in self.queue.queue:
+            if item[2] == order_id:
+                to_remove.append(item)
+
+        for item in to_remove:
+            self.queue.queue.remove(item)
+
     def did_trade(self, trade, trade_id):
         """
         We just performed a trade with a counterparty.
@@ -1180,11 +1192,17 @@ class MarketCommunity(Community):
         self.logger.debug("Received decline trade (proposal id: %d, reason: %d)",
                           declined_trade.proposal_id, declined_trade.decline_reason)
 
+        other_order_id = OrderId(payload.trader_id, payload.order_number)
+
         # Update the cache which will inform the related matchmakers
         cache = self.request_cache.get(u"match", int(order.order_id.order_number))
         if cache:
-            other_order_id = OrderId(payload.trader_id, payload.order_number)
             cache.received_decline_trade(other_order_id, payload.decline_reason)
+
+        # We want to remove this order from all the other caches too if the order is completed or cancelled
+        if payload.decline_reason == DeclinedTradeReason.ORDER_COMPLETED or payload.decline_reason == DeclinedTradeReason.ORDER_CANCELLED:
+            for cache in self.get_match_caches():
+                cache.remove_order(other_order_id)
 
     # Counter trade
     def send_counter_trade(self, counter_trade):
