@@ -142,9 +142,9 @@ class MatchCache(NumberCache):
             self.outstanding_request = item
             if retries == 0:
                 # To prevent all traders from proposing at the same time, we want a small delay
-                delay = random.uniform(0, 0.5)
+                delay = random.uniform(0, 1)
             else:
-                delay = random.uniform(2, 3)
+                delay = random.uniform(1, 2)
             reactor.callLater(delay, self.community.accept_match_and_propose, self.order, other_order_id)
 
     def received_decline_trade(self, other_order_id, decline_reason):
