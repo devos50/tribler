@@ -542,12 +542,15 @@ class MarketCommunity(Community):
         if not self.is_matchmaker:
             return
 
+        ticks = []
         for order_id in self.order_book.get_order_ids():
             if bytes(order_id) not in payload.bloomfilter:
                 is_ask = self.order_book.ask_exists(order_id)
                 entry = self.order_book.get_ask(order_id) if is_ask else self.order_book.get_bid(order_id)
+                ticks.append(entry)
 
-                self.send_order(entry.tick, peer.address)
+        for entry in random.sample(ticks, min(len(ticks), self.settings.num_order_sync)):
+            self.send_order(entry.tick, peer.address)
 
     def ping_peer(self, peer):
         """
