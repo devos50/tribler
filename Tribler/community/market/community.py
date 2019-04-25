@@ -763,19 +763,16 @@ class MarketCommunity(Community):
                         subject = NTFY_MARKET_ON_ASK if isinstance(tick, Ask) else NTFY_MARKET_ON_BID
                         self.tribler_session.notifier.notify(subject, NTFY_UPDATE, None, tick.to_dictionary())
 
-                    matches = 0
-
                     # Check for new matches against the orders of this node
                     for order in self.order_manager.order_repository.find_all():
                         order_tick_entry = self.order_book.get_tick(order.order_id)
                         if not order.is_valid() or not order_tick_entry:
                             continue
 
-                        matches = self.match(order_tick_entry.tick)
+                        self.match(order_tick_entry.tick)
 
                     # Only after we have matched our own orders, do the matching with other ticks if necessary
-                    if matches == 0:
-                        self.match(tick)
+                    self.match(tick)
 
     def send_match_messages(self, matching_ticks, order_id):
         return [self.send_match_message(tick_entry.tick, order_id) for tick_entry in matching_ticks]
