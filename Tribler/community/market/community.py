@@ -649,7 +649,9 @@ class MarketCommunity(Community):
         if self.is_matchmaker:
             # Update ticks in order book, release the reserved quantity and find a new match
             quantity = trade.assets.first.amount
-            self.order_book.update_ticks(trade.order_id, trade.recipient_order_id, quantity, trade_id)
+            completed = self.order_book.update_ticks(trade.order_id, trade.recipient_order_id, quantity, trade_id)
+            for completed_order_id in completed:
+                self.on_order_completed(completed_order_id)
             self.match_order_ids([trade.order_id, trade.recipient_order_id])
 
         for peer in send_peers:
@@ -889,7 +891,9 @@ class MarketCommunity(Community):
             quantity = payload.assets.first.amount
             order_id1 = OrderId(TraderId(payload.trader_id), payload.order_number)
             order_id2 = payload.recipient_order_id
-            self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id)
+            completed = self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id)
+            for completed_order_id in completed:
+                self.on_order_completed(completed_order_id)
             self.match_order_ids([order_id1, order_id2])
 
         ttl_payload.ttl -= 1
@@ -1011,10 +1015,12 @@ class MarketCommunity(Community):
         if matched_tick_entry and (payload.decline_reason == DeclineMatchReason.OTHER_ORDER_COMPLETED or payload.decline_reason == DeclineMatchReason.OTHER_ORDER_CANCELLED):
             self.order_book.remove_tick(matched_tick_entry.order_id)
             self.order_book.completed_orders.add(matched_tick_entry.order_id)
+            self.on_order_completed(matched_tick_entry.order_id)
 
         if payload.decline_reason == DeclineMatchReason.ORDER_COMPLETED and tick_entry:
             self.order_book.remove_tick(tick_entry.order_id)
             self.order_book.completed_orders.add(tick_entry.order_id)
+            self.on_order_completed(tick_entry.order_id)
         elif payload.decline_reason == DeclineMatchReason.OTHER and tick_entry:
             # Search for a new match
             self.match(tick_entry.tick)
@@ -1051,6 +1057,13 @@ class MarketCommunity(Community):
 
                 for peer in send_peers:
                     self.endpoint.send(peer.address, packet)
+
+    def on_order_completed(self, order_id):
+        """
+        An order has been completed. Update the match caches accordingly
+        """
+        for cache in self.get_match_caches():
+            cache.remove_order(order_id)
 
     # Proposed trade
     def send_proposed_trade(self, proposed_trade, address):
@@ -1319,7 +1332,9 @@ class MarketCommunity(Community):
         quantity = payload.assets.first.amount
         order_id1 = OrderId(TraderId(payload.trader_id), payload.order_number)
         order_id2 = payload.recipient_order_id
-        self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id)
+        completed = self.order_book.update_ticks(order_id1, order_id2, quantity, payload.trade_id)
+        for completed_order_id in completed:
+            self.on_order_completed(completed_order_id)
 
 
 class MarketTestnetCommunity(MarketCommunity):

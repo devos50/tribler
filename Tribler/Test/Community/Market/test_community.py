@@ -244,7 +244,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         # Matchmaker should have removed this order from the orderbook
         self.assertFalse(self.nodes[2].overlay.order_book.tick_exists(order.order_id))
 
-    @trial_timeout(2)
+    @trial_timeout(3)
     @inlineCallbacks
     def test_e2e_trade(self):
         """
@@ -255,7 +255,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         yield self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(50, 'DUM1'), AssetAmount(50, 'MB')), 3600)
         yield self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(50, 'DUM1'), AssetAmount(50, 'MB')), 3600)
 
-        yield self.sleep(0.5)  # Give it some time to complete the trade
+        yield self.sleep(1)  # Give it some time to complete the trade
 
         # Verify that the trade has been made
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
@@ -265,7 +265,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 50)
         self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 50)
 
-    @trial_timeout(2)
+    @trial_timeout(3)
     @inlineCallbacks
     def test_e2e_trade_dht(self):
         """
@@ -290,7 +290,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         yield self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
         yield self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # Verify that the trade has been made
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
@@ -541,7 +541,7 @@ class TestMarketCommunityFourNodes(TestMarketCommunityBase):
 class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
     __testing__ = True
 
-    @trial_timeout(2)
+    @trial_timeout(3)
     @inlineCallbacks
     def test_e2e_trade(self):
         """
@@ -552,7 +552,7 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(13, 'DUM2')), 3600)
         self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(13, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # Verify that the trade has been made
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
@@ -562,7 +562,7 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.first.amount, 10)
         self.assertEqual(self.nodes[1].overlay.trading_engine.completed_trades[0].assets.second.amount, 13)
 
-    @trial_timeout(2)
+    @trial_timeout(3)
     @inlineCallbacks
     def test_partial_trade(self):
         """
@@ -573,7 +573,7 @@ class TestMarketCommunityTwoNodes(TestMarketCommunityBase):
         self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
         self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # Verify that the trade has been made
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)

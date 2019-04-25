@@ -94,9 +94,12 @@ class OrderBook(TaskManager):
     def update_ticks(self, order_id1, order_id2, traded_quantity, trade_id):
         """
         Update ticks according to a TrustChain block containing the status of the ask/bid orders.
+        :return a set with completed orders
         """
         self._logger.debug("Updating ticks in order book: %s and %s (traded quantity: %s)",
                            str(order_id1), str(order_id2), str(traded_quantity))
+
+        completed = set()
 
         # Update ticks
         for order_id in [order_id1, order_id2]:
@@ -110,6 +113,9 @@ class OrderBook(TaskManager):
                 if tick.traded >= tick.assets.first.amount:  # We completed the trade
                     self.remove_tick(tick.order_id)
                     self.completed_orders.add(tick.order_id)
+                    completed.add(tick.order_id)
+                    
+        return completed
 
     def tick_exists(self, order_id):
         """
