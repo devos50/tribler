@@ -136,6 +136,49 @@ class TestMarketCommunity(TestMarketCommunityBase):
         # The ask should be removed since this node thinks the order is already completed
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 0)
 
+    @trial_timeout(2)
+    @inlineCallbacks
+    def test_decline_trade_cancel(self):
+        """
+        Test whether a cancelled order is correctly declined when negotiating
+        """
+        yield self.introduce_nodes()
+
+        order = self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+        self.nodes[0].overlay.cancel_order(order.order_id, broadcast=False)
+
+        self.assertEqual(order.status, "cancelled")
+
+        yield self.sleep(0.5)
+
+        self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+
+        yield self.sleep(0.5)
+
+        # No trade should have been made
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 0)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 0)
+        self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 0)
+
+    @trial_timeout(2)
+    @inlineCallbacks
+    def test_decline_match_cancel(self):
+        """
+        Test whether an order is removed when the matched order is cancelled
+        """
+        yield self.introduce_nodes()
+
+        self.nodes[0].overlay.create_ask(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+        yield self.sleep(0.5)
+
+        order = self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
+        self.nodes[1].overlay.cancel_order(order.order_id, broadcast=False)  # Immediately cancel it
+
+        yield self.sleep(0.5)
+        self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 0)
+        self.assertEqual(len(self.nodes[1].overlay.trading_engine.completed_trades), 0)
+        self.assertEqual(len(self.nodes[2].overlay.order_book.bids), 0)
+
     @trial_timeout(3)
     @inlineCallbacks
     def test_counter_trade(self):
@@ -477,7 +520,7 @@ class TestMarketCommunityFourNodes(TestMarketCommunityBase):
         order1 = self.nodes[0].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
         order2 = self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(10, 'DUM1'), AssetAmount(10, 'DUM2')), 3600)
 
-        yield self.sleep(0.2)
+        yield self.sleep(0.3)
 
         # Make sure that the two matchmaker match different orders
         order1_tick = self.nodes[3].overlay.order_book.get_tick(order1.order_id)
@@ -487,7 +530,7 @@ class TestMarketCommunityFourNodes(TestMarketCommunityBase):
 
         self.nodes[2].overlay.create_ask(AssetPair(AssetAmount(20, 'DUM1'), AssetAmount(20, 'DUM2')), 3600)
 
-        yield self.sleep(1)
+        yield self.sleep(1.5)
 
         # Verify that the trade has been made
         self.assertEqual(len(self.nodes[2].overlay.trading_engine.completed_trades), 2)

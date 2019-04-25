@@ -3,11 +3,13 @@ class DeclinedTradeReason(object):
     ORDER_EXPIRED = 1
     ORDER_RESERVED = 2
     ORDER_INVALID = 3
-    UNACCEPTABLE_PRICE = 4
-    OTHER = 5
+    ORDER_CANCELLED = 4
+    UNACCEPTABLE_PRICE = 5
+    OTHER = 6
 
 
 class DeclineMatchReason(object):
     ORDER_COMPLETED = 0
     OTHER_ORDER_COMPLETED = 1
-    OTHER = 2
+    OTHER_ORDER_CANCELLED = 2
+    OTHER = 3

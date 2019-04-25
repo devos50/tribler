@@ -159,6 +159,13 @@ class MatchCache(NumberCache):
                                                           other_order_id,
                                                           match_payload.matchmaker_trader_id,
                                                           DeclineMatchReason.OTHER_ORDER_COMPLETED)
+        elif decline_reason == DeclinedTradeReason.ORDER_CANCELLED and other_order_id in self.matches:
+            # Let the matchmakers know that the order is cancelled
+            for match_payload in self.matches[other_order_id]:
+                self.community.send_decline_match_message(self.order,
+                                                          other_order_id,
+                                                          match_payload.matchmaker_trader_id,
+                                                          DeclineMatchReason.OTHER_ORDER_CANCELLED)
         elif decline_reason == DeclinedTradeReason.ORDER_RESERVED:
             # Add it to the queue again
             self._logger.debug("Adding entry (%d, %s, %s) to matching queue again", *self.outstanding_request)
@@ -969,7 +976,7 @@ class MarketCommunity(Community):
     def received_decline_match(self, _, payload):
         order_id = OrderId(payload.trader_id, payload.order_number)
         matched_order_id = payload.other_order_id
-        self.logger.info("Received decline-match message for tick %s matched with %s", order_id, matched_order_id)
+        self.logger.info("Received decline-match message for tick %s matched with %s, reason %s", order_id, matched_order_id, payload.decline_reason)
 
         # It could be that one or both matched tick(s) have already been removed from the order book by a
         # tx_done block. We have to account for that and act accordingly.
@@ -980,7 +987,7 @@ class MarketCommunity(Community):
             tick_entry.block_for_matching(matched_tick_entry.order_id)
             matched_tick_entry.block_for_matching(tick_entry.order_id)
 
-        if matched_tick_entry and payload.decline_reason == DeclineMatchReason.OTHER_ORDER_COMPLETED:
+        if matched_tick_entry and (payload.decline_reason == DeclineMatchReason.OTHER_ORDER_COMPLETED or payload.decline_reason == DeclineMatchReason.OTHER_ORDER_CANCELLED):
             self.order_book.remove_tick(matched_tick_entry.order_id)
             self.order_book.completed_orders.add(matched_tick_entry.order_id)
 
@@ -991,7 +998,7 @@ class MarketCommunity(Community):
             # Search for a new match
             self.match(tick_entry.tick)
 
-    def cancel_order(self, order_id, ttl=None):
+    def cancel_order(self, order_id, ttl=None, broadcast=True):
         ttl = ttl or self.settings.ttl
         if self.settings.dissemination_policy == DISSEMINATION_POLICY_RANDOM:
             ttl = 1
@@ -1002,27 +1009,27 @@ class MarketCommunity(Community):
             if self.is_matchmaker:
                 self.order_book.remove_tick(order_id)
 
-            # Broadcast the cancel message
-            auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
-            global_time = self.claim_global_time()
-            dist = GlobalTimeDistributionPayload(global_time).to_pack_list()
-            payload = CancelOrderPayload(order.order_id.trader_id, order.timestamp, order.order_id.order_number).to_pack_list()
-            packet = self._ez_pack(self._prefix, MSG_CANCEL_ORDER, [auth, dist, payload])
-            packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
+            if broadcast:
+                auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
+                global_time = self.claim_global_time()
+                dist = GlobalTimeDistributionPayload(global_time).to_pack_list()
+                payload = CancelOrderPayload(order.order_id.trader_id, order.timestamp, order.order_id.order_number).to_pack_list()
+                packet = self._ez_pack(self._prefix, MSG_CANCEL_ORDER, [auth, dist, payload])
+                packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
 
-            send_peers = []
-            if self.settings.dissemination_policy == DISSEMINATION_POLICY_NEIGHBOURS:
-                if self.fixed_broadcast_set:
-                    send_peers = self.fixed_broadcast_set
-                else:
-                    send_peers = random.sample(self.network.verified_peers,
-                                               min(len(self.network.verified_peers), self.settings.fanout))
-            elif self.settings.dissemination_policy == DISSEMINATION_POLICY_RANDOM:
-                send_peers = random.sample(list(self.matchmakers),
-                                           min(self.settings.get_msg_reach(), len(self.matchmakers)))
+                send_peers = []
+                if self.settings.dissemination_policy == DISSEMINATION_POLICY_NEIGHBOURS:
+                    if self.fixed_broadcast_set:
+                        send_peers = self.fixed_broadcast_set
+                    else:
+                        send_peers = random.sample(self.network.verified_peers,
+                                                   min(len(self.network.verified_peers), self.settings.fanout))
+                elif self.settings.dissemination_policy == DISSEMINATION_POLICY_RANDOM:
+                    send_peers = random.sample(list(self.matchmakers),
+                                               min(self.settings.get_msg_reach(), len(self.matchmakers)))
 
-            for peer in send_peers:
-                self.endpoint.send(peer.address, packet)
+                for peer in send_peers:
+                    self.endpoint.send(peer.address, packet)
 
     # Proposed trade
     def send_proposed_trade(self, proposed_trade, address):
@@ -1094,6 +1101,8 @@ class MarketCommunity(Community):
             decline_reason = DeclinedTradeReason.ORDER_COMPLETED
         elif order.status == "expired":
             decline_reason = DeclinedTradeReason.ORDER_EXPIRED
+        elif order.status == "cancelled":
+            decline_reason = DeclinedTradeReason.ORDER_CANCELLED
         elif order.available_quantity == 0:
             decline_reason = DeclinedTradeReason.ORDER_RESERVED
         elif not order.has_acceptable_price(proposed_trade.assets):
