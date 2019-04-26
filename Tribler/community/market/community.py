@@ -287,6 +287,15 @@ class MarketCommunity(Community):
         self.sync_lc = None
         self.sent_matches = set()
 
+        self.num_received_cancel_orders = 0
+        self.num_received_orders = 0
+        self.num_received_match = 0
+        self.num_received_match_decline = 0
+        self.num_received_proposed_trade = 0
+        self.num_received_declined_trade = 0
+        self.num_received_counter_trade = 0
+        self.num_received_complete_trade = 0
+
         self.fixed_broadcast_set = []  # Used if we need to broadcast to a fixed set of other peers
 
         if self.use_database:
@@ -824,6 +833,7 @@ class MarketCommunity(Community):
         :param source_address: The peer we received this payload from.
         :param payload: The CancelOrderPayload we received.
         """
+        self.num_received_cancel_orders += 1
         ttl_payload = self.serializer.ez_unpack_serializables([TTLPayload], data[-1:])[0]
         auth, dist, payload = self._ez_unpack_auth(CancelOrderPayload, data[:-1])
 
@@ -846,6 +856,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(OrderPayload)
     def received_order(self, peer, payload):
+        self.num_received_orders += 1
         self.logger.debug("Received order from peer %s", peer)
         tick = Ask.from_network(payload) if payload.is_ask else Bid.from_network(payload)
         self.on_tick(tick)
@@ -856,6 +867,7 @@ class MarketCommunity(Community):
         :param source_address: The peer we received this payload from.
         :param data: The binary data we received.
         """
+        self.num_received_orders += 1
         ttl_payload = self.serializer.ez_unpack_serializables([TTLPayload], data[-1:])[0]
         auth, dist, payload = self._ez_unpack_auth(OrderPayload, data[:-1])
 
@@ -883,6 +895,7 @@ class MarketCommunity(Community):
         :param source_address: The peer we received this payload from.
         :param data: The binary data we received.
         """
+        self.num_received_complete_trade += 1
         ttl_payload = self.serializer.ez_unpack_serializables([TTLPayload], data[-1:])[0]
         auth, dist, payload = self._ez_unpack_auth(CompletedTradePayload, data[:-1])
 
@@ -913,6 +926,7 @@ class MarketCommunity(Community):
         """
         We received a match message from a matchmaker.
         """
+        self.num_received_match += 1
         self.logger.info("We received a match message from %s for order %s.%s (matched against %s.%s)",
                          payload.matchmaker_trader_id.as_hex(), TraderId(self.mid).as_hex(), payload.recipient_order_number, payload.trader_id.as_hex(), payload.order_number)
 
@@ -999,6 +1013,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(DeclineMatchPayload)
     def received_decline_match(self, _, payload):
+        self.num_received_match_decline += 1
         order_id = OrderId(payload.trader_id, payload.order_number)
         matched_order_id = payload.other_order_id
         self.logger.info("Received decline-match message for tick %s matched with %s, reason %s", order_id, matched_order_id, payload.decline_reason)
@@ -1105,6 +1120,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(TradePayload)
     def received_proposed_trade(self, peer, payload):
+        self.num_received_proposed_trade += 1
         validation = self.check_trade_payload_validity(payload)
         if not validation[0]:
             self.logger.warning("Validation of proposed trade payload failed: %s", validation[1])
@@ -1187,6 +1203,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(DeclineTradePayload)
     def received_decline_trade(self, _, payload):
+        self.num_received_declined_trade += 1
         validation = self.check_trade_payload_validity(payload)
         if not validation[0]:
             self.logger.warning("Validation of decline trade payload failed: %s", validation[1])
@@ -1234,6 +1251,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(TradePayload)
     def received_counter_trade(self, _, payload):
+        self.num_received_counter_trade += 1
         validation = self.check_trade_payload_validity(payload)
         if not validation[0]:
             self.logger.warning("Validation of counter trade payload failed: %s", validation[1])
@@ -1324,6 +1342,7 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(CompletedTradePayload)
     def received_matched_tx_complete(self, peer, payload):
+        self.num_received_complete_trade += 1
         self.logger.debug("Received transaction-completed message as a matchmaker")
         if not self.is_matchmaker:
             return

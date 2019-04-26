@@ -131,7 +131,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
         self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # The ask should be removed since this node thinks the order is already completed
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 0)
@@ -195,7 +195,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
         self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
         self.assertEqual(self.nodes[0].overlay.trading_engine.completed_trades[0].assets.first.amount, 1)
@@ -239,7 +239,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         self.assertEqual(len(self.nodes[2].overlay.order_book.asks), 1)
         self.nodes[1].overlay.create_bid(AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # Matchmaker should have removed this order from the orderbook
         self.assertFalse(self.nodes[2].overlay.order_book.tick_exists(order.order_id))
@@ -393,7 +393,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         yield self.nodes[1].overlay.create_bid(
             AssetPair(AssetAmount(2, 'DUM1'), AssetAmount(2, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         # Verify that the trade has been made
         self.assertEqual(len(self.nodes[0].overlay.trading_engine.completed_trades), 1)
