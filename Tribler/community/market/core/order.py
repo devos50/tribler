@@ -137,6 +137,7 @@ class Order(object):
         self._is_ask = is_ask
         self._reserved_ticks = {}
         self._cancelled = False
+        self.broadcast_peers = []
 
     @classmethod
     def from_database(cls, data, reserved_ticks):

@@ -635,6 +635,8 @@ class MarketCommunity(Community):
             packet = self._ez_pack(self._prefix, MSG_ORDER, [auth, payload])
             send_peers = random.sample(list(self.matchmakers), min(self.settings.get_msg_reach(), len(self.matchmakers)))
 
+        order.broadcast_peers = send_peers
+
         if packet:
             for peer in send_peers:
                 self.endpoint.send(peer.address, packet)
@@ -655,7 +657,11 @@ class MarketCommunity(Community):
         packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
 
         send_peers = []
-        if self.settings.dissemination_policy == DISSEMINATION_POLICY_NEIGHBOURS:
+
+        order = self.order_manager.order_repository.find_by_id(trade.order_id) or self.order_manager.order_repository.find_by_id(trade.recipient_order_id)
+        if order.broadcast_peers:
+            send_peers = order.broadcast_peers
+        elif self.settings.dissemination_policy == DISSEMINATION_POLICY_NEIGHBOURS:
             if self.fixed_broadcast_set:
                 send_peers = self.fixed_broadcast_set
             else:
