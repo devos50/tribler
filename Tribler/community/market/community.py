@@ -1051,7 +1051,7 @@ class MarketCommunity(Community):
             self.order_book.remove_tick(tick_entry.order_id)
             self.order_book.completed_orders.add(tick_entry.order_id)
             self.on_order_completed(tick_entry.order_id)
-        elif payload.decline_reason == DeclineMatchReason.OTHER and tick_entry:
+        elif (payload.decline_reason == DeclineMatchReason.OTHER or payload.decline_reason == DeclineMatchReason.OTHER_ORDER_COMPLETED) and tick_entry:
             # Search for a new match
             self.match(tick_entry.tick)
 
