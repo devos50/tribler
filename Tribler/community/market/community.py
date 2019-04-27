@@ -171,6 +171,13 @@ class MatchCache(NumberCache):
                                                           other_order_id,
                                                           match_payload.matchmaker_trader_id,
                                                           DeclineMatchReason.OTHER_ORDER_CANCELLED)
+        elif decline_reason == DeclinedTradeReason.ADDRESS_LOOKUP_FAIL and other_order_id in self.matches:
+            # Let the matchmakers know that the address resolution failed
+            for match_payload in self.matches[other_order_id]:
+                self.community.send_decline_match_message(self.order,
+                                                          other_order_id,
+                                                          match_payload.matchmaker_trader_id,
+                                                          DeclineMatchReason.OTHER)
         elif decline_reason == DeclinedTradeReason.ORDER_RESERVED:
             # Add it to the queue again
             self._logger.debug("Adding entry (%d, %s, %s) to matching queue again", *self.outstanding_request)
@@ -1014,6 +1021,11 @@ class MarketCommunity(Community):
                 self.send_proposed_trade(propose_trade, address)
             else:
                 order.release_quantity_for_tick(other_order_id, propose_quantity)
+
+                # Notify the match cache
+                cache = self.request_cache.get(u"match", int(order.order_id.order_number))
+                if cache:
+                    cache.received_decline_trade(other_order_id, DeclinedTradeReason.ADDRESS_LOOKUP_FAIL)
 
         # Reserve the quantity
         order.reserve_quantity_for_tick(other_order_id, propose_quantity)
