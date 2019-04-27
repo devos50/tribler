@@ -833,6 +833,10 @@ class MarketCommunity(Community):
         :param source_address: The peer we received this payload from.
         :param payload: The CancelOrderPayload we received.
         """
+        if self.settings.send_fail_rate > 0 and random.random() <= self.settings.send_fail_rate:
+            # Ignore the message
+            return
+
         self.num_received_cancel_orders += 1
         ttl_payload = self.serializer.ez_unpack_serializables([TTLPayload], data[-1:])[0]
         auth, dist, payload = self._ez_unpack_auth(CancelOrderPayload, data[:-1])
@@ -856,6 +860,10 @@ class MarketCommunity(Community):
 
     @lazy_wrapper(OrderPayload)
     def received_order(self, peer, payload):
+        if self.settings.send_fail_rate > 0 and random.random() <= self.settings.send_fail_rate:
+            # Ignore the message
+            return
+
         self.num_received_orders += 1
         self.logger.debug("Received order from peer %s", peer)
         tick = Ask.from_network(payload) if payload.is_ask else Bid.from_network(payload)
@@ -867,6 +875,10 @@ class MarketCommunity(Community):
         :param source_address: The peer we received this payload from.
         :param data: The binary data we received.
         """
+        if self.settings.send_fail_rate > 0 and random.random() <= self.settings.send_fail_rate:
+            # Ignore the message
+            return
+
         self.num_received_orders += 1
         ttl_payload = self.serializer.ez_unpack_serializables([TTLPayload], data[-1:])[0]
         auth, dist, payload = self._ez_unpack_auth(OrderPayload, data[:-1])
@@ -926,6 +938,10 @@ class MarketCommunity(Community):
         """
         We received a match message from a matchmaker.
         """
+        if self.settings.send_fail_rate > 0 and random.random() <= self.settings.send_fail_rate:
+            # Ignore the message
+            return
+
         self.num_received_match += 1
         self.logger.info("We received a match message from %s for order %s.%s (matched against %s.%s)",
                          payload.matchmaker_trader_id.as_hex(), TraderId(self.mid).as_hex(), payload.recipient_order_number, payload.trader_id.as_hex(), payload.order_number)

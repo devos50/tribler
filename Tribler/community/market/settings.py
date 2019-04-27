@@ -18,6 +18,7 @@ class MatchingSettings(object):
         self.match_send_interval = 0  # How long we should wait with sending a match message (to avoid overloading a peer)
         self.sync_interval = 30  # Synchronization interval
         self.num_order_sync = 10  # How many orders to sync at most
+        self.send_fail_rate = 0  # Probability that sending a order/cancel order/match message is not received
 
         self.sync_policy = SYNC_POLICY_NONE
         self.dissemination_policy = DISSEMINATION_POLICY_NEIGHBOURS

@@ -335,7 +335,7 @@ class TestMarketCommunity(TestMarketCommunityBase):
         bid_order = yield self.nodes[1].overlay.create_bid(
             AssetPair(AssetAmount(1, 'DUM1'), AssetAmount(1, 'DUM2')), 3600)
 
-        yield self.sleep(0.5)
+        yield self.sleep(1)
 
         outstanding = self.nodes[1].overlay.get_outstanding_proposals(bid_order.order_id, ask_order.order_id)
         self.assertTrue(outstanding)
