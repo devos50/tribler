@@ -178,10 +178,13 @@ class MatchCache(NumberCache):
                                                           other_order_id,
                                                           match_payload.matchmaker_trader_id,
                                                           DeclineMatchReason.OTHER)
-        elif decline_reason == DeclinedTradeReason.ORDER_RESERVED:
+        elif decline_reason == DeclinedTradeReason.ORDER_RESERVED and self.outstanding_request:
             # Add it to the queue again
             self._logger.debug("Adding entry (%d, %s, %s) to matching queue again", *self.outstanding_request)
             self.queue.insert(self.outstanding_request[0] + 1, self.outstanding_request[1], self.outstanding_request[2])
+        elif decline_reason == DeclinedTradeReason.NO_AVAILABLE_QUANTITY and self.outstanding_request:
+            # Re-add the item to the queue, with the same priority
+            self.queue.insert(self.outstanding_request[0], self.outstanding_request[1], self.outstanding_request[2])
 
         self.outstanding_request = None
 
@@ -1006,6 +1009,11 @@ class MarketCommunity(Community):
         propose_quantity = order.available_quantity
         if propose_quantity == 0:
             self.logger.info("No available quantity for order %s - not sending outgoing proposal", order.order_id)
+
+            # Notify the match cache
+            cache = self.request_cache.get(u"match", int(order.order_id.order_number))
+            if cache:
+                cache.received_decline_trade(other_order_id, DeclinedTradeReason.NO_AVAILABLE_QUANTITY)
             return
 
         propose_trade = Trade.propose(

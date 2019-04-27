@@ -6,7 +6,8 @@ class DeclinedTradeReason(object):
     ORDER_CANCELLED = 4
     UNACCEPTABLE_PRICE = 5
     ADDRESS_LOOKUP_FAIL = 6
-    OTHER = 7
+    NO_AVAILABLE_QUANTITY = 7
+    OTHER = 8
 
 
 class DeclineMatchReason(object):
