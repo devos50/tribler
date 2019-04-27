@@ -105,16 +105,7 @@ class MatchCache(NumberCache):
         if other_order_id not in self.matches:
             self.matches[other_order_id] = []
 
-        # We do not want to add the match twice
-        exists = False
-        for match_payload in self.matches[other_order_id]:
-            match_order_id = OrderId(match_payload.trader_id, match_payload.order_number)
-            if match_order_id == other_order_id:
-                exists = True
-                break
-
-        if not exists:
-            self.matches[other_order_id].append(match_payload)
+        self.matches[other_order_id].append(match_payload)
 
         if not self.queue.contains_order(other_order_id) and not (self.outstanding_request and self.outstanding_request[2] == other_order_id):
             distance = self.haversine(self.order.longitude, self.order.latitude, match_payload.longitude, match_payload.latitude)
