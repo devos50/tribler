@@ -67,6 +67,7 @@ class MatchCache(NumberCache):
         self.order = order
         self.matches = {}
         self.schedule_task = None
+        self.schedule_task_done = False
         self.outstanding_request = None
         self.received_responses_ids = set()
         self.queue = MatchPriorityQueue(self.order)
@@ -108,11 +109,15 @@ class MatchCache(NumberCache):
             # Schedule a timer
             self._logger.info("Scheduling batch match of order %s" % str(self.order.order_id))
             self.schedule_task = reactor.callLater(self.community.settings.match_window, self.start_process_matches)
+        elif self.schedule_task_done and not self.outstanding_request:
+            # If we are currently not processing anything and the schedule task is done, process the matches
+            self.process_match()
 
     def start_process_matches(self):
         """
         Start processing the batch of matches.
         """
+        self.schedule_task_done = True
         self._logger.info("Processing incoming matches for order %s", self.order.order_id)
 
         # It could be that the order has already been completed while waiting - we should let the matchmaker know
@@ -171,6 +176,8 @@ class MatchCache(NumberCache):
             self._logger.debug("Adding entry (%d, %s, %s) to matching queue again", *self.outstanding_request)
             self.queue.insert(self.outstanding_request[0] + 1, self.outstanding_request[1], self.outstanding_request[2])
 
+        self.outstanding_request = None
+
         if self.order.status == "open":
             self.process_match()
 
@@ -190,6 +197,7 @@ class MatchCache(NumberCache):
         """
         We just performed a trade with a counterparty.
         """
+        self.outstanding_request = None
         other_order_id = trade.order_id
         if other_order_id not in self.matches:
             return
