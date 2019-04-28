@@ -889,8 +889,8 @@ class MarketCommunity(Community):
             return
 
         self.num_received_orders += 1
-        self.logger.debug("Received order from peer %s", peer)
         tick = Ask.from_network(payload) if payload.is_ask else Bid.from_network(payload)
+        self.logger.debug("Received order from %s:%d, order %s", peer.address[0], peer.address[1], peer)
         self.on_tick(tick)
 
     def received_order_broadcast(self, source_address, data):

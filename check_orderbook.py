@@ -40,6 +40,7 @@ order_book = OrderBook()
 matching_engine = MatchingEngine(PriceTimeStrategy(order_book))
 
 # Start inserting them
+missed = 0
 for order in orders:
     if isinstance(order, Ask):
         order_book.insert_ask(order)
@@ -49,7 +50,9 @@ for order in orders:
     entry = order_book.get_tick(order.order_id)
     matched_ticks = matching_engine.match(entry)
     if matched_ticks:
+        missed += 1
         print "Found possible match of %s and %s!" % (order.order_id, matched_ticks[0].order_id)
 
 print("Asks in book: %d" % len(order_book.asks))
 print("Bids in book: %d" % len(order_book.bids))
+print("Missed: %d" % missed)
