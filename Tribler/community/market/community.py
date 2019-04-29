@@ -304,6 +304,9 @@ class MarketCommunity(Community):
         self.cancelled_orders = set()  # Keep track of cancelled orders so we don't add them again to the orderbook.
         self.sync_lc = None
         self.sent_matches = set()
+        self.new_orders_relayed = set()
+        self.cancel_orders_relayed = set()
+        self.complete_orders_relayed = set()
 
         self.num_received_cancel_orders = 0
         self.num_received_orders = 0
@@ -870,6 +873,9 @@ class MarketCommunity(Community):
             self.order_book.remove_tick(order_id)
             self.cancelled_orders.add(order_id)
 
+        if order_id in self.cancel_orders_relayed:
+            return
+
         ttl_payload.ttl -= 1
         if ttl_payload.ttl > 0:
             data = data[:-1] + self.serializer.pack_multiple(ttl_payload.to_pack_list())[0]
@@ -881,6 +887,7 @@ class MarketCommunity(Community):
 
             for peer in send_peers:
                 self.endpoint.send(peer.address, data)
+            self.cancel_orders_relayed.add(order_id)
 
     @lazy_wrapper(OrderPayload)
     def received_order(self, peer, payload):
@@ -912,6 +919,9 @@ class MarketCommunity(Community):
                           source_address[0], source_address[1], tick.order_id)
         self.on_tick(tick)
 
+        if tick.order_id in self.new_orders_relayed:
+            return
+
         ttl_payload.ttl -= 1
         if ttl_payload.ttl > 0:
             data = data[:-1] + self.serializer.pack_multiple(ttl_payload.to_pack_list())[0]
@@ -924,6 +934,7 @@ class MarketCommunity(Community):
             for peer in send_peers:
                 self.logger.debug("Relaying order to %d peers", len(send_peers))
                 self.endpoint.send(peer.address, data)
+            self.new_orders_relayed.add(tick.order_id)
 
     def received_trade_complete_broadcast(self, source_address, data):
         """
@@ -945,6 +956,9 @@ class MarketCommunity(Community):
                 self.on_order_completed(completed_order_id)
             self.match_order_ids([order_id1, order_id2])
 
+        if payload.proposal_id in self.complete_orders_relayed:
+            return
+
         ttl_payload.ttl -= 1
         if ttl_payload.ttl > 0:
             data = data[:-1] + self.serializer.pack_multiple(ttl_payload.to_pack_list())[0]
@@ -956,6 +970,8 @@ class MarketCommunity(Community):
 
             for peer in send_peers:
                 self.endpoint.send(peer.address, data)
+
+            self.complete_orders_relayed.add(payload.proposal_id)
 
     @lazy_wrapper(MatchPayload)
     def received_match(self, peer, payload):
@@ -1110,7 +1126,9 @@ class MarketCommunity(Community):
                 packet += self.serializer.pack_multiple(TTLPayload(ttl).to_pack_list())[0]
 
                 send_peers = []
-                if self.settings.dissemination_policy == DISSEMINATION_POLICY_NEIGHBOURS:
+                if order.broadcast_peers:
+                    send_peers = order.broadcast_peers
+                elif self.settings.dissemination_policy == DISSEMINATION_POLICY_NEIGHBOURS:
                     if self.fixed_broadcast_set:
                         send_peers = self.fixed_broadcast_set
                     else:
