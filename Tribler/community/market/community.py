@@ -822,6 +822,9 @@ class MarketCommunity(Community):
         :param tick: The matched tick
         :param recipient_order_id: The order id of the recipient, matching the tick
         """
+        if self.settings.matchmaker_malicious_rate > 0 and random.random() <= self.settings.matchmaker_malicious_rate:
+            return
+        
         if (recipient_order_id, tick.order_id) in self.sent_matches:
             return
         self.sent_matches.add((recipient_order_id, tick.order_id))

@@ -19,6 +19,7 @@ class MatchingSettings(object):
         self.sync_interval = 30  # Synchronization interval
         self.num_order_sync = 10  # How many orders to sync at most
         self.send_fail_rate = 0  # Probability that sending a order/cancel order/match message is not received
+        self.matchmaker_malicious_rate = 0  # Probability that the matchmaker behaves malicious
 
         self.sync_policy = SYNC_POLICY_NONE
         self.dissemination_policy = DISSEMINATION_POLICY_NEIGHBOURS
