@@ -549,7 +549,9 @@ class MarketCommunity(Community):
             self.logger.debug("Tick %s does not have any quantity to match!", tick.order_id)
             return 0
 
-        matched_ticks = self.matching_engine.match(order_tick_entry)
+        do_malicious = self.settings.matchmaker_malicious_rate > 0 and random.random() <= self.settings.matchmaker_malicious_rate
+
+        matched_ticks = self.matching_engine.match(order_tick_entry, malicious=do_malicious)
         self.send_match_messages(matched_ticks, tick.order_id)
         return len(matched_ticks)
 
@@ -830,9 +832,6 @@ class MarketCommunity(Community):
         :param tick: The matched tick
         :param recipient_order_id: The order id of the recipient, matching the tick
         """
-        if self.settings.matchmaker_malicious_rate > 0 and random.random() <= self.settings.matchmaker_malicious_rate:
-            return
-        
         if (recipient_order_id, tick.order_id) in self.sent_matches:
             return
         self.sent_matches.add((recipient_order_id, tick.order_id))

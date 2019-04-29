@@ -24,7 +24,7 @@ class MatchingStrategy(object):
         self.order_book = order_book
 
     @abstractmethod
-    def match(self, order_id, latitude, longitude, is_ask):
+    def match(self, order_id, latitude, longitude, is_ask, malicious=False):
         """
         :param order_id: The order id of the tick to match
         :param latitude: The latitude of the tick
@@ -61,24 +61,24 @@ class TaxiStrategy(MatchingStrategy):
         r = 6371 # Radius of earth in kilometers. Use 3956 for miles
         return c * r
 
-    def match(self, order_id, latitude, longitude, is_ask):
+    def match(self, order_id, latitude, longitude, is_ask, malicious=False):
         if latitude < -90 or latitude > 90 or longitude < -180 or longitude > 180:
             return []
 
-        return self.match_ask(latitude, longitude, order_id) if is_ask else self.match_bid(latitude, longitude, order_id)
+        return self.match_ask(latitude, longitude, order_id, malicious) if is_ask else self.match_bid(latitude, longitude, order_id, malicious)
 
-    def match_ask(self, latitude, longitude, order_id):
+    def match_ask(self, latitude, longitude, order_id, malicious):
         if not self.order_book._bids:
             return []
 
         min_tick = None
-        min_distance = 100000000
+        min_distance = 100000000 if not malicious else 0
         for tick_entry in self.order_book._bids.itervalues():
             if tick_entry.reserved_for_matching > 0 or tick_entry.is_blocked_for_matching(order_id):
                 continue
 
             distance = self.haversine(longitude, latitude, tick_entry.tick.longitude, tick_entry.tick.latitude)
-            if distance < min_distance:
+            if (malicious and distance > min_distance) or (not malicious and distance < min_distance):
                 min_tick = tick_entry
                 min_distance = distance
 
@@ -86,18 +86,18 @@ class TaxiStrategy(MatchingStrategy):
             return [min_tick]
         return []
 
-    def match_bid(self, latitude, longitude, order_id):
+    def match_bid(self, latitude, longitude, order_id, malicious):
         if not self.order_book._asks:
             return []
 
         min_tick = None
-        min_distance = 100000000
+        min_distance = 100000000 if not malicious else 0
         for tick_entry in self.order_book._asks.itervalues():
             if tick_entry.reserved_for_matching > 0 or tick_entry.is_blocked_for_matching(order_id):
                 continue
 
             distance = self.haversine(longitude, latitude, tick_entry.tick.longitude, tick_entry.tick.latitude)
-            if distance < min_distance:
+            if (malicious and distance > min_distance) or (not malicious and distance < min_distance):
                 min_tick = tick_entry
                 min_distance = distance
 
@@ -196,7 +196,7 @@ class MatchingEngine(object):
 
         self.matching_strategy = matching_strategy
 
-    def match(self, tick_entry):
+    def match(self, tick_entry, malicious=False):
         """
         :param tick_entry: The TickEntry that should be matched
         :type tick_entry: TickEntry
@@ -206,5 +206,6 @@ class MatchingEngine(object):
         matched_ticks = self.matching_strategy.match(tick_entry.order_id,
                                                      tick_entry.latitude,
                                                      tick_entry.longitude,
-                                                     tick_entry.tick.is_ask())
+                                                     tick_entry.tick.is_ask(),
+                                                     malicious)
         return matched_ticks
