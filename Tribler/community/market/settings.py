@@ -23,12 +23,3 @@ class MatchingSettings(object):
 
         self.sync_policy = SYNC_POLICY_NONE
         self.dissemination_policy = DISSEMINATION_POLICY_NEIGHBOURS
-
-    def get_msg_reach(self):
-        """
-        Return the message reach, based on TTL/fanout
-        """
-        total = 0
-        for ind in range(1, self.ttl+1):
-            total += self.fanout ** ind
-        return total
