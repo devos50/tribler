@@ -304,10 +304,10 @@ class HttpTrackerSession(TrackerSession):
         response_list = []
 
         unprocessed_infohash_list = self._infohash_list[:]
-        if 'files' in response_dict and isinstance(response_dict['files'], dict):
-            for infohash in response_dict['files']:
-                complete = response_dict['files'][infohash].get('complete', 0)
-                incomplete = response_dict['files'][infohash].get('incomplete', 0)
+        if b'files' in response_dict and isinstance(response_dict[b'files'], dict):
+            for infohash in response_dict[b'files']:
+                complete = response_dict[b'files'][infohash].get(b'complete', 0)
+                incomplete = response_dict[b'files'][infohash].get(b'incomplete', 0)
 
                 # Sow complete as seeders. "complete: number of peers with the entire file, i.e. seeders (integer)"
                 #  - https://wiki.theory.org/BitTorrentSpecification#Tracker_.27scrape.27_Convention
@@ -321,9 +321,9 @@ class HttpTrackerSession(TrackerSession):
                 if infohash in unprocessed_infohash_list:
                     unprocessed_infohash_list.remove(infohash)
 
-        elif 'failure reason' in response_dict:
-            self._logger.info(u"%s Failure as reported by tracker [%s]", self, repr(response_dict['failure reason']))
-            self.failed(msg=repr(response_dict['failure reason']))
+        elif b'failure reason' in response_dict:
+            self._logger.info(u"%s Failure as reported by tracker [%s]", self, repr(response_dict[b'failure reason']))
+            self.failed(msg=repr(response_dict[b'failure reason']))
             return
 
         # handle the infohashes with no result (seeders/leechers = 0/0)

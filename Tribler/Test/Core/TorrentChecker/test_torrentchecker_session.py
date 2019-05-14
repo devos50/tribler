@@ -240,7 +240,7 @@ class TestTorrentCheckerSession(TestAsServer):
         session.action = 123
         session.transaction_id = 123
         self.assertFalse(session.is_failed)
-        session._infohash_list = ["test", "test2"]
+        session._infohash_list = [b"test", b"test2"]
         packet = struct.pack("!iiiii", 123, 123, 0, 1, 2)
         session.handle_scrape_response(packet)
         self.assertTrue(session.is_failed)
@@ -251,7 +251,7 @@ class TestTorrentCheckerSession(TestAsServer):
         session.on_ip_address_resolved("127.0.0.1", start_scraper=False)
         session.result_deferred = Deferred()
         self.assertFalse(session.is_failed)
-        session._infohash_list = ["test"]
+        session._infohash_list = [b"test"]
         packet = struct.pack("!iiiii", session.action, session.transaction_id, 0, 1, 2)
         session.handle_scrape_response(packet)
 
@@ -275,7 +275,7 @@ class TestTorrentCheckerSession(TestAsServer):
         self.assertFalse(session.is_failed)
         packet = struct.pack("!iiq", session.action, session.transaction_id, 126)
         session.handle_response(packet)
-        session._infohash_list = ["test"]
+        session._infohash_list = [b"test"]
         packet = struct.pack("!iiiii", session.action, session.transaction_id, 0, 1, 2)
         session.handle_response(packet)
         self.assertTrue(session.is_finished)
@@ -286,7 +286,7 @@ class TestTorrentCheckerSession(TestAsServer):
         session = HttpTrackerSession("localhost", ("localhost", 8475), "/announce", 5)
         result_deferred = Deferred()
         session.result_deferred = result_deferred
-        session._infohash_list.append("test")
+        session._infohash_list.append(b"test")
         response = bencode({"files": {"a" * 20: {"complete": 10, "incomplete": 10}}})
         session._process_scrape_response(response)
         self.assertTrue(session.is_finished)
@@ -302,7 +302,7 @@ class TestTorrentCheckerSession(TestAsServer):
             test_deferred.callback(None)
 
         session.result_deferred = Deferred().addErrback(on_error)
-        session._process_scrape_response(bencode({'failure reason': '\xe9'}))
+        session._process_scrape_response(bencode({b'failure reason': b'\xe9'}))
 
         return test_deferred
 
@@ -338,13 +338,13 @@ class TestDHTSession(TriblerCoreTest):
         self.session.lm.ltmgr = MockObject()
         self.session.lm.ltmgr.dht_health_manager = MockObject()
         dht_health_dict = {
-            "infohash": hexlify('a' * 20),
+            "infohash": hexlify(b'a' * 20),
             "seeders": 1,
             "leechers": 2
         }
         self.session.lm.ltmgr.dht_health_manager.get_health = lambda *_, **__: succeed({"DHT": [dht_health_dict]})
 
-        self.dht_session = FakeDHTSession(self.session, 'a' * 20, 10)
+        self.dht_session = FakeDHTSession(self.session, b'a' * 20, 10)
 
     @trial_timeout(10)
     def test_cleanup(self):
@@ -369,5 +369,5 @@ class TestDHTSession(TriblerCoreTest):
         """
         Test various methods in the DHT session class
         """
-        self.dht_session.add_infohash('b' * 20)
-        self.assertEqual(self.dht_session.infohash, 'b' * 20)
+        self.dht_session.add_infohash(b'b' * 20)
+        self.assertEqual(self.dht_session.infohash, b'b' * 20)
