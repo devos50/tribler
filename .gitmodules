@@ -3,4 +3,4 @@
 	url = https://github.com/Tribler/py-ipv8.git
 [submodule "Tribler/anydex"]
 	path = Tribler/anydex
-	url = https://github.com/Tribler/anydex-core.git
+	url = https://github.com/devos50/anydex-core.git
