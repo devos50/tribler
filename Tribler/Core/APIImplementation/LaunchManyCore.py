@@ -150,7 +150,13 @@ class TriblerLaunchMany(TaskManager):
                 community_file._DEFAULT_ADDRESSES = [self.session.config.get_ipv8_bootstrap_override()]
                 community_file._DNS_ADDRESSES = []
 
-            self.ipv8 = IPv8(ipv8_config, enable_statistics=self.session.config.get_ipv8_statistics())
+            if self.session.config.get_ipv8_use_raw_socket():
+                from ipv8.messaging.interfaces.udp.raw_endpoint import RawUDPEndpoint
+                endpoint = RawUDPEndpoint(port=ipv8_config['port'], ip=ipv8_config['address'])
+                self.ipv8 = IPv8(ipv8_config, endpoint_override=endpoint,
+                                 enable_statistics=self.session.config.get_ipv8_statistics())
+            else:
+                self.ipv8 = IPv8(ipv8_config, enable_statistics=self.session.config.get_ipv8_statistics())
 
             self.session.config.set_anon_proxy_settings(2, ("127.0.0.1",
                                                             self.session.
