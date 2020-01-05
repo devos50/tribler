@@ -81,6 +81,7 @@ port = integer(min=-1, max=65536, default=7759)
 address = string(default='0.0.0.0')
 bootstrap_override = string(default='')
 statistics = boolean(default=False)
+use_raw_socket = boolean(default=False)
 
 [video_server]
 enabled = boolean(default=True)
