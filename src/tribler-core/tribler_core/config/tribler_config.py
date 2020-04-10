@@ -176,6 +176,12 @@ class TriblerConfig(object):
     def get_trustchain_live_edges_enabled(self):
         return self.config['trustchain']['live_edges_enabled']
 
+    def set_noodle_enabled(self, value):
+        self.config['noodle']['enabled'] = value
+
+    def get_noodle_enabled(self):
+        return self.config['noodle']['enabled']
+
     def set_log_dir(self, value):
         self.config['general']['log_dir'] = str(self.norm_path(value))
 
