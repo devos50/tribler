@@ -43,6 +43,8 @@ def start_tribler_core(base_path, api_port, api_key, root_state_dir):
     from tribler_core.check_os import check_and_enable_code_tracing, set_process_priority
     tribler_core.load_logger_config(root_state_dir)
 
+    exit(3)
+
     from tribler_core.config.tribler_config import TriblerConfig
     from tribler_core.modules.process_checker import ProcessChecker
     from tribler_core.session import Session
