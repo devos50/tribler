@@ -89,8 +89,8 @@ class CoreManager(QObject):
 
             self.core_process = QProcess()
             self.core_process.setProcessEnvironment(core_env)
-            self.core_process.setReadChannel(QProcess.StandardOutput)
-            self.core_process.setProcessChannelMode(QProcess.MergedChannels)
+            #self.core_process.setReadChannel(QProcess.StandardOutput)
+            #self.core_process.setProcessChannelMode(QProcess.MergedChannels)
             self.core_process.readyRead.connect(self.on_core_read_ready)
             self.core_process.finished.connect(self.on_core_finished)
             self.core_process.start(sys.executable, core_args)
