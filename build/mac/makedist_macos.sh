@@ -17,7 +17,7 @@ PI=pyinstaller
 if [ "$(which pyinstaller-2.7)" != "" ]; then
 	PI=pyinstaller-2.7
 fi
-$PI tribler.spec
+$PI tribler.spec --debug=all
 
 mkdir -p dist/installdir
 mv dist/$APPNAME.app dist/installdir
