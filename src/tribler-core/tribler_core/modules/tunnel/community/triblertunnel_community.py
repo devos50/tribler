@@ -13,7 +13,7 @@ import async_timeout
 
 from ipv8.attestation.trustchain.block import EMPTY_PK
 from ipv8.messaging.anonymization.caches import CreateRequestCache
-from ipv8.messaging.anonymization.community import message_to_payload, tc_lazy_wrapper_unsigned
+from ipv8.messaging.anonymization.community import tc_lazy_wrapper_unsigned
 from ipv8.messaging.anonymization.hidden_services import HiddenTunnelCommunity
 from ipv8.messaging.anonymization.payload import (
     EstablishIntroPayload,
@@ -29,7 +29,7 @@ from ipv8.messaging.anonymization.tunnel import (
     CIRCUIT_TYPE_RP_DOWNLOADER,
     CIRCUIT_TYPE_RP_SEEDER,
     EXIT_NODE,
-    PEER_FLAG_EXIT_ANY,
+    PEER_FLAG_EXIT_BT,
     RelayRoute,
 )
 from ipv8.peer import Peer

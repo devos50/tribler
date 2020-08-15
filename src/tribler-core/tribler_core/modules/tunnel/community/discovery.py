@@ -1,7 +1,7 @@
 import time
 from random import sample
 
-from ipv8.messaging.anonymization.tunnel import PEER_FLAG_EXIT_ANY
+from ipv8.messaging.anonymization.tunnel import PEER_FLAG_EXIT_BT
 from ipv8.peerdiscovery.discovery import DiscoveryStrategy
 
 

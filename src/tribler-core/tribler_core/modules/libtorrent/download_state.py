@@ -5,7 +5,7 @@ Author(s): Arno Bakker
 """
 import logging
 
-from ipv8.messaging.anonymization.tunnel import PEER_FLAG_EXIT_ANY
+from ipv8.messaging.anonymization.tunnel import PEER_FLAG_EXIT_BT
 
 from tribler_common.simpledefs import (
     DLSTATUS_ALLOCATING_DISKSPACE,
