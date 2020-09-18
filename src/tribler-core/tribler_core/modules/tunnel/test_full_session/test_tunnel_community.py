@@ -9,11 +9,12 @@ from ipv8.peer import Peer
 from ipv8.peerdiscovery.community import DiscoveryCommunity
 from ipv8.peerdiscovery.network import Network
 from ipv8.test.messaging.anonymization.test_community import MockDHTProvider
-from tribler_common.simpledefs import DLSTATUS_DOWNLOADING
+from tribler_common.simpledefs import DLSTATUS_DOWNLOADING, DLSTATUS_SEEDING
 from tribler_core.modules.libtorrent.download_config import DownloadConfig
 from tribler_core.modules.libtorrent.download_manager import DownloadManager
 from tribler_core.modules.tunnel.community.triblertunnel_community import TriblerTunnelCommunity
 from tribler_core.session import Session
+from tribler_core.tests.tools.common import TESTS_DATA_DIR
 
 
 class ProxyFactory(object):
@@ -48,6 +49,26 @@ async def proxy_factory(request, tribler_config, free_ports):
 
     for session in factory.sessions:
         await session.shutdown()
+
+
+@pytest.fixture
+async def hidden_seeder_session(seed_config, video_tdef):
+    seed_config.set_ipv8_port(-1)
+    seeder_session = Session(seed_config)
+    seeder_session.upgrader_enabled = False
+    await seeder_session.start()
+
+    # Also load the tunnel community in the seeder session
+    await load_tunnel_community_in_session(seeder_session, start_lt=True)
+    seeder_session.tunnel_community.build_tunnels(1)
+
+    dscfg_seed = DownloadConfig()
+    dscfg_seed.set_dest_dir(TESTS_DATA_DIR)
+    dscfg_seed.set_hops(1)
+    upload = seeder_session.dlmgr.start_download(tdef=video_tdef, config=dscfg_seed)
+    await upload.wait_for_status(DLSTATUS_SEEDING)
+    yield seeder_session
+    await seeder_session.shutdown()
 
 
 async def sanitize_network(session):
@@ -178,23 +199,20 @@ async def test_anon_download(enable_ipv8, proxy_factory, session, video_seeder_s
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(20)
-@pytest.mark.skip(reason="This test is currently failing")
-async def test_hidden_services(enable_ipv8, proxy_factory, session, video_seeder_session, video_tdef):
+async def test_hidden_services(enable_ipv8, proxy_factory, session, hidden_seeder_session, video_tdef):
     """
     Test the hidden services overlay by constructing an end-to-end circuit and downloading a torrent over it
     """
     await load_tunnel_community_in_session(session, exitnode=False, start_lt=True)
 
-    # Also load the tunnel community in the seeder session
-    await load_tunnel_community_in_session(video_seeder_session, start_lt=True)
-    video_seeder_session.tunnel_community.build_tunnels(1)
+    hidden_seeder_session.tunnel_community.build_tunnels(1)
 
     relays, exit_nodes = await create_nodes(proxy_factory, num_relays=4, num_exitnodes=2)
-    await introduce_peers([session, video_seeder_session] + relays + exit_nodes)
+    await introduce_peers([session, hidden_seeder_session] + relays + exit_nodes)
     await deliver_messages(timeout=1)
 
-    for session in [session, video_seeder_session] + relays + exit_nodes:
-        assert 7 == len(session.tunnel_community.get_peers())
+    for ses in [session, hidden_seeder_session] + relays + exit_nodes:
+        assert 7 == len(ses.tunnel_community.get_peers())
 
     progress = Future()
 
@@ -207,9 +225,9 @@ async def test_hidden_services(enable_ipv8, proxy_factory, session, video_seeder
 
     session.tunnel_community.build_tunnels(1)
 
-    while len(session.tunnel_community.find_circuits(ctype=CIRCUIT_TYPE_IP_SEEDER)) < 1:
+    while len(hidden_seeder_session.tunnel_community.find_circuits(ctype=CIRCUIT_TYPE_IP_SEEDER)) < 1:
         await deliver_messages()
 
-    download = start_anon_download(session, video_seeder_session, video_tdef, hops=1)
+    download = start_anon_download(session, hidden_seeder_session, video_tdef, hops=1)
     download.set_state_callback(download_state_callback)
     await progress
