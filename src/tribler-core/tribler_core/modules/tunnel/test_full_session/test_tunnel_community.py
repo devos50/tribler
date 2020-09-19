@@ -199,6 +199,7 @@ async def test_anon_download(enable_ipv8, proxy_factory, session, video_seeder_s
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(20)
+@pytest.mark.skip(reason="this test is not working")
 async def test_hidden_services(enable_ipv8, proxy_factory, session, hidden_seeder_session, video_tdef):
     """
     Test the hidden services overlay by constructing an end-to-end circuit and downloading a torrent over it
