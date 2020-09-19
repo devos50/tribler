@@ -145,12 +145,9 @@ async def test_check_and_regen_personal_channel_torrent(enable_chant, personal_c
         f.assert_called_once()
 
 
-torrents_added = 0
-
-
 @pytest.mark.asyncio
 async def test_check_channels_updates(enable_chant, personal_channel, channel_manager, mock_dlmgr, session):
-    global torrents_added
+    torrents_added = 0
     # We add our personal channel in an inconsistent state to make sure the GigaChannel Manager will
     # not try to update it in the same way it should update other's channels
     with db_session:
@@ -192,7 +189,7 @@ async def test_check_channels_updates(enable_chant, personal_channel, channel_ma
         )
 
         def mock_download_channel(chan1):
-            global torrents_added
+            nonlocal torrents_added
             torrents_added += 1
             assert chan1 == chan3
 
@@ -243,12 +240,9 @@ async def test_check_channels_updates(enable_chant, personal_channel, channel_ma
         assert 0 == len(channel_manager.channels_processing_queue)
 
 
-remove_list = []
-
-
 @pytest.mark.asyncio
 async def test_remove_cruft_channels(torrent_template, enable_chant, personal_channel, channel_manager, mock_dlmgr, session):
-    global remove_list
+    remove_list = []
     with db_session:
         # Our personal chan is created, then updated, so there are 2 files on disk and there are 2 torrents:
         # the old one and the new one
@@ -317,6 +311,7 @@ async def test_remove_cruft_channels(torrent_template, enable_chant, personal_ch
         return mock_dl_list
 
     def mock_remove(infohash, remove_content=False):
+        nonlocal remove_list
         d = Future()
         d.set_result(None)
         remove_list.append((infohash, remove_content))

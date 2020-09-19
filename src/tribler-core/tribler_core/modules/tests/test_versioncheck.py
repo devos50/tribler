@@ -53,10 +53,12 @@ async def test_start(version_check_manager, version_server):
     assert not version_check_manager.is_pending_task_active("tribler version check")
 
     import tribler_core.modules.versioncheck_manager as vcm
+    old_id = vcm.version_id
     vcm.version_id = "7.0.0"
     version_check_manager.start()
-    await sleep(0.4)  # Wait a bit for the check to complete
+    await sleep(0.1)  # Wait a bit for the check to complete
     assert version_check_manager.is_pending_task_active("tribler version check")
+    vcm.version_id = old_id
 
 
 @pytest.mark.asyncio

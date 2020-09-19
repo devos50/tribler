@@ -44,4 +44,4 @@ def test_load_logger(tmpdir):
     """
     logger_count = len(logging.root.manager.loggerDict)
     load_logger_config(tmpdir)
-    assert len(logging.root.manager.loggerDict) > logger_count
+    assert len(logging.root.manager.loggerDict) >= logger_count
