@@ -12,13 +12,21 @@ def test_get_random_port():
     assert random_port
 
 
-@pytest.mark.asyncio
-async def test_get_random_port_tcp(bucket_range_port):
+def test_get_random_port_tcp(bucket_range_port):
     rand_port_num = random.randint(*bucket_range_port)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(('', rand_port_num))
-        random_port = get_random_port(socket_type='tcp', min_port=rand_port_num, max_port=rand_port_num)
-        assert random_port >= rand_port_num + 1
+        attempts = 0
+        while attempts < 20:
+            try:
+                sock.bind(('', rand_port_num))
+                random_port = get_random_port(socket_type='tcp', min_port=rand_port_num, max_port=rand_port_num)
+                assert random_port > rand_port_num  # It should have picked a higher port
+                return
+            except OSError:
+                attempts += 1
+                rand_port_num += 1
+
+    assert False
 
 
 def test_get_random_port_udp():
